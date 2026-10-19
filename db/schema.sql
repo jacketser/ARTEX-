@@ -1384,3 +1384,15 @@ CREATE INDEX IF NOT EXISTS idx_notification_deliveries_batch
     ON notification_deliveries(batch_id) WHERE batch_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_notification_deliveries_channel
     ON notification_deliveries(channel_id, id DESC);
+
+-- Local evidence review: additive and independent of finding triage/retests.
+CREATE TABLE IF NOT EXISTS finding_reviews (
+    finding_id BIGINT PRIMARY KEY REFERENCES findings(id) ON DELETE CASCADE,
+    fingerprint TEXT NOT NULL,
+    verdict TEXT NOT NULL CHECK (verdict IN ('supported','refuted','inconclusive')),
+    sources TEXT NOT NULL DEFAULT '',
+    reproduction TEXT NOT NULL DEFAULT '',
+    counter_evidence TEXT NOT NULL DEFAULT '',
+    limitations TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

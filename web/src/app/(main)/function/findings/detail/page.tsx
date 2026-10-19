@@ -9,6 +9,7 @@ import { ArrowLeftIcon, ArrowUpRightIcon, ShieldAlertIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { CopyButton } from "@/components/copy-button";
+import { FindingReviewPanel } from "@/components/finding-review-panel";
 import { FindingRetestPanel } from "@/components/finding-retest-panel";
 import { FindingTrafficPanel } from "@/components/finding-traffic-panel";
 import { Markdown } from "@/components/markdown";
@@ -172,6 +173,7 @@ function FindingDetailInner() {
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{finding.summary || "（无摘要）"}</p>
                 </CardContent>
               </Card>
+              <FindingReviewPanel key={`review-${id}-${finding.evidence_version}-${finding.severity}`} findingId={id} readOnly={finding.inherited} />
               <FindingRetestPanel key={id} findingId={id} readOnly={finding.inherited} onCompleted={load} />
               <Card>
                 <CardHeader>
