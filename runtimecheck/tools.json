@@ -1,0 +1,9 @@
+[
+  {"name":"Python", "command":"python3", "args":["--version"], "version_pattern":"^Python 3\\.", "required":true},
+  {"name":"Node.js", "command":"node", "args":["--version"], "version_pattern":"^v22\\.", "required":true},
+  {"name":"curl", "command":"curl", "args":["--version"], "required":true},
+  {"name":"nmap", "command":"nmap", "args":["--version"]},
+  {"name":"Playwright", "command":"playwright", "args":["--version"], "version_pattern":"^Version 1\\.64\\.1$", "required":true},
+  {"name":"Playwright CLI", "command":"playwright-cli", "args":["--version"], "version_pattern":"^0\\.1\\.22$", "required":true},
+  {"name":"Playwright MCP", "command":"playwright-mcp", "args":["--version"], "version_pattern":"^Version 0\\.0\\.83$", "required":true}
+]

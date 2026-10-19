@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/config"
+	"github.com/Autumn-27/artex/runtimecheck"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -20,6 +21,7 @@ import (
 func runDoctor(args []string, out io.Writer) int {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	fs.SetOutput(out)
+	integrity := fs.String("integrity", filepath.Join(config.BaseDir(), "tool-integrity.json"), "构建时工具文件指纹清单")
 	data := fs.String("data", filepath.Join(config.BaseDir(), "data"), "数据目录")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -46,13 +48,8 @@ func runDoctor(args []string, out io.Writer) int {
 	} else {
 		report("OK", "登录密钥", "已存在（不显示内容）")
 	}
-	for _, name := range []string{"python3", "node", "curl", "nmap", "playwright", "playwright-cli"} {
-		if _, err := exec.LookPath(name); err != nil {
-			report("WARN", name, "未安装或不在 PATH")
-		} else {
-			report("OK", name, "可执行文件存在")
-		}
-	}
+	runtimecheck.CheckTools(report)
+	runtimecheck.CheckIntegrity(*integrity, report)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	modules, err := exec.CommandContext(ctx, "npm", "root", "-g").Output()

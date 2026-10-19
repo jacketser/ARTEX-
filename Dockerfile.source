@@ -41,6 +41,8 @@ WORKDIR /app
 COPY --from=backend /out/artex /app/artex
 COPY start.sh /app/start.sh
 COPY skills/ /app/skills/
+COPY scripts/capture-tool-integrity.py /tmp/capture-tool-integrity.py
+RUN python3 /tmp/capture-tool-integrity.py /app/tool-integrity.json && rm /tmp/capture-tool-integrity.py
 RUN chmod +x /app/artex /app/start.sh
 EXPOSE 8787
 ENTRYPOINT ["/app/start.sh"]
