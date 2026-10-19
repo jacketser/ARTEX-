@@ -84,6 +84,7 @@ func FindingsMarkdown(fs []*db.DBFinding, generatedAt time.Time) string {
 			b.WriteString(rep)
 			b.WriteString("\n\n")
 		}
+		b.WriteString(findingReviewMarkdown(f))
 		b.WriteString(findingTrafficMarkdown(f, false))
 		b.WriteString("---\n\n")
 	}
@@ -115,6 +116,7 @@ func SingleFindingMarkdown(f *db.DBFinding, generatedAt time.Time) string {
 		b.WriteString(rep)
 		b.WriteString("\n")
 	}
+	b.WriteString(findingReviewMarkdown(f))
 	b.WriteString(findingTrafficMarkdown(f, true))
 	return b.String()
 }
@@ -149,7 +151,7 @@ func FindingsCSV(fs []*db.DBFinding) []byte {
 	var buf bytes.Buffer
 	buf.WriteString("\xEF\xBB\xBF") // UTF-8 BOM
 	w := csv.NewWriter(&buf)
-	_ = w.Write([]string{"ID", "名称", "类别", "严重等级", "状态", "所属任务", "发现时间", "概述", "流量证据数量", "流量证据ID"})
+	_ = w.Write([]string{"ID", "名称", "类别", "严重等级", "状态", "所属任务", "发现时间", "概述", "流量证据数量", "流量证据ID", "人工复核", "复核是否过期"})
 	for _, f := range items {
 		_ = w.Write([]string{
 			fmt.Sprintf("%d", f.ID),
@@ -160,7 +162,7 @@ func FindingsCSV(fs []*db.DBFinding) []byte {
 			f.TaskDescription,
 			f.CreatedAt.Format("2006-01-02 15:04:05"),
 			strings.TrimSpace(f.Summary),
-			fmt.Sprint(len(f.TrafficBindings)), findingTrafficIDs(f),
+			fmt.Sprint(len(f.TrafficBindings)), findingTrafficIDs(f), reviewVerdict(f), fmt.Sprint(f.Review != nil && f.Review.Fingerprint != db.FindingFingerprint(f)),
 		})
 	}
 	w.Flush()
@@ -197,4 +199,32 @@ func findingTrafficMarkdown(f *db.DBFinding, attachments bool) string {
 	}
 	out.WriteString("\n")
 	return out.String()
+}
+
+func reviewVerdict(f *db.DBFinding) string {
+	if f.Review == nil {
+		return "尚未人工复核"
+	}
+	switch f.Review.Verdict {
+	case "supported":
+		return "现有证据支持结论"
+	case "refuted":
+		return "现有证据反驳结论"
+	default:
+		return "证据不足，无法确认"
+	}
+}
+func findingReviewMarkdown(f *db.DBFinding) string {
+	var b strings.Builder
+	b.WriteString("\n**证据与反证复核（人工）**\n\n")
+	fmt.Fprintf(&b, "结论：%s。\n\n", reviewVerdict(f))
+	if r := f.Review; r != nil {
+		if r.Fingerprint != db.FindingFingerprint(f) {
+			b.WriteString("复核已过期：证据或结论内容已变化，需要重新确认。\n\n")
+		}
+		for _, item := range []struct{ label, value string }{{"证据来源", r.Sources}, {"复现条件与实际观察", r.Reproduction}, {"反证与替代解释", r.CounterEvidence}, {"限制与缺失证据", r.Limitations}} {
+			fmt.Fprintf(&b, "%s：\n\n%s\n\n", item.label, item.value)
+		}
+	}
+	return b.String()
 }

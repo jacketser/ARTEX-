@@ -39,6 +39,7 @@ export class TicketEventSource extends EventTarget {
       const source = new EventSource(url);
       this.source = source;
       source.onopen = (event) => {
+        if (this.closed || this.source !== source) return;
         this.retries = 0;
         this.onopen?.(event);
         this.dispatchEvent(new Event("open"));
@@ -54,6 +55,7 @@ export class TicketEventSource extends EventTarget {
         });
       }
       source.onerror = (event) => {
+        if (this.closed || this.source !== source) return;
         source.close();
         this.onerror?.(event);
         this.dispatchEvent(new Event("error"));

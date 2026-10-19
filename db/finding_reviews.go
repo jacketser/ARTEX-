@@ -83,3 +83,32 @@ func (d *DB) SaveFindingReview(ctx context.Context, id int64, r FindingReview) e
 	}
 	return tx.Commit()
 }
+
+// LoadFindingReviews attaches reviews in one query when exporting many findings.
+func (d *DB) LoadFindingReviews(ctx context.Context, findings []*DBFinding) error {
+	if len(findings) == 0 {
+		return nil
+	}
+	ids := make([]int64, 0, len(findings))
+	byID := map[int64]*DBFinding{}
+	for _, f := range findings {
+		ids = append(ids, f.ID)
+		byID[f.ID] = f
+	}
+	rows, err := d.QueryContext(ctx, `SELECT finding_id,fingerprint,verdict,sources,reproduction,counter_evidence,limitations,updated_at FROM finding_reviews WHERE finding_id=ANY($1)`, ids)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int64
+		review := &FindingReview{}
+		if err := rows.Scan(&id, &review.Fingerprint, &review.Verdict, &review.Sources, &review.Reproduction, &review.CounterEvidence, &review.Limitations, &review.UpdatedAt); err != nil {
+			return err
+		}
+		if f := byID[id]; f != nil {
+			f.Review = review
+		}
+	}
+	return rows.Err()
+}

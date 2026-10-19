@@ -988,7 +988,7 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 	out["exploration"] = st
 
 	// per-task running state + heartbeat (distinct from "LLM configured").
-	intents, _ := t.Store.ListByKind(db.KindIntent, 100000)
+	intents, intentsErr := t.Store.ListByKind(db.KindIntent, 100000)
 	inFlight := 0
 	for _, in := range intents {
 		if in.State == "running" {
@@ -1008,7 +1008,7 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 	running := s.engine.ReadyFor(t) && s.engine.Started(t.ID) && !paused
 	approvals, diagnosticErr := s.m.PG().PendingInterceptCount(t.ID)
 	tools, toolAge := s.engine.toolProgress(t.ID)
-	diagnostic := diagnoseTask(running, paused, activeCalls, inFlight, last, time.Now().Unix(), approvals, tools, toolAge, diagnosticErr == nil)
+	diagnostic := diagnoseTask(running, paused, activeCalls, inFlight, last, time.Now().Unix(), approvals, tools, toolAge, diagnosticErr == nil && intentsErr == nil)
 	stalled := diagnostic.Code == "stalled"
 
 	// engine_mode follows the spec enum (exploring|paused|stalled|idle).
@@ -2152,6 +2152,10 @@ func (s *Server) findingsExport(w http.ResponseWriter, r *http.Request) {
 	defer os.RemoveAll(stage)
 	if err = s.evidenceStore().StageFindingsExport(r.Context(), fs, stage, format == "md-zip"); err != nil {
 		evidenceError(w, err)
+		return
+	}
+	if err := s.m.pg.LoadFindingReviews(r.Context(), fs); err != nil {
+		writeErr(w, 500, "读取证据复核失败")
 		return
 	}
 	now := time.Now()
