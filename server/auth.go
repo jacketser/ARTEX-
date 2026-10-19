@@ -1,7 +1,9 @@
 package server
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"math/big"
@@ -95,12 +97,27 @@ func signJWT(key []byte) (string, error) {
 // verifyJWT returns true when tokenStr is a valid, non-expired HS256 token.
 func verifyJWT(tokenStr string, key []byte) bool {
 	t, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		if t.Method != jwt.SigningMethodHS256 {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
 		return key, nil
-	})
+	}, jwt.WithExpirationRequired(), jwt.WithSubject("ARTEX"))
 	return err == nil && t.Valid
+}
+
+// Bind signing keys to the current password hash without exposing that hash in JWTs.
+// Any hash replacement (including reset-password.sh) immediately revokes old tokens.
+func sessionSigningKey(key []byte, hash string) []byte {
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte("artex/session/v1\x00" + hash))
+	return mac.Sum(nil)
+}
+func (s *Server) validSession(token string) (bool, error) {
+	hash, _, err := s.m.PG().GetSetting(authPassKey)
+	if err != nil {
+		return false, err
+	}
+	return hash != "" && verifyJWT(token, sessionSigningKey(s.jwtKey, hash)), nil
 }
 
 // extractToken reads the JWT from Authorization: Bearer header,
@@ -129,7 +146,12 @@ func (s *Server) requireAuth(h http.Handler) http.Handler {
 			writeErr(w, 401, "未授权")
 			return
 		}
-		if !verifyJWT(tok, s.jwtKey) {
+		valid, err := s.validSession(tok)
+		if err != nil {
+			writeErr(w, 503, errDataSourceUnavailable)
+			return
+		}
+		if !valid {
 			writeErr(w, 401, "token 无效或已过期")
 			return
 		}
@@ -197,7 +219,7 @@ func (s *Server) authInit(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 403, "密码已设置")
 		return
 	}
-	tok, err := signJWT(s.jwtKey)
+	tok, err := signJWT(sessionSigningKey(s.jwtKey, string(hash)))
 	if err != nil {
 		writeErr(w, 500, "token 生成失败")
 		return
@@ -213,7 +235,12 @@ func (s *Server) authChangePassword(w http.ResponseWriter, r *http.Request) {
 	if pg == nil {
 		return
 	}
-	if !verifyJWT(extractToken(r), s.jwtKey) {
+	valid, err := s.validSession(extractToken(r))
+	if err != nil {
+		writeErr(w, 503, errDataSourceUnavailable)
+		return
+	}
+	if !valid {
 		writeErr(w, 401, "未授权")
 		return
 	}
@@ -251,8 +278,13 @@ func (s *Server) authChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, "密码加密失败")
 		return
 	}
-	if err := pg.SetSetting(authPassKey, string(newHash)); err != nil {
+	changed, err := pg.CompareAndSwapSetting(authPassKey, hash, string(newHash))
+	if err != nil {
 		writeErr(w, 500, "保存失败: "+err.Error())
+		return
+	}
+	if !changed {
+		writeErr(w, 409, "密码已被其他请求修改，请重新登录")
 		return
 	}
 	writeJSON(w, 200, map[string]any{"ok": true})
@@ -289,7 +321,7 @@ func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 401, "用户名或密码错误")
 		return
 	}
-	tok, err := signJWT(s.jwtKey)
+	tok, err := signJWT(sessionSigningKey(s.jwtKey, string(hash)))
 	if err != nil {
 		writeErr(w, 500, "token 生成失败")
 		return

@@ -59,3 +59,13 @@ func (d *DB) SetBool(key string, val bool) error {
 	}
 	return d.SetSetting(key, "false")
 }
+
+// CompareAndSwapSetting prevents concurrent password changes from overwriting a reset.
+func (d *DB) CompareAndSwapSetting(key, oldValue, newValue string) (bool, error) {
+	result, err := d.Exec(`UPDATE settings SET value=$3, updated_at=now() WHERE key=$1 AND value=$2`, key, oldValue, newValue)
+	if err != nil {
+		return false, err
+	}
+	n, err := result.RowsAffected()
+	return n == 1, err
+}

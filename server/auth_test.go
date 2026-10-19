@@ -82,3 +82,62 @@ func TestValidatePassword(t *testing.T) {
 		})
 	}
 }
+
+// Route tests authenticate through the same password-bound signing key as login.
+func signTestJWT(t *testing.T, s *Server) (string, error) {
+	t.Helper()
+	hash, ok, err := s.m.PG().GetSetting(authPassKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok || hash == "" {
+		hash = "test-only-password-hash"
+		if err := s.m.PG().SetSetting(authPassKey, hash); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _, _ = s.m.PG().Exec(`DELETE FROM settings WHERE key=$1 AND value=$2`, authPassKey, hash) })
+	}
+	return signJWT(sessionSigningKey(s.jwtKey, hash))
+}
+
+func TestPasswordResetRevokesSessions(t *testing.T) {
+	m, err := NewManager(t.TempDir(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+	s := &Server{m: m, jwtKey: []byte("01234567890123456789012345678901")}
+	old, exists, err := m.PG().GetSetting(authPassKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if exists {
+			_ = m.PG().SetSetting(authPassKey, old)
+		} else {
+			_, _ = m.PG().Exec(`DELETE FROM settings WHERE key=$1`, authPassKey)
+		}
+	}()
+	_ = m.PG().SetSetting(authPassKey, "hash-before-reset")
+	token, _ := signJWT(sessionSigningKey(s.jwtKey, "hash-before-reset"))
+	if ok, err := s.validSession(token); !ok || err != nil {
+		t.Fatalf("before reset: %v %v", ok, err)
+	}
+	// Same SQL operation as the reset script, with no separate revision to forget.
+	_ = m.PG().SetSetting(authPassKey, "hash-after-reset")
+	if ok, _ := s.validSession(token); ok {
+		t.Fatal("old token survived password reset")
+	}
+	legacy, _ := signJWT(s.jwtKey)
+	if ok, _ := s.validSession(legacy); ok {
+		t.Fatal("legacy unbound token accepted")
+	}
+	newToken, _ := signJWT(sessionSigningKey(s.jwtKey, "hash-after-reset"))
+	if ok, err := s.validSession(newToken); !ok || err != nil {
+		t.Fatalf("new login: %v %v", ok, err)
+	}
+	changed, err := m.PG().CompareAndSwapSetting(authPassKey, "hash-before-reset", "stale-write")
+	if err != nil || changed {
+		t.Fatal("stale password change overwrote reset")
+	}
+}
