@@ -1002,9 +1002,10 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 	paused := s.engine.IsPaused(t.ID)
 	activeCalls := s.engine.ActiveLLMCalls(t.ID)
 	running := s.engine.ReadyFor(t) && s.engine.Started(t.ID) && !paused
-	// A live event-driven engine with no work is healthy idle. Only a persisted
-	// running intent without any corresponding LLM call can be considered stalled.
-	stalled := running && activeCalls == 0 && inFlight > 0 && last > 0 && time.Now().Unix()-last > 120
+	approvals, diagnosticErr := s.m.PG().PendingInterceptCount(t.ID)
+	tools, toolAge := s.engine.toolProgress(t.ID)
+	diagnostic := diagnoseTask(running, paused, activeCalls, inFlight, last, time.Now().Unix(), approvals, tools, toolAge, diagnosticErr == nil)
+	stalled := diagnostic.Code == "stalled"
 
 	// engine_mode follows the spec enum (exploring|paused|stalled|idle).
 	engineMode := "idle"
@@ -1013,7 +1014,7 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 		engineMode = "paused"
 	case stalled:
 		engineMode = "stalled"
-	case running && activeCalls > 0:
+	case running && (activeCalls > 0 || tools > 0):
 		engineMode = "exploring"
 	}
 	out["engine_mode"] = engineMode
@@ -1025,6 +1026,7 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 		"engine_mode":   engineMode,
 		"in_flight":     inFlight,
 		"llm_in_flight": activeCalls,
+		"diagnostic":    diagnostic,
 		"last_activity": last,
 		"stalled":       stalled,
 		"goals_total":   len(goals),

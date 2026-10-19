@@ -97,6 +97,7 @@ type Engine struct {
 	bc *Broadcaster // live activity pub/sub (SSE)
 
 	started  sync.Map // taskID -> bool, so Run is idempotent per task
+	progress sync.Map // taskID -> *taskProgress
 	lastAct  sync.Map // taskID -> int64 unix, last planner/worker activity (heartbeat)
 	llmCalls sync.Map // taskID -> *int64, actual planner/worker/main-agent LLM calls
 	paused   sync.Map // taskID -> bool, user-paused (planner + workers idle but loops alive)
@@ -275,6 +276,7 @@ func (e *Engine) StopTask(taskID string) {
 	e.runtimeMu.Unlock()
 
 	e.started.Delete(taskID)
+	e.progress.Delete(taskID)
 	e.lastAct.Delete(taskID)
 	e.llmCalls.Delete(taskID)
 	e.paused.Delete(taskID)
@@ -638,6 +640,7 @@ func (e *Engine) Broadcaster() *Broadcaster { return e.bc }
 // emitActivity persists one captured step AND fans it out to live subscribers,
 // from a single point so storage and the SSE stream never diverge.
 func (e *Engine) emitActivity(t *Task, r db.Activity) db.Activity {
+	e.observeProgress(t.ID, r)
 	id, err := e.appendActivity(t, r)
 	if err != nil {
 		// NO LONGER SILENT: dropping a record breaks command↔result pairing in the

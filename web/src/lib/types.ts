@@ -26,6 +26,7 @@ export interface Task {
   findings?: { critical: number; high: number; medium: number; low: number }; // 已登记漏洞数(按严重度分档)
   last_activity?: string;
   stalled?: boolean;
+  diagnostic?: { code: string; message: string; advice: string; pending_approvals: number; active_tools: number; tool_elapsed_seconds: number };
   goals_total?: number;
   goals_met?: number;
   engine_mode?: EngineMode;

@@ -372,3 +372,10 @@ func (d *DB) listInterceptsPage(taskID string, page, size int, filter InterceptA
 	}
 	return out, total, rows.Err()
 }
+
+// PendingInterceptCount limits diagnostics to the selected task.
+func (d *DB) PendingInterceptCount(taskID string) (int, error) {
+	var n int
+	err := d.QueryRow(`SELECT count(*) FROM intercept_pending WHERE status='pending' AND task_id=$1`, taskID).Scan(&n)
+	return n, err
+}

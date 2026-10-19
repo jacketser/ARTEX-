@@ -899,6 +899,15 @@ export function OverviewTab({ taskId }: { taskId: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {stats?.active_task?.diagnostic && (
+            <div className="col-span-2 rounded-md border p-3 text-sm sm:col-span-4" role="status">
+              <p className="font-medium">{stats.active_task.diagnostic.message}</p>
+              <p className="mt-1 text-muted-foreground">{stats.active_task.diagnostic.advice}</p>
+              {stats.active_task.diagnostic.pending_approvals > 0 && (
+                <p className="mt-1">待审批：{stats.active_task.diagnostic.pending_approvals}</p>
+              )}
+            </div>
+          )}
           <div>
             <div className="text-xs text-muted-foreground">引擎态</div>
             <StatusBadge
