@@ -1,7 +1,8 @@
 # 当前云服务器部署与二次开发
 
 源码目录：`/home/ARTEX`。`origin` 指向 `jacketser/ARTEX-`，`upstream` 指向
-`trhhubsd/ARTEX`。部署配置和本次增强在本地 `feature/local-enhancements` 分支；是否推送由维护者决定。
+`trhhubsd/ARTEX`。部署配置和本次增强在 `feature/local-enhancements` 分支，该分支已推送到
+[GitHub](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
 
 ## 当前运行方式
 
@@ -67,6 +68,10 @@ ARTEX_LLM_CALL_TIMEOUT=900
 漏洞详情新增“证据与反证复核”，手动填写证据来源、复现条件、反证与限制；复核结论独立于
 漏洞处置状态。修改证据或相关结论内容后，旧复核标记过期。Markdown、ZIP、CSV、JSON
 报告导出包含复核信息。需要补充验证时继续使用原有“漏洞复测”；没有新增自动扫描或额外后台模型调用。
+
+当前版本没有加入完整二开项目的内网会话/隧道/凭据库、分布式节点、伪装入口、自动放行、
+蜜罐识别、Refresh Token 续期、宿主机冻结补偿或按漏洞类别自动反证。当前证据复核是人工流程，
+不能替代安全审阅，也不会自动判断漏洞真伪。
 
 新增 `finding_reviews` 表是增量迁移；回退旧镜像可保留这张表，旧版会忽略它。若需恢复数据，
 使用发布前备份；不要直接删除数据库卷。回退旧版认证实现会恢复旧版令牌校验方式，回退时应

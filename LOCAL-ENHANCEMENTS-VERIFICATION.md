@@ -3,9 +3,9 @@
 验收日期：2026-10-19（Asia/Shanghai）。
 
 - 源码目录：`/home/ARTEX`。
-- 本地分支：`feature/local-enhancements`，未推送远程仓库。
+- 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
 - 当前部署版本：`dev-2ac7047`，程序构建自提交 `2ac7047`。
-- 推荐的七项增强均已完成，范围、使用方法和限制见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 推荐的七项增强已完成约定的本地适配范围；其中结果反证是人工复核和既有复测的安全子集。完整未移植项、使用方法和限制见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
 
 ## 验证结果
@@ -35,6 +35,10 @@
 数据库测试使用临时 PostgreSQL，并以独立空库完成最终验收。浏览器验收中的任务和发现均为
 临时数据库里的合成样例，没有写入正式库；未执行真实模型调用或目标扫描。
 反证清单改善的是证据记录与人工核对流程，尚未进行真实模型误报/漏报或 Token 成本 A/B 评估。
+
+## 未移植功能
+
+本次验收不包含完整二开项目中的内网作战、会话/隧道/凭据库、分布式节点、伪装门控、限时自动放行、蜜罐识别、提示注入与敏感信息外发防护、宿主机冻结补偿、Refresh Token 自动续期，以及按漏洞类别自动反证。当前证据质量功能是人工复核和既有复测的安全子集，详情见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
 
 ## 发布与备份
 
