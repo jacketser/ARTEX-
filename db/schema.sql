@@ -1396,3 +1396,11 @@ CREATE TABLE IF NOT EXISTS finding_reviews (
     limitations TEXT NOT NULL DEFAULT '',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Per-task watchdog state: retry limits survive process restarts and cascade on deletion.
+CREATE TABLE IF NOT EXISTS task_recovery_state (
+ task_id BIGINT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+ attempts INTEGER NOT NULL DEFAULT 0 CHECK(attempts BETWEEN 0 AND 3),
+ last_attempt BIGINT NOT NULL DEFAULT 0,
+ progress_id BIGINT NOT NULL DEFAULT 0
+);

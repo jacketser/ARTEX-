@@ -13,6 +13,8 @@ import type {
   Agent,
   AgentDetail,
   AgentTrigger,
+  AutoReviewResult,
+  HoneypotResult,
   ArchiveBatchItem,
   Asset,
   AssetInterceptRule,
@@ -596,6 +598,10 @@ export const api = {
     get<Finding>(
       `/exploration/findings/${id}${contextTaskId ? `?context_task=${encodeURIComponent(contextTaskId)}` : ""}`,
     ),
+  autoReviewFinding: (id: string, signal?: AbortSignal) =>
+    http<{ fingerprint: string; review: AutoReviewResult }>(`/exploration/findings/${encodeURIComponent(id)}/auto-review`, { signal }),
+  assessHoneypots: (ids: number[]) =>
+    post<{ count: number; results: { id: number; result: HoneypotResult }[] }>("/assets/honeypot-scan", { ids }),
   findingTraffic: (id: string, contextTask?: string) =>
     get<FindingTraffic>(
       `/exploration/findings/${id}/traffic${contextTask ? `?context_task=${encodeURIComponent(contextTask)}` : ""}`,

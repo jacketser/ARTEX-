@@ -17,16 +17,17 @@ import (
 
 // Asset is a row in the assets table.
 type Asset struct {
-	ID         int64   `json:"id"`
-	Type       string  `json:"type"`
-	CompanyID  *int64  `json:"company_id,omitempty"`
-	TaskIDs    []int64 `json:"task_ids"`
-	Domain     string  `json:"domain,omitempty"`
-	RootDomain string  `json:"root_domain,omitempty"`
-	IP         string  `json:"ip,omitempty"`
-	CSegment   string  `json:"c_segment,omitempty"`
-	Port       *int    `json:"port,omitempty"`
-	ICP        string  `json:"icp,omitempty"`
+	Honeypot   map[string]any `json:"honeypot,omitempty"`
+	ID         int64          `json:"id"`
+	Type       string         `json:"type"`
+	CompanyID  *int64         `json:"company_id,omitempty"`
+	TaskIDs    []int64        `json:"task_ids"`
+	Domain     string         `json:"domain,omitempty"`
+	RootDomain string         `json:"root_domain,omitempty"`
+	IP         string         `json:"ip,omitempty"`
+	CSegment   string         `json:"c_segment,omitempty"`
+	Port       *int           `json:"port,omitempty"`
+	ICP        string         `json:"icp,omitempty"`
 	// ip fields
 	BoundDomains []string         `json:"bound_domains,omitempty"`
 	OpenPorts    []map[string]any `json:"open_ports,omitempty"`
@@ -1529,6 +1530,11 @@ func scanAssets(rows *sql.Rows) ([]*Asset, error) {
 		}
 		if len(extraRaw) > 0 {
 			_ = json.Unmarshal(extraRaw, &a.Extra)
+		}
+		if a.Extra != nil {
+			if value, ok := a.Extra["honeypot"].(map[string]any); ok {
+				a.Honeypot = value
+			}
 		}
 		out = append(out, a)
 	}

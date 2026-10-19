@@ -899,6 +899,13 @@ export function OverviewTab({ taskId }: { taskId: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {stats?.active_task?.auto_recovery && (
+            <div className="col-span-2 rounded-md border p-3 text-sm sm:col-span-4" role="status">
+              <p className="font-medium">自动恢复：{stats.active_task.auto_recovery.message}</p>
+              <p className="text-muted-foreground">已尝试 {stats.active_task.auto_recovery.attempts}/{stats.active_task.auto_recovery.max_attempts} 次；只唤醒调度，不重放工具。</p>
+              {stats.active_task.auto_recovery.last_attempt > 0 && <p>上次唤醒：{new Date(stats.active_task.auto_recovery.last_attempt * 1000).toLocaleString("zh-CN")}</p>}
+            </div>
+          )}
           {stats?.active_task?.diagnostic && (
             <div className="col-span-2 rounded-md border p-3 text-sm sm:col-span-4" role="status">
               <p className="font-medium">{stats.active_task.diagnostic.message}</p>

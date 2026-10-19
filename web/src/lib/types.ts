@@ -26,6 +26,7 @@ export interface Task {
   findings?: { critical: number; high: number; medium: number; low: number }; // 已登记漏洞数(按严重度分档)
   last_activity?: string;
   stalled?: boolean;
+  auto_recovery?: { enabled: boolean; attempts: number; max_attempts: number; last_attempt: number; available: boolean; message: string };
   diagnostic?: { code: string; message: string; advice: string; pending_approvals: number; active_tools: number; tool_elapsed_seconds: number };
   goals_total?: number;
   goals_met?: number;
@@ -220,7 +221,20 @@ export interface TaskAssetView {
 // ---- New unified asset model (new backend) ----
 export type NewAssetType = "root_domain" | "ip" | "subdomain" | "app" | "service" | "endpoint";
 
+export interface HoneypotResult {
+  version: string;
+  fingerprint: string;
+  matched: boolean;
+  score: number;
+  confidence: "none" | "low" | "medium" | "high";
+  provider?: string;
+  signals: string[];
+  evidence: string[];
+  limitations: string;
+}
+
 export interface Asset {
+  honeypot?: HoneypotResult;
   id: number;
   type: NewAssetType;
   company_id?: number;
@@ -511,6 +525,15 @@ export interface Finding {
   inherited?: boolean;
   assets?: FindingAsset[];
   ts: string;
+}
+
+export interface AutoReviewResult {
+  basis: string;
+  suggestions: string[];
+  verdict: "supported" | "refuted" | "inconclusive";
+  checks: { key: string; label: string; passed: boolean; details?: string }[];
+  missing: string[];
+  warnings: string[];
 }
 
 // FindingsPage 是发现列表的服务端分页响应。
@@ -944,6 +967,7 @@ export interface Settings {
   // worker/主 agent/对话)由 noa 接管上下文压缩,取代内置 compaction;每 run 读一次,对
   // 之后启动的 run 生效。
   noa_compaction?: boolean;
+  auto_recovery_enabled?: boolean;
   // ---- 漏洞 IM 推送（渠道本身是独立资源，见 /api/notify/*，这里只有三项全局配置）----
   notify_enabled?: boolean; // 推送总开关，默认开；用于维护期一键止血
   notify_public_base_url?: string; // 漏洞详情回链的外部访问地址；空=消息不带回链

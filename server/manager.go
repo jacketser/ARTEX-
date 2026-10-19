@@ -275,6 +275,7 @@ const (
 	// agent(planner/worker/主 agent/对话)由 noa 接管上下文压缩,取代内置 compaction。
 	// 每 run 读一次,切换只影响之后启动的 run。
 	settingNoaCompaction = "noa_compaction"
+	settingAutoRecovery  = "auto_recovery_enabled"
 	// defaultWebSearchBackend is used when web search is on but no backend was picked.
 	defaultWebSearchBackend = "ddgs"
 	// deepSeekWebSearchBackend borrows the active LLM profile instead of its own
@@ -286,6 +287,10 @@ const (
 	// is enabled but no explicit limit was saved.
 	defaultConcurrencyLimit = 5
 )
+
+func (m *Manager) AutoRecoveryEnabled() bool {
+	return m.pg.GetBool(settingAutoRecovery, true)
+}
 
 // ConcurrencyLimit returns whether the simultaneous-running-task cap is enabled and
 // its limit (default 5 when enabled but unset). limit is always >=1 when enabled.

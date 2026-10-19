@@ -744,6 +744,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/assets", s.listAssets)
 	mux.HandleFunc("GET /api/assets/counts", s.assetCounts)
 	mux.HandleFunc("POST /api/assets", s.insertAssets)
+	mux.HandleFunc("POST /api/assets/honeypot-scan", s.scanAssetHoneypot)
 	mux.HandleFunc("DELETE /api/assets", s.deleteAssets)
 
 	// company system
@@ -764,6 +765,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/exploration/findings/{id}", s.getFinding)
 	mux.HandleFunc("GET /api/exploration/findings/{id}/review", s.findingReview)
 	mux.HandleFunc("PUT /api/exploration/findings/{id}/review", s.findingReview)
+	mux.HandleFunc("POST /api/exploration/findings/{id}/auto-review", s.findingAutoReview)
+	mux.HandleFunc("GET /api/exploration/findings/{id}/auto-review", s.findingAutoReview)
 	mux.HandleFunc("GET /api/exploration/findings/{id}/lineage", s.findingLineage)
 	mux.HandleFunc("POST /api/exploration/findings/{id}/deepen", s.deepenFinding)
 	mux.HandleFunc("GET /api/exploration/findings/{id}/retests", s.listFindingRetests)
@@ -1031,6 +1034,7 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 		"in_flight":     inFlight,
 		"llm_in_flight": activeCalls,
 		"diagnostic":    diagnostic,
+		"auto_recovery": s.taskRecoveryStatus(r.Context(), t),
 		"last_activity": last,
 		"stalled":       stalled,
 		"goals_total":   len(goals),
@@ -3322,7 +3326,8 @@ func (s *Server) settingsPayload() map[string]any {
 		"constraints_inject_worker":  s.constraintInjectWorker(),
 		// 实验功能:noa 模型驱动上下文压缩(默认关)。开启后平台接入的四类 agent 由 noa
 		// 接管上下文压缩,取代内置 compaction;每 run 读一次,对之后启动的 run 生效。
-		"noa_compaction": s.m.NoaCompactionEnabled(),
+		"noa_compaction":        s.m.NoaCompactionEnabled(),
+		"auto_recovery_enabled": s.m.AutoRecoveryEnabled(),
 		// 漏洞 IM 推送的全局项。渠道本身是独立资源，走 /api/notify/* 管理；
 		// 这里只放「作用于全部渠道」的三项。
 		"notify_enabled":             s.m.pg.GetBool(settingNotifyEnabled, true),
@@ -3395,6 +3400,7 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 		ConstraintsInjectWorker  *bool `json:"constraints_inject_worker"`
 		// 实验功能:noa 上下文压缩开关(默认关);每 run 读,对之后启动的 run 生效,无需重建 agent。
 		NoaCompaction *bool `json:"noa_compaction"`
+		AutoRecovery  *bool `json:"auto_recovery_enabled"`
 		// 漏洞 IM 推送的全局项。三者都由投递引擎每轮读一次，改完即时生效，
 		// 不需要重建 agent 或重启。
 		NotifyEnabled    *bool   `json:"notify_enabled"`
@@ -3420,6 +3426,12 @@ func (s *Server) putSettings(w http.ResponseWriter, r *http.Request) {
 	if req.NoaCompaction != nil {
 		// 每 run 读的解析器,切换即时对之后启动的 run 生效,无需 applyLLM 重建。
 		if err := s.m.SetNoaCompaction(*req.NoaCompaction); err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+	}
+	if req.AutoRecovery != nil {
+		if err := s.m.pg.SetBool(settingAutoRecovery, *req.AutoRecovery); err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}

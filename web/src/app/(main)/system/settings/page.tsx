@@ -43,6 +43,7 @@ export default function SystemSettingsPage() {
   const [injectWorker, setInjectWorker] = React.useState(true);
   // 实验功能:noa 上下文压缩(默认关)。
   const [noaCompaction, setNoaCompaction] = React.useState(false);
+  const [autoRecovery, setAutoRecovery] = React.useState(true);
   // 纯前端偏好：不走 /api/settings，直接读写 localStorage。
   const sendMode = useChatSendMode();
 
@@ -60,6 +61,7 @@ export default function SystemSettingsPage() {
     setInjectPlanner(s.constraints_inject_planner !== false);
     setInjectWorker(s.constraints_inject_worker !== false);
     setNoaCompaction(!!s.noa_compaction);
+    setAutoRecovery(s.auto_recovery_enabled !== false);
   }, []);
 
   const saveWorkers = () => {
@@ -161,6 +163,11 @@ export default function SystemSettingsPage() {
         setNoaCompaction(!v); // revert on failure
         toast.error(`保存失败：${(e as Error).message}`);
       });
+  };
+
+  const toggleAutoRecovery = (v: boolean) => {
+    setAutoRecovery(v);
+    api.setSettings({ auto_recovery_enabled: v }).then(apply).catch(() => setAutoRecovery(!v));
   };
 
   // Persist a web-search patch (enable and/or backend). Optimistic with refetch.
@@ -292,6 +299,17 @@ export default function SystemSettingsPage() {
               disabled={!loaded || saving}
               onCheckedChange={toggleTraffic}
             />
+          </CardContent>
+        </Card>
+
+        <Card className="mb-4 break-inside-avoid md:mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><ShieldAlertIcon className="size-4" />任务卡住自动恢复</CardTitle>
+            <CardDescription>任务有待执行或运行中意图，超过 120 秒无活动，且没有审批、模型调用、工具或任务操作执行时，唤醒调度。冷却 5 分钟，连续最多 3 次，重启保留计数；实际 Worker 完成或人工输入后可重置次数。暂停、排队、终态和超时收尾任务不会唤醒。</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <Label htmlFor="auto-recovery" className="text-sm font-normal text-muted-foreground">自动唤醒{autoRecovery ? " · 已开启" : " · 已关闭"}</Label>
+            <Switch id="auto-recovery" checked={autoRecovery} disabled={!loaded} onCheckedChange={toggleAutoRecovery} />
           </CardContent>
         </Card>
 

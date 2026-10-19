@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { HoneypotAssessment, HoneypotScanButton } from "@/components/honeypot-assessment";
 import { AssetDslSearch } from "@/components/asset-dsl-search";
 import { ScopeTextEditor } from "@/components/scope-text-editor";
 import {
@@ -589,8 +590,12 @@ export default function AssetsPage() {
         {/* 服务 */}
         <TabsContent value="service" className="mt-0 flex min-h-0 flex-1 flex-col gap-2">
           {searchBox}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <HoneypotScanButton assets={currentRows} onResults={(items) => setRows((prev) => prev.map((a) => ({ ...a, honeypot: items.find((item) => item.id === a.id)?.result ?? a.honeypot })))} />
+            基于已保存元数据自动提示；未发现签名不代表安全。
+          </div>
           <AssetCard
-            cols={["", "服务", "域名", "IP", "端口", "状态码", "标题", "指纹", "认证", ""]}
+            cols={["", "服务", "域名", "IP", "端口", "状态码", "标题", "指纹", "蜜罐提示", "认证", ""]}
             loaded={loaded}
             total={total}
             page={page}
@@ -649,6 +654,7 @@ export default function AssetsPage() {
                   <TableCell>
                     <Chips items={a.technologies ?? []} />
                   </TableCell>
+                  <TableCell><HoneypotAssessment asset={a} /></TableCell>
                   <TableCell>
                     {(a.auth ?? []).length === 0 ? (
                       <span className="text-xs text-muted-foreground">—</span>
