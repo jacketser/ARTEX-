@@ -43,8 +43,9 @@ type Server struct {
 	engine *Engine
 	ctx    context.Context
 
-	skillDir string // root directory for skill subdirectories
-	jwtKey   []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
+	sseTickets sseTicketStore
+	skillDir   string // root directory for skill subdirectories
+	jwtKey     []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
 
 	// concMu serializes concurrency-cap decisions (admission + reconcile) so a
 	// scheduler tick and an HTTP settings change / task creation can't both count
@@ -652,6 +653,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerSideRoutes(mux)
 
 	// Auth routes — exempt from JWT check (handled in requireAuth)
+	mux.HandleFunc("POST /api/sse-ticket", s.issueSSETicket)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
 	mux.HandleFunc("POST /api/auth/init", s.authInit)
 	mux.HandleFunc("POST /api/auth/login", s.authLogin)

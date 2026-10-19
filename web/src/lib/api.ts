@@ -3,6 +3,7 @@
 // a few fields the backend serializes differently (e.g. created_at as a unix int)
 // are passed through and formatted at the call site.
 
+import { TicketEventSource } from "@/lib/sse";
 import type { ChatMention } from "@/lib/chat-mentions";
 import { MOCK } from "@/lib/mock/enabled";
 import { mockHandle } from "@/lib/mock/handler";
@@ -147,7 +148,7 @@ export async function http<T>(path: string, init?: RequestInit): Promise<T> {
   return r.json();
 }
 
-// sseUrl builds a URL for Server-Sent Events streams.
+// Real-time streams use route-bound, short-lived tickets.
 //
 // Production (static export / Docker): the Go backend serves the web UI *and* the
 // SSE streams on the same port, so we default to a same-origin (relative) URL.
@@ -186,15 +187,17 @@ function mockReport(_task?: string): string {
 > （demo）本报告由 mock 数据生成，仅用于界面演示。`;
 }
 
-export function sseUrl(path: string): string {
-  const base =
-    process.env.NEXT_PUBLIC_SSE_BASE ??
-    (process.env.NODE_ENV !== "production" && typeof window !== "undefined"
-      ? `${window.location.protocol}//${window.location.hostname}:8787`
-      : "");
-  const token = getToken();
-  const sep = path.includes("?") ? "&" : "?";
-  return token ? `${base}${path}${sep}token=${encodeURIComponent(token)}` : `${base}${path}`;
+export function openEventStream(path: string): TicketEventSource {
+  return new TicketEventSource(path, async (route, signal) => {
+    const base = process.env.NEXT_PUBLIC_SSE_BASE ??
+      (process.env.NODE_ENV !== "production" && typeof window !== "undefined"
+        ? `${window.location.protocol}//${window.location.hostname}:8787` : "");
+    if (MOCK) return `${base}${route}`;
+    const { ticket } = await http<{ ticket: string }>("/sse-ticket", {
+      method: "POST", body: JSON.stringify({ path: route }), signal,
+    });
+    return `${base}${route}${route.includes("?") ? "&" : "?"}ticket=${encodeURIComponent(ticket)}`;
+  });
 }
 
 const get = <T>(p: string) => http<T>(p);

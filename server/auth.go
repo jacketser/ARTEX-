@@ -121,7 +121,7 @@ func (s *Server) validSession(token string) (bool, error) {
 }
 
 // extractToken reads the JWT from Authorization: Bearer header,
-// artex_token cookie, or ?token= query param (for SSE connections).
+// or artex_token cookie. Long-lived credentials are never read from URLs.
 func extractToken(r *http.Request) string {
 	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
 		return strings.TrimPrefix(h, "Bearer ")
@@ -129,7 +129,7 @@ func extractToken(r *http.Request) string {
 	if c, err := r.Cookie("artex_token"); err == nil && c.Value != "" {
 		return c.Value
 	}
-	return r.URL.Query().Get("token")
+	return ""
 }
 
 // requireAuth wraps h with JWT validation.
@@ -142,6 +142,24 @@ func (s *Server) requireAuth(h http.Handler) http.Handler {
 			return
 		}
 		tok := extractToken(r)
+		routeURL := *r.URL
+		query := routeURL.Query()
+		ticket := query.Get("ticket")
+		query.Del("ticket")
+		routeURL.RawQuery = query.Encode()
+		streamRoute, isStream := sseRoute(routeURL.RequestURI())
+		if r.URL.Query().Has("ticket") {
+			var ok bool
+			if r.Method != http.MethodGet || !isStream {
+				writeErr(w, 401, "票据接口无效")
+				return
+			}
+			tok, ok = s.sseTickets.consume(ticket, streamRoute, time.Now())
+			if !ok {
+				writeErr(w, 401, "票据无效或已过期")
+				return
+			}
+		}
 		if tok == "" {
 			writeErr(w, 401, "未授权")
 			return
@@ -153,6 +171,10 @@ func (s *Server) requireAuth(h http.Handler) http.Handler {
 		}
 		if !valid {
 			writeErr(w, 401, "token 无效或已过期")
+			return
+		}
+		if isStream && r.Method == http.MethodGet {
+			s.serveAuthenticatedStream(h, w, r, tok)
 			return
 		}
 		h.ServeHTTP(w, r)
