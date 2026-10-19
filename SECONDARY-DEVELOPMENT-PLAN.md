@@ -74,6 +74,8 @@
 
 ### 验证记录
 
+发布版本、浏览器验收和备份位置见 [本地增强验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
+
 - 独立 PostgreSQL 测试实例，不使用正式数据库运行测试。
 - 前端 TypeScript 检查与生产静态构建通过；SSE 重新领票、游标恢复和卸载清理测试通过。
 - Go 全套回归中，`agent.TestGraphOverviewExpandsAssociatedCompanyScope` 在原版提交 `4379d69` 和本分支均失败（`task scope missing: <nil>`）；其他包通过。这项既有问题未混入本次功能移植修复。
