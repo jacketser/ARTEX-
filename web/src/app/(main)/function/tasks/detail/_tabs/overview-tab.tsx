@@ -1,4 +1,5 @@
 "use client";
+import { RecoveryHistory } from "@/components/recovery-controls";
 
 import * as React from "react";
 
@@ -900,10 +901,11 @@ export function OverviewTab({ taskId }: { taskId: string }) {
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {stats?.active_task?.auto_recovery && (
-            <div className="col-span-2 rounded-md border p-3 text-sm sm:col-span-4" role="status">
+            <div className="col-span-2 rounded-md border p-3 text-sm sm:col-span-4" role={stats.active_task.auto_recovery.needs_attention ? "alert" : "status"}>
               <p className="font-medium">自动恢复：{stats.active_task.auto_recovery.message}</p>
               <p className="text-muted-foreground">已尝试 {stats.active_task.auto_recovery.attempts}/{stats.active_task.auto_recovery.max_attempts} 次；只唤醒调度，不重放工具。</p>
               {stats.active_task.auto_recovery.last_attempt > 0 && <p>上次唤醒：{new Date(stats.active_task.auto_recovery.last_attempt * 1000).toLocaleString("zh-CN")}</p>}
+ <RecoveryHistory taskId={taskId} recent={stats.active_task.auto_recovery.history??[]} />
             </div>
           )}
           {stats?.active_task?.diagnostic && (

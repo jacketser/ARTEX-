@@ -1,4 +1,5 @@
 "use client";
+import { RecoveryAlerts } from "@/components/recovery-controls";
 
 import * as React from "react";
 
@@ -784,6 +785,7 @@ export default function TasksPage() {
         <TabsTrigger value="archived">已归档</TabsTrigger>
       </TabsList>
       <TabsContent value="current">
+ <RecoveryAlerts />
         <Card>
           <CardContent className="flex flex-col gap-4 px-0 pt-6">
             <div className="flex flex-wrap items-center gap-2 px-4 lg:px-6">

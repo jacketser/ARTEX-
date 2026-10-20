@@ -1404,3 +1404,68 @@ CREATE TABLE IF NOT EXISTS task_recovery_state (
  last_attempt BIGINT NOT NULL DEFAULT 0,
  progress_id BIGINT NOT NULL DEFAULT 0
 );
+
+-- Recovery outcome ledger: one record per reserved wake, retained for the task lifetime.
+CREATE TABLE IF NOT EXISTS task_recovery_history (
+ id BIGSERIAL PRIMARY KEY,
+ task_id BIGINT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+ attempt INTEGER NOT NULL,
+ started_at BIGINT NOT NULL,
+ observe_until BIGINT NOT NULL,
+ progress_id BIGINT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'observing' CHECK(status IN ('observing','recovered','no_progress','interrupted')),
+ finished_at BIGINT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_recovery_history_task ON task_recovery_history(task_id,id DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_recovery_observing ON task_recovery_history(task_id) WHERE status='observing';
+
+-- Queue metadata-only reassessment. Updates to assessment/review metadata never requeue themselves.
+CREATE TABLE IF NOT EXISTS asset_honeypot_pending (
+ asset_id BIGINT PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE,
+ queued_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE OR REPLACE FUNCTION mark_honeypot_stale() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NEW.type='service' AND (TG_OP='INSERT' OR NEW.type IS DISTINCT FROM OLD.type OR
+ ROW(NEW.service_name,NEW.page_title,NEW.technologies,NEW.extra->'banner',NEW.extra->'server_header',NEW.extra->'powered_by',NEW.extra->'response_summary')
+ IS DISTINCT FROM ROW(OLD.service_name,OLD.page_title,OLD.technologies,OLD.extra->'banner',OLD.extra->'server_header',OLD.extra->'powered_by',OLD.extra->'response_summary')) THEN
+  NEW.extra=jsonb_set(COALESCE(NEW.extra,'{}'),'{honeypot_stale}','true',true);
+  IF NEW.extra ? 'honeypot_review' THEN
+   NEW.extra=jsonb_set(NEW.extra,'{honeypot_review,stale}','true',true);
+  END IF;
+ END IF;
+ RETURN NEW;
+END; $$;
+CREATE OR REPLACE FUNCTION queue_honeypot_refresh() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NEW.type='service' AND NEW.extra->>'honeypot_stale'='true' THEN
+  INSERT INTO asset_honeypot_pending(asset_id) VALUES(NEW.id) ON CONFLICT(asset_id) DO NOTHING;
+ END IF;
+ RETURN NEW;
+END; $$;
+DROP TRIGGER IF EXISTS trg_honeypot_stale ON assets;
+CREATE TRIGGER trg_honeypot_stale BEFORE INSERT OR UPDATE ON assets FOR EACH ROW EXECUTE FUNCTION mark_honeypot_stale();
+DROP TRIGGER IF EXISTS trg_honeypot_queue ON assets;
+CREATE TRIGGER trg_honeypot_queue AFTER INSERT OR UPDATE ON assets FOR EACH ROW EXECUTE FUNCTION queue_honeypot_refresh();
+INSERT INTO asset_honeypot_pending(asset_id) SELECT id FROM assets WHERE type='service'
+ AND (NOT (extra ? 'honeypot') OR extra->>'honeypot_stale'='true') ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS finding_review_history (
+ id BIGSERIAL PRIMARY KEY,
+ finding_id BIGINT NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+ kind TEXT NOT NULL CHECK(kind IN ('manual','automatic')),
+ fingerprint TEXT NOT NULL,
+ result JSONB NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_finding_review_history ON finding_review_history(finding_id,id DESC);
+CREATE OR REPLACE FUNCTION archive_manual_review() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ INSERT INTO finding_review_history(finding_id,kind,fingerprint,result) VALUES(NEW.finding_id,'manual',NEW.fingerprint,to_jsonb(NEW));
+ RETURN NEW;
+END; $$;
+DROP TRIGGER IF EXISTS trg_review_history ON finding_reviews;
+CREATE TRIGGER trg_review_history AFTER INSERT OR UPDATE ON finding_reviews FOR EACH ROW EXECUTE FUNCTION archive_manual_review();
+INSERT INTO finding_review_history(finding_id,kind,fingerprint,result,created_at)
+ SELECT r.finding_id,'manual',r.fingerprint,to_jsonb(r),r.updated_at FROM finding_reviews r
+ WHERE NOT EXISTS(SELECT 1 FROM finding_review_history h WHERE h.finding_id=r.finding_id AND h.kind='manual');

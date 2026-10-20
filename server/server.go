@@ -745,6 +745,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/assets/counts", s.assetCounts)
 	mux.HandleFunc("POST /api/assets", s.insertAssets)
 	mux.HandleFunc("POST /api/assets/honeypot-scan", s.scanAssetHoneypot)
+	mux.HandleFunc("PUT /api/assets/{id}/honeypot-review", s.reviewHoneypot)
+	mux.HandleFunc("GET /api/tasks/{id}/recovery-history", s.recoveryHistory)
+	mux.HandleFunc("GET /api/recovery-alerts", s.recoveryAlerts)
+	mux.HandleFunc("GET /api/settings/auto-recovery", s.recoverySettings)
+	mux.HandleFunc("PUT /api/settings/auto-recovery", s.recoverySettings)
 	mux.HandleFunc("DELETE /api/assets", s.deleteAssets)
 
 	// company system
@@ -767,6 +772,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/exploration/findings/{id}/review", s.findingReview)
 	mux.HandleFunc("POST /api/exploration/findings/{id}/auto-review", s.findingAutoReview)
 	mux.HandleFunc("GET /api/exploration/findings/{id}/auto-review", s.findingAutoReview)
+	mux.HandleFunc("GET /api/exploration/findings/{id}/review-history", s.findingReviewHistory)
 	mux.HandleFunc("GET /api/exploration/findings/{id}/lineage", s.findingLineage)
 	mux.HandleFunc("POST /api/exploration/findings/{id}/deepen", s.deepenFinding)
 	mux.HandleFunc("GET /api/exploration/findings/{id}/retests", s.listFindingRetests)

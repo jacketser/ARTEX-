@@ -598,8 +598,8 @@ export const api = {
     get<Finding>(
       `/exploration/findings/${id}${contextTaskId ? `?context_task=${encodeURIComponent(contextTaskId)}` : ""}`,
     ),
-  autoReviewFinding: (id: string, signal?: AbortSignal) =>
-    http<{ fingerprint: string; review: AutoReviewResult }>(`/exploration/findings/${encodeURIComponent(id)}/auto-review`, { signal }),
+  autoReviewFinding: (id: string, signal?: AbortSignal, save = false) =>
+    http<{ fingerprint: string; review: AutoReviewResult }>(`/exploration/findings/${encodeURIComponent(id)}/auto-review`, { signal, method: save ? "POST" : "GET" }),
   assessHoneypots: (ids: number[]) =>
     post<{ count: number; results: { id: number; result: HoneypotResult }[] }>("/assets/honeypot-scan", { ids }),
   findingTraffic: (id: string, contextTask?: string) =>

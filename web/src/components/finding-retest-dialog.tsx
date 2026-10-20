@@ -23,14 +23,21 @@ import type { FindingRetest } from "@/lib/types";
 interface FindingRetestDialogProps {
   findingId: string;
   findingName?: string;
+  initialNotes?: string;
   onClose: () => void;
   onStarted?: (retest: FindingRetest) => void;
 }
 
 // 仅在打开时挂载，关闭后清空说明；列表与详情共用提交锁及错误处理，启动后留在当前页。
-export function FindingRetestDialog({ findingId, findingName, onClose, onStarted }: FindingRetestDialogProps) {
+export function FindingRetestDialog({
+  findingId,
+  findingName,
+  initialNotes = "",
+  onClose,
+  onStarted,
+}: FindingRetestDialogProps) {
   const notesId = React.useId();
-  const [notes, setNotes] = React.useState("");
+  const [notes, setNotes] = React.useState(initialNotes.slice(0, 4000));
   const [submitting, setSubmitting] = React.useState(false);
   const submitLock = React.useRef(false);
 

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { HoneypotAssessment, HoneypotScanButton } from "@/components/honeypot-assessment";
+import { HoneypotAssessment, HoneypotScanButton, HoneypotFilter } from "@/components/honeypot-assessment";
 import { AssetDslSearch } from "@/components/asset-dsl-search";
 import { ScopeTextEditor } from "@/components/scope-text-editor";
 import {
@@ -591,8 +591,8 @@ export default function AssetsPage() {
         <TabsContent value="service" className="mt-0 flex min-h-0 flex-1 flex-col gap-2">
           {searchBox}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <HoneypotScanButton assets={currentRows} onResults={(items) => setRows((prev) => prev.map((a) => ({ ...a, honeypot: items.find((item) => item.id === a.id)?.result ?? a.honeypot })))} />
-            基于已保存元数据自动提示；未发现签名不代表安全。
+            <HoneypotFilter onPick={(value)=>{setQuery(value ? `honeypot==${value}` : "");setPage(0)}} /><HoneypotScanButton assets={currentRows} onResults={(items) => setRows((prev) => prev.map((a) => ({ ...a, honeypot: items.find((item) => item.id === a.id)?.result ?? a.honeypot })))} />
+            元数据变化后自动重评；未发现签名不代表不是蜜罐。
           </div>
           <AssetCard
             cols={["", "服务", "域名", "IP", "端口", "状态码", "标题", "指纹", "蜜罐提示", "认证", ""]}
@@ -654,7 +654,7 @@ export default function AssetsPage() {
                   <TableCell>
                     <Chips items={a.technologies ?? []} />
                   </TableCell>
-                  <TableCell><HoneypotAssessment asset={a} /></TableCell>
+                  <TableCell><HoneypotAssessment asset={a} onChanged={refresh} /></TableCell>
                   <TableCell>
                     {(a.auth ?? []).length === 0 ? (
                       <span className="text-xs text-muted-foreground">—</span>

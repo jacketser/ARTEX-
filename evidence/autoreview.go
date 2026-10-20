@@ -7,12 +7,13 @@ import (
 )
 
 type AutoReview struct {
-	Verdict     string        `json:"verdict"`
-	Basis       string        `json:"basis"`
-	Checks      []ReviewCheck `json:"checks"`
-	Missing     []string      `json:"missing"`
-	Warnings    []string      `json:"warnings"`
-	Suggestions []string      `json:"suggestions"`
+	Comparisons []TrafficComparison `json:"comparisons"`
+	Verdict     string              `json:"verdict"`
+	Basis       string              `json:"basis"`
+	Checks      []ReviewCheck       `json:"checks"`
+	Missing     []string            `json:"missing"`
+	Warnings    []string            `json:"warnings"`
+	Suggestions []string            `json:"suggestions"`
 }
 type ReviewCheck struct {
 	Key     string `json:"key"`

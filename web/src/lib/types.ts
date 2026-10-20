@@ -26,7 +26,7 @@ export interface Task {
   findings?: { critical: number; high: number; medium: number; low: number }; // 已登记漏洞数(按严重度分档)
   last_activity?: string;
   stalled?: boolean;
-  auto_recovery?: { enabled: boolean; attempts: number; max_attempts: number; last_attempt: number; available: boolean; message: string };
+  auto_recovery?: { history: {id:number;task_id:string;attempt:number;started_at:number;observe_until:number;finished_at:number;status:string}[]; needs_attention:boolean; enabled: boolean; attempts: number; max_attempts: number; last_attempt: number; available: boolean; message: string };
   diagnostic?: { code: string; message: string; advice: string; pending_approvals: number; active_tools: number; tool_elapsed_seconds: number };
   goals_total?: number;
   goals_met?: number;
@@ -222,6 +222,8 @@ export interface TaskAssetView {
 export type NewAssetType = "root_domain" | "ip" | "subdomain" | "app" | "service" | "endpoint";
 
 export interface HoneypotResult {
+ stale?: boolean;
+ assessed_at?: number;
   version: string;
   fingerprint: string;
   matched: boolean;
@@ -235,6 +237,7 @@ export interface HoneypotResult {
 
 export interface Asset {
   honeypot?: HoneypotResult;
+ honeypot_review?: {fingerprint:string;verdict:"confirmed"|"excluded"|"unreviewed";note:string;updated_at:number;stale:boolean};
   id: number;
   type: NewAssetType;
   company_id?: number;
@@ -528,6 +531,7 @@ export interface Finding {
 }
 
 export interface AutoReviewResult {
+ comparisons?: {baseline_id:string;proof_id:string;differences:string[];limitation:string;bodies:{side:string;status:string;baseline_length:number;proof_length:number;first_difference?:number;details:string}[]}[];
   basis: string;
   suggestions: string[];
   verdict: "supported" | "refuted" | "inconclusive";

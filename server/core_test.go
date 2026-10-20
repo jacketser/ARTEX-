@@ -24,7 +24,9 @@ func TestCoreTaskLifecyclePG(t *testing.T) {
 	}
 	defer m.Close()
 	td := t.TempDir()
-	s := New(context.Background(), m, td, td, td)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s := New(ctx, m, td, td, td)
 	h := s.Handler()
 	tok, err := signTestJWT(t, s)
 	if err != nil {
@@ -74,7 +76,8 @@ func TestCoreTaskLifecyclePG(t *testing.T) {
 
 	// the exploration owns goal node(s) — goal seeding is async, poll briefly
 	var goals []*db.Node
-	for i := 0; i < 30; i++ {
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
 		goals, err = m.pg.Exploration(expID).ListByKind("goal", 10)
 		if err != nil || len(goals) > 0 {
 			break

@@ -23,6 +23,8 @@ type Input struct {
 	ResponseSummary string   `json:"response_summary"`
 }
 type Result struct {
+	Stale       bool     `json:"stale"`
+	AssessedAt  int64    `json:"assessed_at"`
 	Version     string   `json:"version"`
 	Fingerprint string   `json:"fingerprint"`
 	Matched     bool     `json:"matched"`

@@ -3,7 +3,9 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"time"
 )
 
 // FindingAutoReviewContext reads one consistent snapshot without target access.
@@ -51,4 +53,53 @@ func (d *DB) FindingAutoReviewContext(ctx context.Context, id int64) (*DBFinding
 		return nil, nil, err
 	}
 	return f, retests, nil
+}
+
+type ReviewHistoryEntry struct {
+	ID          int64           `json:"id"`
+	Kind        string          `json:"kind"`
+	Fingerprint string          `json:"fingerprint"`
+	Result      json.RawMessage `json:"result"`
+	CreatedAt   time.Time       `json:"created_at"`
+}
+
+func (d *DB) SaveAutomaticReview(ctx context.Context, id int64, fingerprint string, result any) error {
+	raw, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	tx, err := d.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	f := &DBFinding{}
+	err = tx.QueryRowContext(ctx, `SELECT evidence_version,vulnclass,severity,summary,evidence FROM findings WHERE id=$1 FOR UPDATE`, id).Scan(&f.EvidenceVersion, &f.VulnClass, &f.Severity, &f.Summary, &f.Evidence)
+	if err != nil {
+		return err
+	}
+	if FindingFingerprint(f) != fingerprint {
+		return ErrReviewStale
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO finding_review_history(finding_id,kind,fingerprint,result) VALUES($1,'automatic',$2,$3::jsonb)`, id, fingerprint, string(raw))
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+func (d *DB) FindingReviewHistory(ctx context.Context, id, before int64) ([]ReviewHistoryEntry, error) {
+	rows, err := d.QueryContext(ctx, `SELECT id,kind,fingerprint,result,created_at FROM finding_review_history WHERE finding_id=$1 AND ($2::bigint=0 OR id<$2) ORDER BY id DESC LIMIT 50`, id, before)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []ReviewHistoryEntry{}
+	for rows.Next() {
+		var e ReviewHistoryEntry
+		if err = rows.Scan(&e.ID, &e.Kind, &e.Fingerprint, &e.Result, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }

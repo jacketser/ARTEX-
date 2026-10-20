@@ -67,7 +67,10 @@ export function FindingRetestPanel({
 
   React.useEffect(() => {
     void load();
+    const refresh = () => void load();
+    window.addEventListener("finding-retest-started", refresh);
     return () => {
+      window.removeEventListener("finding-retest-started", refresh);
       requestSeq.current++;
     };
   }, [load]);

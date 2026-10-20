@@ -524,6 +524,67 @@ func (t *ToolSet) graphOverviewData() map[string]any {
 	if t.as != nil && t.ts != nil && t.taskID > 0 {
 		{
 			m := map[string]any{}
+			// Scope is authorization context, independent of coverage metrics.
+			if rows, err := t.as.ListTaskScope(t.taskID); err == nil {
+				m["scope_count"] = len(rows)
+				m["scope_truncated"] = len(rows) > 50
+				if len(rows) > 50 {
+					rows = rows[:50]
+				}
+				scope := []map[string]any{}
+				budget := overviewTextBudget{remaining: 16000}
+				for _, row := range rows {
+					entry := map[string]any{"kind": row.Kind, "source": row.Source, "value": budget.take(row.Value, 400)}
+					if row.Domain != "" {
+						entry["value"] = budget.take(row.Domain, 400)
+					}
+					if row.Net != "" {
+						entry["value"] = budget.take(row.Net, 400)
+					}
+					if row.CompanyID != nil {
+						entry["company_id"] = *row.CompanyID
+						entry["company_name"] = budget.take(row.CompanyName, 200)
+						if t.cs != nil {
+							if rules, err := t.cs.GetScope(*row.CompanyID); err == nil {
+								entry["company_scope_count"] = len(rules)
+								entry["company_scope_truncated"] = len(rules) > 50
+								if len(rules) > 50 {
+									rules = rules[:50]
+								}
+								expanded := []map[string]any{}
+								keywords := []string{}
+								for _, rule := range rules {
+									value := rule.Value
+									if (rule.Kind == "icp" || rule.Kind == "keyword") && rule.Raw != "" {
+										value = rule.Raw
+									}
+									if rule.Domain != "" {
+										value = rule.Domain
+									}
+									if rule.Net != "" {
+										value = rule.Net
+									}
+									if rule.Kind == "ip" {
+										value = strings.TrimSuffix(strings.TrimSuffix(value, "/32"), "/128")
+									}
+									value = budget.take(value, 400)
+									expanded = append(expanded, map[string]any{"kind": rule.Kind, "value": value})
+									if rule.Kind == "keyword" {
+										keywords = append(keywords, value)
+									}
+								}
+								entry["company_scope"] = expanded
+								entry["company_keywords"] = keywords
+							} else {
+								entry["company_scope_error"] = "读取企业范围失败，请使用 list_companies 核对"
+							}
+						}
+					}
+					scope = append(scope, entry)
+				}
+				m["scope"] = scope
+				m["scope_text_truncated"] = budget.truncated
+			}
 			if !t.coverageDisabled {
 				if cov, err := t.as.TaskCoverageWithSources(t.taskID); err == nil {
 					m["denominator"] = cov.Denominator

@@ -28,6 +28,7 @@ func leafNode(e Expr) *astNode       { return &astNode{kind: "leaf", expr: &e} }
 // knownStringFields maps DSL field name → SQL column name.
 // NOTE: "type" is intentionally excluded — it is a separate parameter, not a DSL field.
 var knownStringFields = map[string]string{
+	"honeypot":     HoneypotStatusSQL,
 	"domain":       "domain",
 	"root_domain":  "root_domain",
 	"ip":           "ip",

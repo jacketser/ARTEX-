@@ -1,9 +1,15 @@
 package server
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
+	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/honeydetect"
@@ -46,8 +52,8 @@ func (s *Server) scanAssetHoneypot(w http.ResponseWriter, r *http.Request) {
 	}
 	results := make([]map[string]any, 0, len(assets))
 	for _, a := range assets {
-		result := honeydetect.Detect(honeyInput(a))
-		if err := as.SetHoneypot(a.ID, result); err != nil {
+		result, err := as.AssessHoneypot(r.Context(), a.ID, nil)
+		if err != nil {
 			writeErr(w, 500, "无法保存识别结果，请重试")
 			return
 		}
@@ -56,12 +62,43 @@ func (s *Server) scanAssetHoneypot(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"count": len(results), "results": results})
 }
 
-func honeyInput(a *db.Asset) honeydetect.Input {
-	get := func(key string) string {
-		if v, ok := a.Extra[key].(string); ok {
-			return v
-		}
-		return ""
+func honeyInput(a *db.Asset) honeydetect.Input { return db.HoneypotInput(a) }
+func (sc *Scheduler) refreshHoneypots() {
+	ctx, cancel := context.WithTimeout(sc.s.ctx, 2*time.Second)
+	defer cancel()
+	if err := sc.pg.Assets().RefreshHoneypots(ctx); err != nil && sc.s.ctx.Err() == nil {
+		log.Printf("[honeypot] metadata reassessment failed: %v", err)
 	}
-	return honeydetect.Input{Service: a.ServiceName, Title: a.PageTitle, Technologies: a.Technologies, Banner: get("banner"), ServerHeader: get("server_header"), PoweredBy: get("powered_by"), ResponseSummary: get("response_summary")}
+}
+func (s *Server) reviewHoneypot(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok || id <= 0 {
+		writeErr(w, 400, "无效资产编号")
+		return
+	}
+	var req map[string]string
+	r.Body = http.MaxBytesReader(w, r.Body, 8192)
+	if decode(r, &req) != nil || (req["verdict"] != "confirmed" && req["verdict"] != "excluded" && req["verdict"] != "unreviewed") || len(req["note"]) > 4000 || (req["verdict"] != "unreviewed" && strings.TrimSpace(req["note"]) == "") {
+		writeErr(w, 400, "请选择确认、排除或撤销，并填写不超过 4000 字节的依据")
+		return
+	}
+	_, err := s.assetStore().AssessHoneypot(r.Context(), id, req)
+	if errors.Is(err, db.ErrHoneypotStale) {
+		writeErr(w, 409, err.Error())
+		return
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		writeErr(w, 404, "资产不存在")
+		return
+	}
+	if err != nil {
+		writeErr(w, 500, "保存人工复核失败")
+		return
+	}
+	items, err := s.assetStore().GetByIDs([]int64{id})
+	if err != nil || len(items) != 1 {
+		writeErr(w, 500, "读取资产失败")
+		return
+	}
+	writeJSON(w, 200, items[0])
 }

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { HoneypotAssessment, HoneypotScanButton } from "@/components/honeypot-assessment";
+import { HoneypotAssessment, HoneypotScanButton, HoneypotFilter } from "@/components/honeypot-assessment";
 import { AssetDslSearch } from "@/components/asset-dsl-search";
 import { ScopeTextEditor } from "@/components/scope-text-editor";
 import {
@@ -589,7 +589,7 @@ export function AssetsTab({ taskId }: { taskId: string }) {
         </TabsContent>
 
         <TabsContent value="service" className="mt-0 flex min-h-0 flex-1 flex-col">
-          <div className="mb-2"><HoneypotScanButton assets={rows} onResults={(items) => setRows((prev) => prev.map((a) => ({ ...a, honeypot: items.find((item) => item.id === a.id)?.result ?? a.honeypot })))} /></div>
+          <div className="mb-2"><HoneypotFilter onPick={(value)=>{setQuery(value ? `honeypot==${value}` : "");setPage(0)}} /><HoneypotScanButton assets={rows} onResults={(items) => setRows((prev) => prev.map((a) => ({ ...a, honeypot: items.find((item) => item.id === a.id)?.result ?? a.honeypot })))} /></div>
           <AssetCard
             cols={["地址 / 服务", "状态码", "标题", "响应长度", "指纹", "蜜罐提示", "认证", "来源", "操作"]}
             {...commonCardProps}
@@ -620,7 +620,7 @@ export function AssetsTab({ taskId }: { taskId: string }) {
                   <TableCell>
                     <Chips items={asset.technologies ?? []} />
                   </TableCell>
-                  <TableCell><HoneypotAssessment asset={asset} /></TableCell>
+                  <TableCell><HoneypotAssessment asset={asset} onChanged={refresh} /></TableCell>
                   <TableCell>
                     {(asset.auth ?? []).length === 0 ? (
                       <span className="text-muted-foreground text-xs">—</span>

@@ -1,0 +1,56 @@
+name: regression
+on:
+  push:
+    branches: ["main", "master", "feature/**"]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: regression-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: verify
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: verify
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U verify -d verify"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      ARTEX_PG_DSN: postgres://verify:isolated-ci-only@localhost:5432/verify?sslmode=disable
+      GOMAXPROCS: "2"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+      # Packages share a disposable database; avoid inter-package fixture races.
+      - run: go test -p 1 ./... -count=1
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: node --experimental-transform-types --test src/lib/sse.test.ts src/lib/activity-merge.test.mjs src/lib/chat-mentions.test.mjs
+      - run: npm run build:static
