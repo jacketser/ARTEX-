@@ -1,5 +1,5 @@
 "use client";
-import { FreezeSettings, HoneyRulesSettings, ScenarioSettings } from "@/components/enhancement-settings";
+import { FreezeSettings, HoneyRulesSettings, ScenarioSettings, ProxySecuritySettings, HoneypotBehaviorSettings } from "@/components/enhancement-settings";
 import { RecoverySettings } from "@/components/recovery-controls";
 
 import * as React from "react";
@@ -329,6 +329,8 @@ export default function SystemSettingsPage() {
         </Card>
         <FreezeSettings />
         <HoneyRulesSettings />
+        <HoneypotBehaviorSettings />
+        <ProxySecuritySettings />
         <ScenarioSettings />
 
         <Card className="mb-4 break-inside-avoid md:mb-6">

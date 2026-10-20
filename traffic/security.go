@@ -14,8 +14,10 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	mproxy "github.com/lqqyt2423/go-mitmproxy/proxy"
@@ -30,9 +32,16 @@ type hostWindow struct {
 	urls                map[[32]byte]int
 }
 type securityGuard struct {
-	mu     sync.Mutex
-	hosts  map[string]*hostWindow
-	source func(context.Context) ([]string, error)
+	mu          sync.Mutex
+	hosts       map[string]*hostWindow
+	tasks       map[string]*hostWindow
+	config      *SecurityConfig
+	allowed     atomic.Uint64
+	unavailable atomic.Bool
+	blocked     map[string]uint64
+	owners      sync.Map
+	taskKey     []byte
+	source      func(context.Context) ([]string, error)
 }
 
 // SetSecretSource must be installed before serving traffic. Reads are bounded by
@@ -57,38 +66,8 @@ func (t *Traffic) secrets(ctx context.Context) ([]string, error) {
 // Per authority: allow ordinary scanners, stop tight loops / unbounded crawls.
 // Fixed one-minute windows and bounded maps prevent the guard itself growing.
 func (g *securityGuard) admit(host, method, uri string, now time.Time) bool {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	if g.hosts == nil {
-		g.hosts = make(map[string]*hostWindow)
-	}
-	w := g.hosts[host]
-	if w != nil && now.Before(w.blockedUntil) {
-		return false
-	}
-	if w == nil || now.Sub(w.start) >= time.Minute {
-		if len(g.hosts) >= 4096 {
-			for k, v := range g.hosts {
-				if now.Sub(v.start) >= time.Minute && !now.Before(v.blockedUntil) {
-					delete(g.hosts, k)
-				}
-			}
-			if len(g.hosts) >= 4096 {
-				return false
-			}
-		}
-		w = &hostWindow{start: now, urls: make(map[[32]byte]int)}
-		g.hosts[host] = w
-	}
-	w.total++
-	if method == http.MethodGet || method == http.MethodHead {
-		w.urls[sha256.Sum256([]byte(method+" "+uri))]++
-	}
-	if w.total > 3000 || len(w.urls) > 1500 || w.urls[sha256.Sum256([]byte(method+" "+uri))] > 120 {
-		w.blockedUntil = now.Add(time.Minute)
-		return false
-	}
-	return true
+	reason, _ := g.admitTask("", host, method, uri, now)
+	return reason == ""
 }
 
 func secretVariants(secret string) []string {
@@ -174,9 +153,23 @@ func guardReject(f *mproxy.Flow, status int, reason string) {
 }
 
 func (s *sink) Requestheaders(f *mproxy.Flow) {
-	if f.Request == nil || f.Request.URL == nil || f.Request.Method == http.MethodConnect {
+	if f.Request == nil || f.Request.URL == nil {
 		return
 	}
+	task, err := s.flowTask(f)
+	if err != nil {
+		s.reject(f, 407, "task_credential")
+		return
+	}
+	if f.Request.Method == http.MethodConnect {
+		return
+	}
+	if s.t.security.unavailable.Load() {
+		s.reject(f, 503, "policy_unavailable")
+		return
+	}
+	policy := s.t.SecurityConfig()
+	bodyLimit := policy.MaxBodyKiB * 1024
 	r := f.Request
 	ctx := context.Background()
 	if r.Raw() != nil {
@@ -184,7 +177,7 @@ func (s *sink) Requestheaders(f *mproxy.Flow) {
 	}
 	secrets, err := s.t.secrets(ctx)
 	if err != nil {
-		guardReject(f, 503, "secret_source_unavailable")
+		s.reject(f, 503, "secret_source_unavailable")
 		return
 	}
 	host := r.URL.Host
@@ -192,13 +185,15 @@ func (s *sink) Requestheaders(f *mproxy.Flow) {
 		host = r.Raw().Host
 	}
 	if containsSecret([]byte(host+"\n"+r.URL.String()+"\n"+headerLines(r.Header)), secrets) {
-		guardReject(f, 403, "platform_credential")
+		s.reject(f, 403, "platform_credential")
 		return
 	}
-	if !s.t.security.admit(strings.ToLower(r.URL.Host), r.Method, r.URL.RequestURI(), time.Now()) {
-		guardReject(f, 429, "crawl_budget")
+	if reason, retry := s.t.security.admitTask(task, canonicalAuthority(r.URL), r.Method, r.URL.RequestURI(), time.Now()); reason != "" {
+		s.reject(f, 429, reason)
+		f.Response.Header.Set("Retry-After", strconv.Itoa(retry))
 		return
 	}
+
 	if r.Header == nil {
 		r.Header = make(http.Header)
 	}
@@ -208,18 +203,18 @@ func (s *sink) Requestheaders(f *mproxy.Flow) {
 	// Buffer before upstream forwarding so a streaming/unknown-length request
 	// cannot bypass the Request hook at go-mitmproxy's large-body cutoff.
 	if raw := r.Raw(); raw != nil && raw.Body != nil {
-		if raw.ContentLength > maxGuardBody {
-			guardReject(f, 413, "request_body_limit")
+		if raw.ContentLength > int64(bodyLimit) {
+			s.reject(f, 413, "request_body_limit")
 			return
 		}
-		b, e := io.ReadAll(io.LimitReader(raw.Body, maxGuardBody+1))
+		b, e := io.ReadAll(io.LimitReader(raw.Body, int64(bodyLimit)+1))
 		raw.Body.Close()
 		if e != nil {
-			guardReject(f, 400, "request_body_read")
+			s.reject(f, 400, "request_body_read")
 			return
 		}
-		if len(b) > maxGuardBody {
-			guardReject(f, 413, "request_body_limit")
+		if len(b) > bodyLimit {
+			s.reject(f, 413, "request_body_limit")
 			return
 		}
 		scan := b
@@ -228,25 +223,26 @@ func (s *sink) Requestheaders(f *mproxy.Flow) {
 		case "gzip":
 			z, e := gzip.NewReader(bytes.NewReader(b))
 			if e != nil {
-				guardReject(f, 400, "invalid_encoding")
+				s.reject(f, 400, "invalid_encoding")
 				return
 			}
-			scan, e = io.ReadAll(io.LimitReader(z, maxGuardBody+1))
+			scan, e = io.ReadAll(io.LimitReader(z, int64(bodyLimit)+1))
 			z.Close()
-			if e != nil || len(scan) > maxGuardBody {
-				guardReject(f, 413, "decoded_body_limit")
+			if e != nil || len(scan) > bodyLimit {
+				s.reject(f, 413, "decoded_body_limit")
 				return
 			}
 		default:
-			guardReject(f, 415, "unsupported_request_encoding")
+			s.reject(f, 415, "unsupported_request_encoding")
 			return
 		}
 		if containsSecret(scan, secrets) {
-			guardReject(f, 403, "platform_credential")
+			s.reject(f, 403, "platform_credential")
 			return
 		}
 		raw.Body = io.NopCloser(bytes.NewReader(b))
 	}
+	s.t.security.allowed.Add(1)
 }
 
 func sensitiveField(k string) bool {
@@ -387,3 +383,9 @@ func (t *Traffic) sanitizedFlow(f *mproxy.Flow) (*mproxy.Flow, error) {
 	out.Response = &resp
 	return &out, nil
 }
+
+func (s *sink) reject(f *mproxy.Flow, status int, reason string) {
+	s.t.security.block(reason)
+	guardReject(f, status, reason)
+}
+func (t *Traffic) SetSecurityUnavailable(v bool) { t.security.unavailable.Store(v) }

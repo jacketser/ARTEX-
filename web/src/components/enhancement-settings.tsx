@@ -21,10 +21,10 @@ function useConfig<T>(path: string) {
       });
     return () => c.abort();
   }, [path]);
-  async function save() {
+  async function save(next?: T) {
     setBusy(true);
     try {
-      setValue(await http<T>(path, { method: "PUT", body: JSON.stringify(value) }));
+      setValue(await http<T>(path, { method: "PUT", body: JSON.stringify(next === undefined ? value : next) }));
       setError("");
       toast.success("配置已保存");
     } catch (e) {
@@ -373,4 +373,63 @@ export function ScenarioSettings() {
       </CardContent>
     </Card>
   );
+}
+
+type ProxySecurityConfig = {
+    host_requests_per_minute: number;
+    host_distinct_urls_per_minute: number;
+    url_requests_per_minute: number;
+    task_requests_per_minute: number;
+    unattributed_requests_per_minute: number;
+    cooldown_seconds: number;
+    max_body_kib: number;
+};
+type ProxyStats = {
+    capture_enabled: boolean;
+    stats: null | {
+        allowed: number;
+        blocked: Record<string, number>;
+        tracked_hosts: number;
+        tracked_tasks: number;
+        active_cooldowns: number;
+    };
+};
+export function ProxySecuritySettings() {
+    const c = useConfig<ProxySecurityConfig>("/settings/proxy-security");
+    const [stats, setStats] = React.useState<ProxyStats | null>(null), [error, setError] = React.useState("");
+    const load = React.useCallback(async () => { try {
+        setStats(await http<ProxyStats>("/proxy-security/stats"));
+        setError("");
+    }
+    catch (e) {
+        setError((e as Error).message);
+    } }, []);
+    React.useEffect(() => { void load(); }, [load]);
+    const labels: Record<keyof ProxySecurityConfig, string> = { host_requests_per_minute: "每主机每分钟请求数", host_distinct_urls_per_minute: "每主机每分钟不同 GET/HEAD URL 数", url_requests_per_minute: "同一 GET/HEAD URL 每分钟请求数", task_requests_per_minute: "每任务每分钟请求数", unattributed_requests_per_minute: "未归属流量共享每分钟请求数", cooldown_seconds: "超限冷却秒数", max_body_kib: "请求正文上限 KiB（最多 5120）" };
+    return <Card className="mb-4 break-inside-avoid"><CardHeader><CardTitle>代理安全</CardTitle><CardDescription>仅作用于经过记录代理的可解析 HTTP。任务 Agent 的 Bash/WebFetch 使用任务归属凭据，共享 MCP 等无归属流量使用独立公共预算。平台凭据拦截与落库脱敏始终保留。</CardDescription></CardHeader><CardContent className="space-y-3">
+    {c.error && <p role="alert">{c.error}</p>}
+    {c.value && <fieldset disabled={c.busy} className="space-y-2">{(Object.keys(labels) as (keyof ProxySecurityConfig)[]).map(k => <label key={k} className="block text-xs">{labels[k]}<Input type="number" min={1} value={c.value![k]} onChange={e => c.setValue({ ...c.value!, [k]: Number(e.target.value) })}/></label>)}<Button size="sm" onClick={() => void c.save()}>保存代理限额</Button></fieldset>}
+    <p className="text-xs text-muted-foreground">保存后对新请求生效，已有计数与冷却不清零。主机与任务限额同时执行；直连和透明透传不在正文检查范围。历史流量和旧证据不会追溯脱敏。</p>
+    <Button size="sm" variant="outline" onClick={() => void load()}>刷新拦截统计</Button>{error && <p role="alert">{error}</p>}
+    {stats && <div className="text-xs space-y-1"><p>流量捕获：{stats.capture_enabled ? "已开启" : "已关闭，实际流量可能不经过此代理"}</p><p>本进程启动以来的统计，重启清零。</p>{stats.stats && <><p>放行 {stats.stats.allowed} 次 · 当前冷却 {stats.stats.active_cooldowns} 项</p>{Object.entries(stats.stats.blocked).map(([reason, count]) => <p key={reason}>{reason}：{count}</p>)}</>}</div>}
+  </CardContent></Card>;
+}
+type BehaviorConfig = {
+    enabled: boolean;
+    allowed_origins: string[];
+};
+export function HoneypotBehaviorSettings() {
+    const c = useConfig<BehaviorConfig>("/settings/honeypot-behavior");
+    const [origins, setOrigins] = React.useState("");
+    React.useEffect(() => { if (c.value)
+        setOrigins(c.value.allowed_origins.join("\n")); }, [c.value?.allowed_origins]);
+    return <Card className="mb-4 break-inside-avoid"><CardHeader><CardTitle>HTTP 蜜罐行为验证</CardTitle><CardDescription>默认关闭，仅人工触发。为明确授权的 HTTP/HTTPS 服务增加响应一致性与名称线索核对，不自动确认蜜罐，也不影响任务调度。</CardDescription></CardHeader><CardContent className="space-y-3">
+  {c.error && <p role="alert">{c.error}</p>}{c.value && <fieldset disabled={c.busy} className="space-y-3">
+   <label className="flex items-center justify-between">启用人工行为验证<Switch checked={c.value.enabled} onCheckedChange={v => c.setValue({ ...c.value!, enabled: v })}/></label>
+   <label className="block text-xs">已授权服务来源（每行一个，最多 100 个）<Textarea aria-label="行为验证授权来源" value={origins} placeholder={"https://lab.example.test\nhttp://lab.example.test:8080"} onChange={e => setOrigins(e.target.value)}/></label>
+   <p className="text-xs text-muted-foreground">只接受 scheme://host[:port]，不填路径、查询或凭据。内网实验服务也需明确加入；回环、本机及链路本地地址禁止。配置全局上游代理时拒绝执行，不绕过代理直连。</p>
+   <p className="text-xs text-muted-foreground">每次最多 4 请求、20 秒、正文 64 KiB；同来源间隔 5 分钟、全局并发 2。不会自动重试、跟随跳转、读取凭据或关闭 TLS 校验。</p>
+   <Button size="sm" onClick={() => void c.save({ ...c.value!, allowed_origins: origins.split(/\r?\n/).map(v => v.trim()).filter(Boolean) })}>保存行为验证设置</Button>
+  </fieldset>}
+ </CardContent></Card>;
 }

@@ -158,6 +158,7 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 			return append(values, string(key)), err
 		})
 	}
+	m.applyProxySecurity()
 	s.initSideQuestions()
 	// 熔断阈值/冷却是失败路径上的热参数，启动时把全局重试策略推给 Registry 一次；
 	// 之后每次保存策略再推一次（saveLLMRetryPolicy）。
@@ -752,6 +753,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/assets", s.listAssets)
 	mux.HandleFunc("GET /api/assets/counts", s.assetCounts)
 	mux.HandleFunc("POST /api/assets", s.insertAssets)
+	mux.HandleFunc("GET /api/settings/honeypot-behavior", s.behaviorSettings)
+	mux.HandleFunc("PUT /api/settings/honeypot-behavior", s.behaviorSettings)
+	mux.HandleFunc("GET /api/assets/{id}/honeypot-behavior", s.honeypotBehavior)
+	mux.HandleFunc("POST /api/assets/{id}/honeypot-behavior", s.honeypotBehavior)
 	mux.HandleFunc("POST /api/assets/honeypot-scan", s.scanAssetHoneypot)
 	mux.HandleFunc("PUT /api/assets/{id}/honeypot-review", s.reviewHoneypot)
 	mux.HandleFunc("GET /api/tasks/{id}/recovery-history", s.recoveryHistory)
@@ -760,6 +765,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/settings/freeze-compensation", s.freezeSettings)
 	mux.HandleFunc("PUT /api/settings/freeze-compensation", s.freezeSettings)
 	mux.HandleFunc("GET /api/clock-compensations", s.clockHistory)
+	mux.HandleFunc("GET /api/settings/proxy-security", s.proxySecuritySettings)
+	mux.HandleFunc("PUT /api/settings/proxy-security", s.proxySecuritySettings)
+	mux.HandleFunc("GET /api/proxy-security/stats", s.proxySecurityStats)
 	mux.HandleFunc("GET /api/settings/honeypot-rules", s.honeyRulesSettings)
 	mux.HandleFunc("PUT /api/settings/honeypot-rules", s.honeyRulesSettings)
 	mux.HandleFunc("GET /api/settings/scenario-prompts", s.scenarioSettings)

@@ -1505,3 +1505,18 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
  revoked BOOLEAN NOT NULL DEFAULT false
 );
 CREATE INDEX IF NOT EXISTS auth_sessions_expiry ON auth_sessions(expires_at);
+
+-- Explicit, bounded HTTP behavior checks: durable audit and cross-request cooldown.
+CREATE TABLE IF NOT EXISTS asset_honeypot_probes (
+ id BIGSERIAL PRIMARY KEY,
+ asset_id BIGINT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+ origin TEXT NOT NULL,
+ source_fingerprint TEXT NOT NULL,
+ rule_revision TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'running' CHECK(status IN ('running','complete','blocked','interrupted')),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ finished_at TIMESTAMPTZ,
+ result JSONB NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_honeypot_probes_asset ON asset_honeypot_probes(asset_id,id DESC);
+CREATE INDEX IF NOT EXISTS idx_honeypot_probes_time ON asset_honeypot_probes(created_at DESC);

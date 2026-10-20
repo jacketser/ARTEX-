@@ -227,6 +227,7 @@ func Open(dir, addr string) (*Traffic, error) {
 		_, tunnel := t.pass.Load(hostOnly(req.Host))
 		return !tunnel
 	})
+	p.SetAuthProxy(t.authenticateProxy)
 	p.AddAddon(&sink{t: t})
 	t.proxy = p
 	return t, nil

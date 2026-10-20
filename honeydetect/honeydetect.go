@@ -1,5 +1,5 @@
-// Package honeydetect flags explicit self-identification in saved metadata.
-// No requests, probes, credential checks, evasion or automatic target skipping.
+// Package honeydetect provides metadata matching and bounded manual HTTP diagnostics.
+// No credential attempts, evasion or automatic target skipping.
 package honeydetect
 
 import (

@@ -49,3 +49,10 @@ func TestProxyEnvInjectsCAWhenRecording(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkerPromptDoesNotExposeTaskProxyCapability(t *testing.T) {
+	prompt := workerSystem("http://task-123:private-proxy-capability@127.0.0.1:8788", "/tmp/test-ca", "/tmp", "/tmp/run")
+	if strings.Contains(prompt, "private-proxy-capability") || strings.Contains(prompt, "task-123@") {
+		t.Fatal("proxy capability exposed in prompt")
+	}
+}

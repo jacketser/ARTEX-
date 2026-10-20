@@ -404,6 +404,7 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 		}
 		if tr != nil {
 			m.traffic = tr
+			m.applyProxySecurity()
 			tr.SetSecretSource(m.trafficSecrets)
 			go func() {
 				log.Printf("[traffic] recording proxy on %s (set HTTP_PROXY=%s + trust _ca CA)", proxyAddr, tr.ProxyAddr())
@@ -751,6 +752,12 @@ func (m *Manager) Traffic() *traffic.Traffic { return m.traffic }
 //
 // So the global proxy takes effect in both modes: at the MITM's upstream when
 // capturing, in the agent's own bash env / WebFetch when not.
+func (m *Manager) TaskProxyAddr(id string) string {
+	if m.traffic != nil && m.TrafficEnabled() {
+		return m.traffic.TaskProxyAddr(id)
+	}
+	return m.ProxyAddr()
+}
 func (m *Manager) ProxyAddr() string {
 	if m.traffic != nil && m.TrafficEnabled() {
 		return m.traffic.ProxyAddr()

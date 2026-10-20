@@ -191,6 +191,7 @@ func TestCrawlDistinctAndTotalBudgets(t *testing.T) {
 	if g.admit("distinct.test", "GET", "/last", now) {
 		t.Fatal("distinct URL expansion unbounded")
 	}
+	g = securityGuard{} // independent scenario: task-wide budget spans hosts
 	for i := 0; i < 3000; i++ {
 		if !g.admit("total.test", "POST", "/scan", now) {
 			t.Fatal("early total limit")

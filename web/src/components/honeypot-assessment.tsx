@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { HoneypotBehavior } from "@/components/honeypot-behavior";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { api, http } from "@/lib/api";
 import { Textarea } from "@/components/ui/textarea";
 import type { Asset, HoneypotResult } from "@/lib/types";
 
-export function HoneypotAssessment({ asset, onChanged }: { asset: Asset; onChanged?: () => void }) {
+function StaticHoneypotAssessment({ asset, onChanged }: { asset: Asset; onChanged?: () => void }) {
   const [note, setNote] = React.useState("");
   const [verdict, setVerdict] = React.useState("confirmed");
   const [busy, setBusy] = React.useState(false);
@@ -147,4 +148,8 @@ export function HoneypotScanButton({
       {busy ? "保存中…" : "保存本页蜜罐识别"}
     </Button>
   );
+}
+
+export function HoneypotAssessment(props: {asset:Asset;onChanged?:()=>void}) {
+ return <div><StaticHoneypotAssessment {...props}/><HoneypotBehavior asset={props.asset}/></div>;
 }
