@@ -6,7 +6,7 @@
 
 ## 当前运行方式
 
-当前部署版本为 `dev-e0556f7`，源码提交 `e0556f7`（2026-10-20）；发布验证与备份见 [验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
+当前部署版本为 `dev-ec9fe3d`，源码提交 `ec9fe3d`（2026-10-20）；发布验证与备份见 [验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
 
 - 使用 `Dockerfile.source` 从当前工作目录编译 Next.js 静态前端及 Go 后端。
 - Compose 文件是 **`compose.source.yml`**，不是上游的 `docker-compose.yml`。
