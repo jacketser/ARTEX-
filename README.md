@@ -1,21 +1,284 @@
 <div align="center">
 
-# ARTEX
+# ARTEX · 本地增强版
 
-AI autonomous penetration testing system. Multi-agent LLM, Go backend, Next.js frontend.
+基于 ARTEX 的二次开发：任务稳定性、证据审阅、静态蜜罐识别与认证安全增强。
 
-AI 自主渗透测试系统（Go 后端 + Next.js 前端）。
+Go 后端 · Next.js 前端 · PostgreSQL · 源码 Docker Compose 部署
 
-[![Release](https://img.shields.io/github/v/release/trhhubsd/ARTEX)](https://github.com/trhhubsd/ARTEX/releases)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 
 </div>
 
-ARTEX is a multi-agent system for autonomous penetration testing in an isolated lab: a planner and workers share an asset graph and an exploration graph, with human-in-the-loop approval and full traffic recording. It ships as one binary or a Docker Compose stack.
+本仓库是 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-)，基于
+[trhhubsd/ARTEX](https://github.com/trhhubsd/ARTEX) 继续开发。当前增强代码位于
+**`feature/local-enhancements` 分支**，本文按 2026-10-20 已落地代码整理。
 
----
+部分设计参考 [enwjx/artex-ymh](https://github.com/enwjx/artex-ymh)，在当前上游结构上逐项适配，
+部分功能独立实现；**不是参考二开仓库的完整移植**。
+
+## 导航
+
+- [原版能力与二开范围](#原版能力与二开范围)
+- [已完成的二开功能](#已完成的二开功能)
+- [尚未加入的功能](#尚未加入的功能)
+- [源码部署与访问](#源码部署与访问)
+- [配置与更新](#配置与更新)
+- [继续二次开发](#继续二次开发)
+- [截图预览](#截图预览) · [系统技术架构](#系统技术架构)
+- [来源与致谢](#来源与致谢) · [许可与免责声明](#许可与免责声明)
+
+详细文档：[部署与维护](DEPLOYMENT.md) · [功能范围与后续计划](SECONDARY-DEVELOPMENT-PLAN.md) ·
+[开发及发布验收](LOCAL-ENHANCEMENTS-VERIFICATION.md)
+
+## 原版能力与二开范围
+
+ARTEX 原版提供多 Agent 协作、资产图与探索图、任务调度、工具审批、人在环路对话、流量记录、
+漏洞管理与手动复测，以及 MCP、技能和模型配置。原有 ScopeSentry 资产同步也保留。
+这些能力属于上游基础，**不计作本仓库新增功能**。
+
+本次二开围绕三个方向：
+
+1. **任务稳定性**：部署自检、模型超时、心跳诊断、保守自动恢复与时钟补偿。
+2. **证据质量**：人工及自动反证审阅、流量对照、静态蜜罐线索与场景指导。
+3. **认证安全与维护**：登录续期与吊销、SSE 票据、代理防护、源码部署及回归工作流。
+
+## 已完成的二开功能
+
+### 任务稳定性与运维
+
+| 功能 | 新增或增强内容 | 使用入口与边界 |
+| --- | --- | --- |
+| 部署自检 | 检查数据库、模型配置是否存在、目录可写、JWT 密钥、浏览器、工具版本及关键文件指纹 | `artex doctor`；不迁移数据库、不调用模型、不输出密钥；指纹不等于完整供应链验证 |
+| 模型调用整体超时 | 流式、非流式及内部重试等待统一限时，保留调用方取消及更短截止时间 | 默认 600 秒；`ARTEX_LLM_CALL_TIMEOUT` 调整，`0` 关闭 |
+| 任务心跳诊断 | 展示暂停、审批、工具执行、模型/代理调度与疑似停滞，提供处理建议 | 任务详情 → 心跳；不把正常等待直接判为失败 |
+| 卡住任务自动恢复 | 有待执行意图、无活动且无模型/工具/审批/任务操作时唤醒已有引擎；持久化次数、冷却、观察结果与分页历史 | 系统设置 → 任务卡住自动恢复；默认停滞 120 秒、冷却/观察各 300 秒、连续最多 3 次；不重放工具、不重置 running 意图、不跳过审批 |
+| 恢复失败处理 | 连续无进展时站内提醒，支持人工确认与处理备注；可向显式开启的实时通知渠道推送，持久化去重 | 任务列表、恢复历史、系统通知；渠道推送默认关闭，人工确认不等于恢复成功 |
+| 服务器冻结与时钟跳变补偿 | 检测进程存活期间的疑似长停顿或墙钟跳变，事务及幂等记录调整任务截止、恢复观察与冷却时间 | 系统设置 → 服务器冻结补偿；默认阈值 60 秒、单次上限 86400 秒；不补偿退出后的停机，不重放失败调用 |
+| 源码部署与回归维护 | 新增源码镜像、部署脚本与 GitHub Actions；补齐企业授权范围上下文，修复部分异步测试等待和清理逻辑 | `deploy-source.sh`、`compose.source.yml`、回归工作流；测试使用独立 PostgreSQL |
+
+恢复结果区分“观察中、观察到进展、无进展、中断”。成功 Worker 结果或任务完成才算实际进展；
+人工输入可以重置恢复预算，但不会标为自动恢复成功。暂停、排队、终态与超时收尾任务不参与恢复。
+时钟补偿无法证明云平台发生冻结，也不取消单次模型调用或 Worker 自身的超时。
+
+### 证据质量与场景指导
+
+| 功能 | 新增或增强内容 | 使用入口与边界 |
+| --- | --- | --- |
+| 人工证据与反证复核 | 保存来源、复现条件、反证、限制及支持/反驳/无法确认结论；内容变更标记过期，报告携带复核记录 | 漏洞详情 → 证据与反证复核；不自动修改漏洞处置状态 |
+| 自动反证审阅 | 结合证据、人工复核指纹、证明/正常对照流量及最近复测给出类别建议；支持流量差异、证据跳转、审阅历史及缺失项预填复测 | 漏洞详情 → 自动审阅现有证据；只检查已有记录，不访问目标、不额外调用模型、不自动执行证伪请求 |
+| 静态蜜罐识别 | 使用已保存服务名、标题、技术栈、banner/header/摘要及 TLS 元数据匹配规则；支持人工确认/排除/撤销、状态筛选及过期重评 | 资产页或任务资产页 → 服务列表 → 保存本页蜜罐识别；系统设置可维护规则、来源与版本；不发行为探针 |
+| 场景化提示词 | `web/api/app/ad/priv/pwn/recon/rev/pivot/meta` 十类可编辑指导，按意图标签/摘要选择，支持预览和关闭 | 系统设置 → 场景化提示词；默认每轮最多 2 类、总计 8000 字符，保留固定授权边界；未导入额外攻击工具链 |
+
+自动审阅不会自动判断漏洞真伪，流量差异也不是漏洞成立的证明。证据不足、来源失效或结论冲突时需要人工核对。
+预填复测仍须用户点击启动，之后才走原有复测 Agent 流程。
+
+蜜罐规则命中只是线索，评分不是概率，未命中不代表不是蜜罐；默认规则不是经过独立验证的产品指纹库。
+元数据或规则变化后，旧评估及人工结论会过期，后台只重评静态规则，人工结论须重新确认。
+
+场景指导按当前结构独立编写，参考了二开的标签选择与长度控制思路。预览不调用模型，实际使用会增加有限上下文；
+**尚无真实模型质量、误报率或 Token 收益的 A/B 数据**。
+
+### 认证与代理安全
+
+| 功能 | 新增或增强内容 | 使用入口与边界 |
+| --- | --- | --- |
+| 改密与重置吊销旧登录 | 签名绑定当前密码哈希；页面改密和密码重置均使旧登录失效 | HTTP 即时校验，已打开 SSE 约 15 秒内关闭；正常重启保留当前版本有效会话 |
+| SSE 一次性票据 | 以短时一次性票据替代 URL 中的长期 JWT；绑定完整路径和查询参数，重连重新领票 | 前端自动处理；有效期 45 秒，重复、过期及跨路由使用拒绝 |
+| 登录自动续期 | 15 分钟访问令牌；HttpOnly / SameSite=Strict 刷新 Cookie，数据库只存刷新凭据哈希；轮换与 10 秒并发重试窗口 | API、上传/下载/导出、SSE 领票统一续期；连续 7 天未刷新或达到 30 天绝对期限需重新登录；支持跨标签页协调与退出同步 |
+| 提示信任边界 | 固定系统提示约束，工具/MCP 文本及附加消息以 JSON 包装标记为不可信来源 | 主要 Agent 路径默认生效；降低提示注入风险，不保证模型绝不会服从恶意内容 |
+| 代理外发检查与抓取预算 | 检测已知平台密钥及私钥标记外发；限制主机请求总量、重复抓取及请求正文，缺少 UA 时补固定值 | 仅覆盖实际经过记录代理且可解析的 HTTP；普通目标 Authorization 和显式 UA 保留 |
+| 新流量落库脱敏 | 常见头部/query/JSON/form 凭据字段及已知平台密钥在流量库、索引和 blob 写入前处理；压缩正文副本省略 | 带 `X-Artex-Capture` 提示；不改实际收发内容，不追溯清理旧流量/旧证据，脱敏快照不等于字节级原文 |
+
+**代理保护的前提是开启流量捕获，并且请求实际经过记录代理。** 流量捕获默认关闭，入口为
+“系统设置 → 流量捕获”。直连、MITM 失败后的透明透传、WebSocket 消息及任意 TCP/UDP 不在此正文检查范围；
+它不是系统级出网沙箱，也不能识别任意编码或未知凭据。
+
+同一主机及端口共享一分钟预算：3000 次请求、1500 个不同 GET/HEAD URL、同一 GET/HEAD URL 120 次；
+超限后冷却 60 秒。请求正文及 gzip 解压正文上限 5 MiB。详细行为及限制见[二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
+
+升级到本次认证格式后需要重新登录一次。退出吊销当前浏览器会话，改密或重置吊销全部旧登录。
+访问令牌仍由浏览器脚本持有，自动续期并不代表可以抵御页面 XSS。
+
+## 尚未加入的功能
+
+以下能力尚未落地或明确暂缓，不属于当前版本承诺：
+
+- 行为型蜜罐探测，以及自动向目标执行漏洞证伪请求。
+- 内网会话、反弹 Shell、隧道、凭据库、内网拓扑和阶段移交子系统。
+- 分布式执行节点。
+- 伪装入口、限时自动放行审批。
+- 参考二开项目的完整攻击工具链与完整场景提示词包。
+
+详细取舍及后续范围见[二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
+
+## 源码部署与访问
+
+### 推荐：从本 fork 构建 Docker 镜像
+
+服务器需准备 Git、Python 3、Docker 及支持 `docker compose` 的 Compose v2。
+前端与后端依赖在镜像构建阶段安装，宿主机无需单独安装 Go 或 Node.js。
+
+```bash
+git clone --branch feature/local-enhancements https://github.com/jacketser/ARTEX- ARTEX
+cd ARTEX
+./deploy-source.sh
+```
+
+脚本在文件不存在时生成 `.env` 中的随机数据库密码、`jwt.key` 及 `data/` 目录，已有配置会保留；
+随后使用 [Dockerfile.source](Dockerfile.source) 构建，并通过
+[compose.source.yml](compose.source.yml) 启动应用和 PostgreSQL 16，等待健康检查。
+若已有 `.env`，须先确保其中的 `POSTGRES_PASSWORD` 有效。
+
+- 应用镜像 **`jacketser/artex:local` 是本机构建标签**，不是供直接拉取的二开发布镜像。
+- 默认仅发布 `127.0.0.1:8787`；数据库不发布宿主机端口，流量代理仅监听应用容器内部回环地址。
+- 数据保留在 Compose 数据库卷以及 `data/`、`skills/`、`jwt.key`。
+- 本 fork 使用 **`compose.source.yml`**。仓库保留的上游安装/更新脚本、默认 `docker-compose.yml` 和上游 Releases 不作为本增强版的部署入口。
+- 源码构建使用 `dev-<提交>` 版本标识，禁用上游页面升级，避免覆盖定制代码。
+
+### SSH 隧道访问管理页
+
+在自己的电脑执行，替换 SSH 用户和服务器地址；使用自定义 SSH 端口时加 `-p 端口`：
+
+```bash
+ssh -N -L 8787:127.0.0.1:8787 用户名@服务器地址
+```
+
+保持隧道打开，浏览器访问 `http://127.0.0.1:8787`。全新实例首次进入 `/setup` 设置管理员密码；
+已有实例使用原账号。登录后在“LLM 配置”中配置模型 API 地址、密钥及模型名称。
+
+检查服务与部署环境：
+
+```bash
+docker compose -f compose.source.yml ps
+curl -fsS http://127.0.0.1:8787/api/health
+docker compose -f compose.source.yml exec -T artex /app/artex doctor
+```
+
+`doctor` 返回码：`0` 表示无失败（允许警告），`1` 表示存在失败，`2` 表示参数错误。
+未配置模型时提示警告，不会为了自检调用模型。
+
+## 配置与更新
+
+### 常用配置
+
+| 配置 | 作用 |
+| --- | --- |
+| `.env` 中的 `POSTGRES_PASSWORD` | 源码 Compose 的 PostgreSQL 密码，首次部署脚本生成 |
+| `ARTEX_BIND_ADDRESS` / `ARTEX_HTTP_PORT` | 管理页面绑定地址与宿主机端口，默认 `127.0.0.1` / `8787` |
+| `ARTEX_LLM_CALL_TIMEOUT` | 一次逻辑模型调用的总秒数，默认 `600`，`0` 关闭 |
+| `ARTEX_COOKIE_SECURE` | HTTPS 反向代理设为 `true`；SSH 隧道 HTTP 访问保持 `false` |
+| 页面“LLM 配置” | 管理模型供应商、API 地址、密钥及模型；也可使用 Compose 中已声明的模型环境变量 |
+| 页面“系统设置” | 任务并发、自动恢复、冻结补偿、蜜罐规则、场景提示词与流量捕获 |
+
+修改 Compose 已声明的运行时环境变量后，用 `docker compose -f compose.source.yml up -d --wait`
+重建相应容器使配置生效。此操作可能中断运行任务，应在空闲时执行。不要把 `.env`、JWT 密钥、数据库备份或本机登录记录提交到 Git。
+
+### 更新二开版本
+
+先确认没有运行任务，按[部署文档](DEPLOYMENT.md#常用维护)备份数据库和持久化文件，保留可回退镜像，
+再在当前源码目录执行：
+
+```bash
+git status --short
+# 若存在本地修改，先提交或妥善保存，再拉取：
+git pull --ff-only origin feature/local-enhancements
+./deploy-source.sh
+```
+
+源码构建失败时，原应用容器继续运行；构建成功后的容器替换会中断任务。
+部署脚本等待健康检查，**不自动回滚失败部署**。数据库由应用启动时做增量迁移，回退镜像不等于回退数据库；
+认证版本回退还涉及签名密钥轮换，具体操作见[部署与维护](DEPLOYMENT.md)。
+日常维护不要执行 `docker compose down -v`，以免删除数据库卷。
+
+### 可选：HTTPS 反向代理
+
+管理页、API 和 SSE 默认同源。使用 HTTPS 时，在 `.env` 设置 `ARTEX_COOKIE_SECURE=true` 并重建应用容器；
+反向代理须保留外部 Host，并为 SSE 关闭缓冲、延长读取超时。Nginx 示例（证书路径自行配置）：
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name your.domain.com;
+    # ssl_certificate / ssl_certificate_key ...
+
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+}
+```
+
+服务不依赖任意客户端提供的 `X-Forwarded-Proto` 判断 Cookie 是否安全，须显式配置 `ARTEX_COOKIE_SECURE`。
+一般无需设置 `NEXT_PUBLIC_SSE_BASE`；仅 SSE 使用不同来源时在**前端构建期**配置，运行时修改不会改变已生成静态包。
+
+## 继续二次开发
+
+### 主要代码与文档
+
+| 路径 | 内容 |
+| --- | --- |
+| [web/](web/) | Next.js 页面、任务/资产/审阅交互、浏览器登录续期与 SSE |
+| [server/](server/) | HTTP API、认证、SSE 票据、配置与管理入口 |
+| [agent/](agent/) / [server/engine.go](server/engine.go) | Agent、模型调用、提示边界与任务调度 |
+| [evidence/](evidence/) / [honeydetect/](honeydetect/) / [scenarioprompt/](scenarioprompt/) | 证据审阅、静态蜜罐规则与场景化指导 |
+| [traffic/](traffic/) | 流量记录、代理外发检查、抓取预算与落库脱敏 |
+| [db/](db/) | PostgreSQL 存储、增量 schema 与恢复/复核记录 |
+| [runtimecheck/](runtimecheck/) | 自检、工具清单与关键文件校验 |
+| [Dockerfile.source](Dockerfile.source) / [deploy-source.sh](deploy-source.sh) | 构建及部署当前源码 |
+| [.github/workflows/regression.yml](.github/workflows/regression.yml) | 独立数据库后端回归、前端类型检查、专项测试及静态构建 |
+| [SECONDARY-DEVELOPMENT-PLAN.md](SECONDARY-DEVELOPMENT-PLAN.md) | 功能来源、优先级、实现边界及未完成项 |
+| [LOCAL-ENHANCEMENTS-VERIFICATION.md](LOCAL-ENHANCEMENTS-VERIFICATION.md) | 开发验证、发布验收与回退记录 |
+
+Go module 保持上游路径，无需为了 fork 修改包名。修改完成并通过验证后，使用 `./deploy-source.sh` 发布。
+
+### 开发与验证
+
+本地开发方式保留：
+
+```bash
+./dev.sh
+# 前端开发服务：5173；后端：8787；流量代理：8788
+```
+
+开发前准备项目要求的 Go、Node.js 与前端依赖；当前 CI 使用 Go 1.26、Node.js 22。
+`dev.sh` 的后端默认监听所有网卡；云服务器开发前须调整监听地址与端口，或在隔离环境运行。
+已有正式实例时，应另建开发实例和数据库并避开端口冲突，开发端口也通过 SSH 隧道访问。
+前端容器热更新方式见[部署文档](DEPLOYMENT.md#修改代码并发布)。
+
+后端测试必须使用**独立测试数据库**，不要沿用正式部署的 `ARTEX_PG_DSN`。
+可复用回归工作流中的临时 PostgreSQL 配置及 `go test -p 1 ./... -count=1` 命令；
+前端运行类型检查、专项测试与 `npm run build:static`，完整步骤以
+[回归工作流](.github/workflows/regression.yml)为准。
+
+现有验收覆盖模型超时/取消、恢复状态、复核过期、蜜罐重评、时钟补偿、认证轮换/吊销、SSE 重连及代理脱敏等路径。
+最近一轮还完成隔离环境浏览器验收和正式服务健康检查；具体版本与测试限制见
+[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。此处不把历史通过记录等同于之后每次改动均已验证。
+
+### 单二进制与跨平台构建
+
+需要单二进制或跨平台包时，可使用原有 [build.sh](build.sh)。为避免启用上游更新路径，二开构建显式保留 `dev-*` 标识：
+
+```bash
+ARTEX_BUILD_VERSION=dev-local ./build.sh --target linux/amd64
+# 构建脚本支持的跨平台压缩包：
+ARTEX_BUILD_VERSION=dev-local ./build.sh --release
+```
+
+运行二进制前需自行准备 PostgreSQL、配置及外部工具；源码容器已集中处理这些运行依赖，仍是本 fork 的推荐方式。
 
 ## 截图预览
+
+以下为仓库保留的原版界面截图，展示基础能力，不代表所有二开入口的当前界面。
+
+<details>
+<summary>展开查看仪表盘、任务、资产、流量与配置页面</summary>
 
 | 仪表盘（总览 / Token 消耗 / 活动流） | 任务列表 |
 | :---: | :---: |
@@ -45,230 +308,7 @@ ARTEX is a multi-agent system for autonomous penetration testing in an isolated 
 | :---: | :---: |
 | ![拦截](screenshots/intercept.png) | ![日志](screenshots/logs.png) |
 
-
----
-
-## 审批记录详情
-
-全局「审批记录」、任务内「拦截审批」及对话中的审批卡片均支持展开查看详情。展示结构参考
-[AegisHook 的审批详情组件](https://github.com/RuoJi6/AegisHook/blob/main/web/src/components/CallDetail.vue)，沿用 ARTEX 的组件和主题：
-
-
-## 资产同步（ScopeSentry）
-
-支持从 [ScopeSentry](https://github.com/Autumn-27/ScopeSentry) 直接同步资产数据，免去重复收集：
-
-- 在「**资产同步**」页填 ScopeSentry 的地址与 API Key，接入数据源；
-- 按**项目**或**任务**维度选择要同步的目标与资产类型（域名 / 子域 / IP / 端口 / 站点 / 端点…）；
-- 一键导入并按公司资产范围归并，直接进入 ARTEX 的资产图供 agent 探索使用。
-
----
-
-## 安装
-
-> 依赖数据库 **PostgreSQL**；探索需配置 **LLM**（`ANTHROPIC_API_KEY` 或 `OPENAI_API_KEY`，也可在 UI 里配）。
-
-### 方式一：一键安装脚本（推荐）
-
-```bash
-git clone https://github.com/trhhubsd/ARTEX
-cd ARTEX
-./install.sh
-```
-
-脚本会：检测 / 自动安装 Docker → 让你选 **① 全部 Docker** 或 **② 本地编译运行**：
-
-- **① 全部 Docker**：填一个 Postgres 密码（可回车随机）→ 自动写 `.env` → `docker compose up -d`。
-- **② 本地运行**：选数据库（连已有 / 用 Docker 起一个）→ 生成 `config.json` → `go` 编译内嵌单二进制 → 启动。
-
-装好后打开 **http://localhost:8787** （首次进入 `/setup` 设置管理员密码）。
-
-### 方式二：Docker Compose（推荐）
-
-```bash
-git clone https://github.com/trhhubsd/ARTEX
-cd ARTEX
-cp .env.example .env          # 填 POSTGRES_PASSWORD、可选 ANTHROPIC_API_KEY
-docker compose up -d          # 拉取 tomicdd/artex 镜像 + postgres
-# → http://localhost:8787
-```
-
-镜像已含常用工具（ripgrep/curl/vim/npm/nmap…）；`./skills` 与 `./data` 以绑定挂载持久化。
-
-远程 MCP 可在系统设置中选择 `http`（Streamable HTTP）或 `sse`（旧版 SSE）。
-旧版 SSE 服务通常使用 `GET /sse` 建立事件流，再通过服务返回的
-`/message?sessionId=...` 接收 JSON-RPC 请求；配置时将 URL 填为 `/sse`，请求头按
-`Authorization=Bearer <token>` 填写。
-
-### 方式三：从源码编译单二进制
-
-```bash
-# 1) 前端静态导出
-cd web && npm ci && npm run build:static && cd ..
-# 2) 拷进内嵌目录
-cp -r web/out server/webui/dist
-# 3) 编译（-tags embedui 才内嵌前端）
-CGO_ENABLED=0 go build -tags embedui -o artex ./cmd/artex
-./start.sh
-```
-
-### 方式五：构建跨平台 Release 压缩包
-
-`build.sh` 会先构建并嵌入前端，再使用 Go linker 去除调试信息，并将发布文件压缩为 zip。Release 模式默认生成 Linux amd64/arm64、macOS amd64/arm64 和 Windows amd64 的 zip 包：
-
-```bash
-./build.sh --release
-# 产物：dist/artex-0.3.3-*.zip
-```
-
-UPX 自解压二进制可能与部分 Linux 内核、虚拟化环境或安全策略不兼容，因此默认不启用。可用 `ARTEX_TARGETS` 自定义目标；确认目标运行环境兼容时，可显式传入 `--upx` 进一步缩小二进制：
-
-```bash
-ARTEX_TARGETS=linux/amd64,windows/amd64 ./build.sh --release
-./build.sh --target linux/amd64 --upx
-```
-
----
-
-## 更新升级
-
-> 升级只换程序、不动数据：Postgres 数据卷 `pgdata`、`./data`（jwt.key / SQLite 等）、`./skills` 都会保留。**数据库迁移无需手动执行**——`artex` 每次启动会幂等重跑 `schema.sql`（含 `ADD COLUMN` / `CREATE INDEX IF NOT EXISTS`），即“重启即迁移”。升级前仍建议先备份 `./data` 与数据库。
-
-### 方式一：页面一键更新（推荐）
-
-在 **系统配置** 页（侧边栏「系统配置」→ `/system/settings`）的**版本与更新**卡片里，可以直接检查并安装新版本，无需登录服务器。
-
-点「更新」后：下载当前平台的发布包 → 比对 Release 的 `SHA256SUMS` → 用 `-h` 冒烟测试新二进制 → 暂存为 `artex.new` → 程序退出，由 `start.sh` / `start.bat` 重新拉起并完成换装。页面会自动等到新版本上线后刷新。
-
-- **失败不会留下坏程序**：校验或冒烟不通过就丢弃暂存件、继续跑当前版本；换装后的新版若连续 3 次启动失败，会自动回滚到 `artex.old`（失败的那个留作 `artex.failed` 供排查）。
-- **随时可回退**：上一版本保留为 `artex.old`，卡片上有「回滚到上一版本」。注意数据库结构不会回退。
-- **更新会中断正在运行的任务**——更新即重启，请在空闲时进行。
-- **开发构建不给更新**：版本号是 `dev` 或 `git describe` 带后缀时禁用，避免正式版覆盖掉本地调试的二进制。
-- **Docker 下只换程序、不换镜像**：镜像里的 playwright / nmap 等工具链不会跟着升级，且 `docker compose up -d` 重建容器后会退回镜像自带的版本。要连镜像一起升级仍请用 `docker compose pull artex && docker compose up -d artex`。
-- 访问 GitHub 需要代理时，在同一页面配置**全局代理**即可，更新链路会走它。更新只从 GitHub 域名下载并强制 HTTPS。
-
-### 方式二：一键更新脚本
-
-```bash
-cd ARTEX
-./update.sh
-```
-
-脚本先可选 `git pull` 拉取最新代码，再让你选 **① Docker 更新** 或 **② 本地编译更新**（与 `install.sh` 对应）：
-
-- **① Docker**：可指定目标镜像 tag（回车沿用 `.env` 的 `ARTEX_TAG`，缺省 `latest`）→ `docker compose pull` → `docker compose up -d`（换新镜像重启即自动迁移）。
-- **② 本地**：重建前端静态产物 → 重新编译 `./artex`（完成后重启进程生效）。
-
-### 方式三：Docker Compose（手动）
-
-```bash
-cd ARTEX
-git pull                       # 更新 compose / 脚本（可选）
-# 指定版本：在 .env 设 ARTEX_TAG=v0.2.0；不设则用 latest
-docker compose pull artex
-docker compose up -d artex     # 换新镜像重启 → 自动迁移 schema
-docker image prune -f          # 清理旧镜像（可选）
-```
-
-### 方式四：预编译二进制（Releases）
-
-到 [Releases](https://github.com/trhhubsd/ARTEX/releases) 下载新版本 zip，停掉旧进程后覆盖 `artex` 与 `skills/`（保留你的 `config.json` 与 `data/`），重启即可：
-
-```bash
-cp -r <解压目录>/skills ./ && cp <解压目录>/artex ./
-./start.sh
-```
-
-### 方式五：从源码编译
-
-```bash
-git pull
-cd web && npm ci && npm run build:static && cd ..
-cp -r web/out server/webui/dist
-CGO_ENABLED=0 go build -tags embedui -o artex ./cmd/artex
-# 重启 ./start.sh
-```
-
----
-
-## 配置
-
-**数据库**（`config.json`，或用环境变量 `ARTEX_PG_DSN` 覆盖）：
-
-```json
-{
-  "database": {
-    "host": "127.0.0.1", "port": 5432,
-    "user": "artex", "password": "yourpass",
-    "dbname": "artex", "sslmode": "disable"
-  }
-}
-```
-
-**LLM**：`export ANTHROPIC_API_KEY=sk-...`（或 `OPENAI_API_KEY`），也可在 UI 的「LLM 配置」页填写。
-可选：`ARTEX_LLM_PROVIDER` / `ARTEX_LLM_MODEL` / `ARTEX_LLM_BASE_URL` / `ARTEX_LLM_PROXY`。
-
-**并发**：每个任务的 work agent 数在「系统设置」里配置（默认 3）。
-
-**常用参数**：`./start.sh -addr :8787 -proxy :8788`（`-addr` 前端+API，`-proxy` 流量录制代理）。启动脚本会把参数原样透传给 `artex`。
-
-### 反向代理部署（HTTPS / 只开放 443）
-
-前端和 API/SSE 都由同一个后端端口（默认 `:8787`）提供，实时活动流默认走**同源**地址，因此**无需配置 `NEXT_PUBLIC_SSE_BASE`**，公网只开放 443、把 8787 留在内网即可。
-
-SSE 是长连接 + 持续推送，反代**必须关闭缓冲**，否则浏览器能连上却收不到事件（表现为活动流一直转圈）。Nginx 示例：
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name your.domain.com;
-    # ssl_certificate / ssl_certificate_key ...
-
-    location / {
-        proxy_pass http://127.0.0.1:8787;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # SSE 关键项：关缓冲、长超时、HTTP/1.1
-        proxy_buffering off;
-        proxy_cache off;
-        proxy_read_timeout 3600s;
-        proxy_http_version 1.1;
-        proxy_set_header Connection "";
-    }
-}
-```
-
-> 仅当 SSE 需要走与页面不同的来源（如独立子域）时，才在**构建期**设置 `NEXT_PUBLIC_SSE_BASE`（该变量在 `next build` 时固化进静态包，容器运行时再设无效）。
-
----
-
-
-
-## 开发
-
-### 手动漏洞复测
-
-任务详情的「复测」页签可分页选择本任务的漏洞、查看历次结论和证据，并手动发起复测。启动后保留当前页签，显示转圈图标和「复测中」；确认修复后同步更新漏洞状态。
-
-在漏洞列表每行操作区点击「复测」，或在漏洞详情的「漏洞复测」区域点击「发起复测」，填写可选的修复版本、测试条件或限制，系统会创建独立的复测 Agent 会话，启动后保留当前页面。列表的平铺、按任务分组和资产视图均支持该入口；复测运行时显示转圈图标和「复测中」，需要查看时点击进入对应会话，结束后恢复「复测」。复测无需重新启动原扫描任务，结论分为「仍可复现」「已修复」「无法确认」，每次的结论、证据和会话链接保存在漏洞详情中。
-
-新版后端首次启动会预置可编辑的「漏洞复测」（`retester`）Agent，可在 Agent 管理中配置提示词、LLM、运行预算和工具。默认使用其绑定的 LLM，未绑定则使用全局激活配置。复测会话成功完成且结论为「已修复」时，系统自动将漏洞处置状态改为「已修复」；执行中、失败、停止或其他结论保留原状态。原始证据和报告始终保留。也可在状态下拉菜单中手动选择「已修复」。同一漏洞正在复测时复用已有会话，停止、失败或服务重启后可重新发起。
-
-本版历史记录通过漏洞详情和会话查看，暂未纳入漏洞报告导出或任务归档包，也未自动关联流量包。演示模式只生成明确标注的模拟记录，不请求真实目标。
-
-### 本地运行与测试
-
-```bash
-./dev.sh    # 后端(:8787) + 流量代理(:8788) + 前端 next dev(:5173) → http://localhost:5173
-```
-
-- 后端：`go run ./cmd/artex`（不带 `-tags embedui` 则不内嵌前端）
-- 前端：`cd web && npm run dev`（`/api` 反代到后端，带热更新）
-- 测试：`go test ./...`
-- Mock 预览（无后端）：`cd web && NEXT_PUBLIC_MOCK=1 npm run dev`
-
----
+</details>
 
 ## 系统技术架构
 
@@ -282,7 +322,7 @@ flowchart TB
     UI["仪表盘 · 任务 · 资产 · 覆盖图 · 流量 · 工作空间 · 系统配置"]
   end
   subgraph SRV["server（Go net/http）"]
-    API["REST /api/*　JWT 鉴权　SSE"]
+    API["REST /api/*　短期 JWT + 会话续期　SSE 票据"]
     ENG["engine 调度循环"]
     MGR["Manager　任务/引擎/store 生命周期"]
   end
@@ -313,7 +353,7 @@ flowchart TB
   WK --> DB
   MA --> DB
   GO --> DB
-  WK -->|"Bash / HTTP 全程留痕"| PROXY
+  WK -->|"启用捕获且经过代理的 HTTP"| PROXY
   WK --> GUARD
   WK --> ENR
   PL -.-> EXT
@@ -324,7 +364,7 @@ flowchart TB
 | 层 | 职责 |
 | --- | --- |
 | **前端** | Next.js 静态导出，`go:embed` 内嵌进单二进制；可视化任务/资产/探索链路/覆盖图，人在环路对话 |
-| **server** | `net/http` 路由 + JWT 鉴权 + SSE；`Manager` 托管任务、引擎、DB store 的生命周期 |
+| **server** | `net/http` 路由 + 短期 JWT / 刷新会话 + SSE 一次性票据；`Manager` 托管任务、引擎、DB store 的生命周期 |
 | **engine** | 每任务一个 `plannerLoop` + N 个 worker goroutine；意图领取、超时/暂停/drain |
 | **agent** | goals / planner / worker / mainagent，`ToolSet` 把双图暴露成 LLM 工具 |
 | **db** | 双图的 Postgres 落地（pgx）；schema 随 `go:embed` 每次启动幂等建表 |
@@ -389,7 +429,7 @@ sequenceDiagram
   W->>FR: claimNext 领一条意图
   W->>DB: 取意图 asset_ids 的原始资产作为初始信息
   W->>PX: 真实工具执行(Kali / Bash / HTTP)
-  PX-->>W: 响应(全程留痕 + CA 验证)
+  PX-->>W: 响应(可解析的捕获流量脱敏留存)
   W->>DB: 写回 fact / asset / finding + 每步 activity
   DB-->>EV: 图变更
   EV-->>P: 再次唤醒(闭环)
@@ -438,25 +478,28 @@ flowchart TB
 
 于是攻击链在“事件驱动 + 无状态会话”的环境下依然**稳定推进、不重复、不错序**——这是 ARTEX 能自主走完多步利用链的关键。
 
----
+## 来源与致谢
 
-## 交流群
+- 原项目：[Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)；当前上游：[trhhubsd/ARTEX](https://github.com/trhhubsd/ARTEX)。
+- 本 fork：[jacketser/ARTEX-](https://github.com/jacketser/ARTEX-)，二开分支 `feature/local-enhancements`。
+- 参考二开：[enwjx/artex-ymh](https://github.com/enwjx/artex-ymh)，本次对照快照为 `1e0ebcc5b58e69d2b5893578d18dd58a674a9146`；具体参考文件见二次开发计划。
+- Agent SDK：[Autumn-27/norma](https://github.com/Autumn-27/norma)。
+- 原版审批详情展示参考：[AegisHook](https://github.com/RuoJi6/AegisHook/blob/main/web/src/components/CallDetail.vue)。
+- 原版资产同步集成：[ScopeSentry](https://github.com/Autumn-27/ScopeSentry)；在“资产同步”页配置地址与 API Key，按项目或任务选择资产后导入。
+- 上游保留参考：[oritera/Cairn](https://github.com/oritera/Cairn)。
 
-扫码关注微信公众号 **SecSentry**，在公众号后台私信即可入群交流。
+### 上游交流渠道
 
-<div align="center">
+原项目提供微信公众号 **SecSentry** 作为交流入口；下方为仓库保留的上游二维码。
 
-<img src="screenshots/wx.png" alt="微信公众号 SecSentry" width="480" />
+<details>
+<summary>查看上游公众号二维码</summary>
 
-</div>
+<img src="screenshots/wx.png" alt="上游微信公众号 SecSentry" width="480" />
 
----
-本仓库继续维护 [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)（AGPL-3.0）。要跟上后续版本，请 fork [trhhubsd/ARTEX](https://github.com/trhhubsd/ARTEX)。
+</details>
 
-## 参考
-
-https://github.com/oritera/Cairn
-
+以下保留上游许可与使用声明。
 
 ## 许可与免责声明
 
