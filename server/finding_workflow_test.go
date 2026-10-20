@@ -23,7 +23,15 @@ func workflowCall(t *testing.T, ctx context.Context, tool actool.CoreTool, input
 	if err != nil || r.IsError != wantError {
 		t.Fatalf("%s: error=%v result=%s", tool.Name(), err, r.Flatten())
 	}
-	return r.Flatten()
+	text := r.Flatten()
+	var envelope struct {
+		Trust   string `json:"trust"`
+		Content string `json:"content"`
+	}
+	if json.Unmarshal([]byte(text), &envelope) == nil && envelope.Trust == "untrusted_tool_data" {
+		return envelope.Content
+	}
+	return text
 }
 
 func workflowTool(t *testing.T, tools []actool.CoreTool, name string) actool.CoreTool {

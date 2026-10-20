@@ -21,7 +21,7 @@ import (
 const (
 	jwtKeyFilename = "jwt.key"
 	authPassKey    = "auth.password_hash"
-	jwtTTL         = 7 * 24 * time.Hour
+	jwtTTL         = 15 * time.Minute
 	keyChars       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 	// 下限与 setup 页的前端校验一致——校验只放在前端等于没放，直接打 API 就能
@@ -85,7 +85,7 @@ func loadOrCreateJWTKey(keyDir, dataDir string) ([]byte, error) {
 	return buf, nil
 }
 
-// signJWT issues a 7-day HS256 token for user ARTEX.
+// signJWT issues a short-lived HS256 token for user ARTEX.
 func signJWT(key []byte) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Subject:   "ARTEX",
@@ -109,7 +109,7 @@ func verifyJWT(tokenStr string, key []byte) bool {
 // Any hash replacement (including reset-password.sh) immediately revokes old tokens.
 func sessionSigningKey(key []byte, hash string) []byte {
 	mac := hmac.New(sha256.New, key)
-	mac.Write([]byte("artex/session/v1\x00" + hash))
+	mac.Write([]byte("artex/session/v2\x00" + hash))
 	return mac.Sum(nil)
 }
 func (s *Server) validSession(token string) (bool, error) {
@@ -117,7 +117,19 @@ func (s *Server) validSession(token string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return hash != "" && verifyJWT(token, sessionSigningKey(s.jwtKey, hash)), nil
+	if hash == "" || !verifyJWT(token, sessionSigningKey(s.jwtKey, hash)) {
+		return false, nil
+	}
+	var claims jwt.RegisteredClaims
+	if _, err := jwt.ParseWithClaims(token, &claims, func(*jwt.Token) (any, error) { return sessionSigningKey(s.jwtKey, hash), nil }, jwt.WithValidMethods([]string{"HS256"})); err != nil {
+		return false, nil
+	}
+	if claims.ID == "" {
+		return true, nil
+	} // internally issued short-lived tokens
+	var active bool
+	err = s.m.pg.QueryRow(`SELECT EXISTS(SELECT 1 FROM auth_sessions WHERE id=$1 AND NOT revoked AND expires_at>now() AND last_used_at>now()-interval '7 days')`, claims.ID).Scan(&active)
+	return active, err
 }
 
 // extractToken reads the JWT from Authorization: Bearer header,
@@ -138,6 +150,10 @@ func (s *Server) requireAuth(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := r.URL.Path
 		if strings.HasPrefix(p, "/api/auth/") || p == "/api/health" {
+			if r.Method != http.MethodGet && !refreshOriginOK(r) {
+				writeErr(w, 403, "请求来源无效")
+				return
+			}
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -241,12 +257,7 @@ func (s *Server) authInit(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 403, "密码已设置")
 		return
 	}
-	tok, err := signJWT(sessionSigningKey(s.jwtKey, string(hash)))
-	if err != nil {
-		writeErr(w, 500, "token 生成失败")
-		return
-	}
-	writeJSON(w, 200, map[string]any{"token": tok})
+	s.issueLogin(w, r, string(hash))
 }
 
 // POST /api/auth/change-password — changes the admin password. Requires a valid
@@ -309,6 +320,7 @@ func (s *Server) authChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 409, "密码已被其他请求修改，请重新登录")
 		return
 	}
+	s.setRefreshCookie(w, r, "", time.Unix(0, 0))
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
@@ -343,10 +355,5 @@ func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 401, "用户名或密码错误")
 		return
 	}
-	tok, err := signJWT(sessionSigningKey(s.jwtKey, string(hash)))
-	if err != nil {
-		writeErr(w, 500, "token 生成失败")
-		return
-	}
-	writeJSON(w, 200, map[string]any{"token": tok})
+	s.issueLogin(w, r, string(hash))
 }

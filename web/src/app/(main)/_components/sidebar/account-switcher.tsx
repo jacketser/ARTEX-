@@ -31,8 +31,8 @@ export function AccountSwitcher({
   const [activeUser, setActiveUser] = useState(users[0]);
   const [pwOpen, setPwOpen] = useState(false);
 
-  function handleLogout() {
-    auth.clearToken();
+  async function handleLogout() {
+    try { await auth.logout(); } catch { window.alert("退出登录失败，请重试"); return; }
     window.location.href = "/login";
   }
 

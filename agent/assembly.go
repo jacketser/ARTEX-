@@ -83,5 +83,6 @@ func (g *guardedTool) Call(ctx context.Context, in json.RawMessage, tc *actool.T
 			res, err = actool.Errorf(fmt.Sprintf("工具 %s 内部错误：%v（本次调用已失败，可换个参数或改用别的工具）", g.Name(), r)), nil
 		}
 	}()
-	return g.CoreTool.Call(ctx, in, tc)
+	res, err = g.CoreTool.Call(ctx, in, tc)
+	return isolateToolResult(res), err
 }

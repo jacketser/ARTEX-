@@ -96,12 +96,12 @@ func TestRecordKeepsBodiesInIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"POST /v1/login HTTP/1.1", "Host: api.example.com", `"password":"P@ssw0rd"`} {
+	for _, want := range []string{"POST /v1/login HTTP/1.1", "Host: api.example.com", `"password":"[REDACTED]"`} {
 		if !strings.Contains(req, want) {
 			t.Fatalf("请求原文缺少 %q，实际：\n%s", want, req)
 		}
 	}
-	for _, want := range []string{"HTTP 200", `"token":"abc123"`, "内网测试账号"} {
+	for _, want := range []string{"HTTP 200", `"token":"[REDACTED]"`, "内网测试账号"} {
 		if !strings.Contains(resp, want) {
 			t.Fatalf("响应原文缺少 %q，实际：\n%s", want, resp)
 		}
@@ -133,9 +133,12 @@ func TestFullTextSearchMatchesBodies(t *testing.T) {
 	if n := hits("password"); n != 1 {
 		t.Fatalf("搜 password 命中 %d 条，应为 1", n)
 	}
-	// Substring inside a token — the default unicode61 tokenizer cannot do this.
-	if n := hits("ssw0r"); n != 1 {
-		t.Fatalf("搜子串 ssw0r 命中 %d 条，应为 1", n)
+	// Secrets must not enter the index; non-sensitive substrings remain searchable.
+	if n := hits("ssw0r"); n != 0 {
+		t.Fatal("password leaked into FTS")
+	}
+	if n := hits("dmin"); n != 1 {
+		t.Fatal("non-sensitive substring missing")
 	}
 	if n := hits("内网测试"); n != 1 {
 		t.Fatalf("搜中文命中 %d 条，应为 1", n)

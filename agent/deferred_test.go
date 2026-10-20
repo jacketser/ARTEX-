@@ -12,7 +12,7 @@ import (
 func TestDeferredSystem_NoGlobal(t *testing.T) {
 	// No global MCP names → plain single-segment system, no cache boundary.
 	sys, boundary := deferredSystem("SYS", DeferredInfo{})
-	if len(sys) != 1 || sys[0] != "SYS" || boundary != 0 {
+	if len(sys) != 1 || sys[0] != "SYS"+agentSafetyBoundary || boundary != 0 {
 		t.Fatalf("expected [SYS],0 — got %v,%d", sys, boundary)
 	}
 }
@@ -23,7 +23,7 @@ func TestDeferredSystem_WithGlobal(t *testing.T) {
 		GlobalNames: []string{"mcp__browser__navigate", "mcp__browser__click"},
 	}
 	sys, boundary := deferredSystem("SYS", def)
-	if len(sys) != 2 || sys[0] != "SYS" {
+	if len(sys) != 2 || sys[0] != "SYS"+agentSafetyBoundary {
 		t.Fatalf("expected [SYS, block], got %v", sys)
 	}
 	if !strings.Contains(sys[1], "<available-deferred-tools>") ||

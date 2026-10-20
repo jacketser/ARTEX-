@@ -1,7 +1,7 @@
 // Package traffic implements the request-recording subsystem (docs §10): an
 // embedded go-mitmproxy proxy whose addon writes every target HTTP exchange into
 // a human-browsable file tree, with a sidecar SQLite index for paged queries.
-// Full capture, plaintext (no redaction), target HTTP only.
+// Target HTTP capture with credential redaction before persistence.
 package traffic
 
 import (
@@ -135,12 +135,13 @@ const TrafficSearchDescription = "查询记录代理已抓取的目标流量（�
 
 // Traffic runs the recording proxy and owns the file tree + index.
 type Traffic struct {
-	dir   string
-	addr  string
-	db    *sql.DB
-	wmu   sync.Mutex // serializes record() vs DeleteHost (incl. blob GC)
-	seq   atomic.Int64
-	proxy *mproxy.Proxy
+	security securityGuard
+	dir      string
+	addr     string
+	db       *sql.DB
+	wmu      sync.Mutex // serializes record() vs DeleteHost (incl. blob GC)
+	seq      atomic.Int64
+	proxy    *mproxy.Proxy
 	// fts reports whether the full-text index is available. False on a driver
 	// build without FTS5: recording and metadata search still work, body search
 	// degrades to unsupported rather than erroring.
@@ -434,6 +435,12 @@ func proxyCausedErr(err error) bool {
 // full-text index. Nothing is written to a per-request directory — only bodies
 // above maxInlineBody spill to the content-addressed blob store.
 func (t *Traffic) record(f *mproxy.Flow) {
+	safe, err := t.sanitizedFlow(f)
+	if err != nil {
+		log.Printf("[security] recording skipped: credential redaction unavailable")
+		return
+	}
+	f = safe
 	// The write lock covers blob + index writes, so DeleteHost (and its blob GC)
 	// can run under the same lock without racing a concurrent record.
 	t.wmu.Lock()
@@ -649,7 +656,7 @@ func headerLines(h map[string][]string) string {
 
 // requestHeaderLines restores the HTTP Host header, which net/http stores on
 // Request.Host rather than in Header. Keeping it in request.http makes the raw
-// capture complete and directly replayable.
+// capture interpretable. Sanitized credentials cannot be directly replayed.
 func requestHeaderLines(req *mproxy.Request) string {
 	headers := req.Header.Clone()
 	headers.Del("Host")

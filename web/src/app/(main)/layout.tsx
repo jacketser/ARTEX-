@@ -5,7 +5,7 @@ import * as React from "react";
 
 import { AppSidebar } from "@/app/(main)/_components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { auth } from "@/lib/auth";
+import { ensureSession } from "@/lib/session";
 import { getClientCookie } from "@/lib/cookie.client";
 import {
   SIDEBAR_COLLAPSIBLE_VALUES,
@@ -33,16 +33,12 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
   // disables. No token → bounce to /login; render nothing until confirmed so no
   // protected UI (or its API calls) flashes for a logged-out visitor.
   const [authed, setAuthed] = React.useState(false);
+  const [authError, setAuthError] = React.useState("");
   React.useEffect(() => {
-    if (auth.getToken()) {
-      setAuthed(true);
-    } else {
-      // 客户端守卫认为未登录时，必须同时清掉 cookie：否则 proxy.ts 仅凭
-      // “cookie 存在”就把我们从 /login 又重定向回主界面，与本守卫来回弹跳
-      // 形成无限重定向 → 白屏（cookie 与 localStorage 不一致时触发）。
-      auth.clearToken();
-      window.location.href = "/login";
-    }
+    let live = true;
+    ensureSession().then(ok => { if (!live) return; if (ok) setAuthed(true); else window.location.href = "/login"; })
+      .catch(() => { if (live) setAuthError("登录服务暂时不可用，请刷新重试"); });
+    return () => { live = false; };
   }, []);
 
   const defaultOpen = typeof document === "undefined" ? true : getClientCookie("sidebar_state") !== "false";
@@ -57,7 +53,7 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
     PREFERENCE_DEFAULTS.sidebar_collapsible,
   );
 
-  if (!authed) return null;
+  if (!authed) return authError ? <p role="alert" className="p-8">{authError}</p> : null;
 
   return (
     <SidebarProvider

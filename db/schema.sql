@@ -1492,3 +1492,16 @@ CREATE TABLE IF NOT EXISTS task_recovery_notifications (
  history_id BIGINT PRIMARY KEY REFERENCES task_recovery_history(id) ON DELETE CASCADE,
  event_id BIGINT REFERENCES notification_events(id) ON DELETE SET NULL
 );
+
+-- Refresh credentials are random, hashed, bounded and rotated. No raw tokens.
+CREATE TABLE IF NOT EXISTS auth_sessions (
+ id TEXT PRIMARY KEY,
+ token_hash TEXT NOT NULL,
+ previous_hash TEXT NOT NULL DEFAULT '',
+ previous_until TIMESTAMPTZ NOT NULL DEFAULT 'epoch',
+ password_key TEXT NOT NULL,
+ expires_at TIMESTAMPTZ NOT NULL,
+ last_used_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ revoked BOOLEAN NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS auth_sessions_expiry ON auth_sessions(expires_at);
