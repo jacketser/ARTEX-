@@ -1448,7 +1448,7 @@ CREATE TRIGGER trg_honeypot_stale BEFORE INSERT OR UPDATE ON assets FOR EACH ROW
 DROP TRIGGER IF EXISTS trg_honeypot_queue ON assets;
 CREATE TRIGGER trg_honeypot_queue AFTER INSERT OR UPDATE ON assets FOR EACH ROW EXECUTE FUNCTION queue_honeypot_refresh();
 INSERT INTO asset_honeypot_pending(asset_id) SELECT id FROM assets WHERE type='service'
- AND (NOT (extra ? 'honeypot') OR extra->>'honeypot_stale'='true') ON CONFLICT DO NOTHING;
+ AND (NOT (extra ? 'honeypot') OR NOT (extra->'honeypot' ? 'assessed_at') OR extra->>'honeypot_stale'='true') ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS finding_review_history (
  id BIGSERIAL PRIMARY KEY,
