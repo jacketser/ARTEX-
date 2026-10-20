@@ -88,17 +88,18 @@ func (d *DB) UpdateRecoveryOutcomes(ctx context.Context, now int64) error {
 }
 
 type TaskRecoveryEvent struct {
-	ID           int64  `json:"id"`
-	TaskID       string `json:"task_id"`
-	Attempt      int    `json:"attempt"`
-	StartedAt    int64  `json:"started_at"`
-	ObserveUntil int64  `json:"observe_until"`
-	Status       string `json:"status"`
-	FinishedAt   int64  `json:"finished_at"`
+	ID               int64  `json:"id"`
+	TaskID           string `json:"task_id"`
+	Attempt          int    `json:"attempt"`
+	StartedAt        int64  `json:"started_at"`
+	ObserveUntil     int64  `json:"observe_until"`
+	Status           string `json:"status"`
+	FinishedAt       int64  `json:"finished_at"`
+	AcknowledgedNote string `json:"acknowledged_note,omitempty"`
 }
 
 func (d *DB) RecoveryHistory(ctx context.Context, id string, before int64) ([]TaskRecoveryEvent, error) {
-	rows, err := d.QueryContext(ctx, `SELECT id,task_id::text,attempt,started_at,observe_until,status,finished_at FROM task_recovery_history WHERE task_id=$1 AND ($2::bigint=0 OR id<$2) ORDER BY id DESC LIMIT 50`, id, before)
+	rows, err := d.QueryContext(ctx, `SELECT h.id,h.task_id::text,h.attempt,h.started_at,h.observe_until,h.status,h.finished_at,COALESCE(a.note,'') FROM task_recovery_history h LEFT JOIN task_recovery_ack a ON a.history_id=h.id WHERE h.task_id=$1 AND ($2::bigint=0 OR h.id<$2) ORDER BY h.id DESC LIMIT 50`, id, before)
 	if err != nil {
 		return nil, err
 	}
@@ -106,20 +107,23 @@ func (d *DB) RecoveryHistory(ctx context.Context, id string, before int64) ([]Ta
 	out := []TaskRecoveryEvent{}
 	for rows.Next() {
 		var e TaskRecoveryEvent
-		if err = rows.Scan(&e.ID, &e.TaskID, &e.Attempt, &e.StartedAt, &e.ObserveUntil, &e.Status, &e.FinishedAt); err != nil {
+		if err = rows.Scan(&e.ID, &e.TaskID, &e.Attempt, &e.StartedAt, &e.ObserveUntil, &e.Status, &e.FinishedAt, &e.AcknowledgedNote); err != nil {
 			return nil, err
 		}
 		out = append(out, e)
 	}
 	return out, rows.Err()
 }
-func (d *DB) RecoveryAlerts(ctx context.Context) ([]TaskRecoveryEvent, error) {
-	rows, err := d.QueryContext(ctx, `SELECT h.id,h.task_id::text,h.attempt,h.started_at,h.observe_until,h.status,h.finished_at
- FROM task_recovery_history h JOIN tasks t ON t.id=h.task_id JOIN task_recovery_state r ON r.task_id=t.id
- WHERE h.status='no_progress' AND r.attempts>=3 AND t.deleted_at IS NULL AND t.status NOT IN ('done','failed','timeout')
+
+const recoveryAlertQuery = ` FROM task_recovery_history h JOIN tasks t ON t.id=h.task_id JOIN task_recovery_state r ON r.task_id=t.id
+ WHERE NOT EXISTS(SELECT 1 FROM task_recovery_ack ack WHERE ack.history_id=h.id) AND h.status='no_progress' AND r.attempts>=3 AND t.deleted_at IS NULL AND t.status NOT IN ('done','failed','timeout')
  AND NOT t.paused AND NOT t.queued
  AND h.id=(SELECT max(x.id) FROM task_recovery_history x WHERE x.task_id=t.id)
- AND NOT EXISTS(SELECT 1 FROM activity a WHERE a.exploration_id=t.exploration_id AND a.id>h.progress_id AND (a.kind='user' OR (a.worker LIKE 'work#%' AND a.kind='result' AND NOT a.is_error)))
+ AND NOT EXISTS(SELECT 1 FROM activity a WHERE a.exploration_id=t.exploration_id AND a.id>h.progress_id AND (a.kind='user' OR (a.worker LIKE 'work#%' AND a.kind='result' AND NOT a.is_error)))`
+
+func (d *DB) RecoveryAlerts(ctx context.Context) ([]TaskRecoveryEvent, error) {
+	rows, err := d.QueryContext(ctx, `SELECT h.id,h.task_id::text,h.attempt,h.started_at,h.observe_until,h.status,h.finished_at
+`+recoveryAlertQuery+`
  ORDER BY h.id DESC LIMIT 100`)
 	if err != nil {
 		return nil, err

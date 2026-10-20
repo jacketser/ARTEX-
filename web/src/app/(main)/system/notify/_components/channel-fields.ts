@@ -134,6 +134,7 @@ export type ChannelForm = {
   excludeText: string;
   taskIDsText: string;
   assetIDsText: string;
+  onRecoveryFailure: boolean;
   onStatusChange: boolean;
 };
 
@@ -149,6 +150,7 @@ export const emptyForm = (kind: string): ChannelForm => ({
   excludeText: "",
   taskIDsText: "",
   assetIDsText: "",
+  onRecoveryFailure: false,
   onStatusChange: false,
 });
 

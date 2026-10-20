@@ -24,6 +24,8 @@ type Snapshot struct {
 
 // Item 是一条待推送的漏洞，供渠道渲染。
 type Item struct {
+	TaskID    int64
+	Kind      string
 	FindingID int64
 	Name      string
 	VulnClass string

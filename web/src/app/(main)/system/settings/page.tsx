@@ -1,4 +1,5 @@
 "use client";
+import { FreezeSettings, HoneyRulesSettings, ScenarioSettings } from "@/components/enhancement-settings";
 import { RecoverySettings } from "@/components/recovery-controls";
 
 import * as React from "react";
@@ -168,7 +169,10 @@ export default function SystemSettingsPage() {
 
   const toggleAutoRecovery = (v: boolean) => {
     setAutoRecovery(v);
-    api.setSettings({ auto_recovery_enabled: v }).then(apply).catch(() => setAutoRecovery(!v));
+    api
+      .setSettings({ auto_recovery_enabled: v })
+      .then(apply)
+      .catch(() => setAutoRecovery(!v));
   };
 
   // Persist a web-search patch (enable and/or backend). Optimistic with refetch.
@@ -305,15 +309,26 @@ export default function SystemSettingsPage() {
 
         <Card className="mb-4 break-inside-avoid md:mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base"><ShieldAlertIcon className="size-4" />任务卡住自动恢复</CardTitle>
-            <CardDescription>任务有待执行或运行中意图，超过停滞阈值无活动，且没有审批、模型调用、工具或任务操作执行时，唤醒调度。冷却后可再次唤醒，连续最多 3 次，重启保留计数；实际 Worker 完成或人工输入后可重置次数。暂停、排队、终态和超时收尾任务不会唤醒。</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldAlertIcon className="size-4" />
+              任务卡住自动恢复
+            </CardTitle>
+            <CardDescription>
+              任务有待执行或运行中意图，超过停滞阈值无活动，且没有审批、模型调用、工具或任务操作执行时，唤醒调度。冷却后可再次唤醒，连续最多
+              3 次，重启保留计数；实际 Worker 完成或人工输入后可重置次数。暂停、排队、终态和超时收尾任务不会唤醒。
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4">
-            <Label htmlFor="auto-recovery" className="text-sm font-normal text-muted-foreground">自动唤醒{autoRecovery ? " · 已开启" : " · 已关闭"}</Label>
+            <Label htmlFor="auto-recovery" className="text-sm font-normal text-muted-foreground">
+              自动唤醒{autoRecovery ? " · 已开启" : " · 已关闭"}
+            </Label>
             <Switch id="auto-recovery" checked={autoRecovery} disabled={!loaded} onCheckedChange={toggleAutoRecovery} />
           </CardContent>
- <RecoverySettings />
+          <RecoverySettings />
         </Card>
+        <FreezeSettings />
+        <HoneyRulesSettings />
+        <ScenarioSettings />
 
         <Card className="mb-4 break-inside-avoid md:mb-6">
           <CardHeader>
@@ -464,8 +479,8 @@ export default function SystemSettingsPage() {
               记录代理，独立于流量捕获。
               <br />
               来源可选 <b>DuckDuckGo（ddgs）</b>（无需 Key）、<b>Brave（免费版）</b>（需填写 Brave API Key）、{" "}
-              <b>Tavily</b>（需填写 Tavily API Key）或 <b>DeepSeek</b>（复用当前 LLM 配置）。总开关关闭时，各
-              Agent 的网络搜索开关不可用。
+              <b>Tavily</b>（需填写 Tavily API Key）或 <b>DeepSeek</b>（复用当前 LLM 配置）。总开关关闭时，各 Agent
+              的网络搜索开关不可用。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">

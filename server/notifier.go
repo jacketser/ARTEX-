@@ -430,7 +430,7 @@ func (n *Notifier) itemFor(ctx context.Context, snap notify.Snapshot, baseURL st
 		// 消息里少一行资产而已。
 		log.Printf("[notify] 解析资产名失败 finding=%d: %v", snap.FindingID, err)
 	}
-	item := notify.Item{
+	item := notify.Item{TaskID: snap.TaskID, Kind: snap.Kind,
 		FindingID:  snap.FindingID,
 		Name:       snap.Name,
 		VulnClass:  snap.VulnClass,
@@ -444,6 +444,9 @@ func (n *Notifier) itemFor(ctx context.Context, snap notify.Snapshot, baseURL st
 		// 详情页路由见 web/src/app/(main)/function/findings/detail/page.tsx，
 		// 它从 query 参数 id 读取漏洞 id。
 		item.DetailURL = fmt.Sprintf("%s/function/findings/detail?id=%d", baseURL, snap.FindingID)
+		if snap.Kind == notify.EventRecoveryExhausted {
+			item.DetailURL = fmt.Sprintf("%s/function/tasks/detail?id=%d", baseURL, snap.TaskID)
+		}
 	}
 	return item, nil
 }

@@ -103,7 +103,7 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
           <TableHeader>
             <TableRow>
               <TableHead className="w-40">时间</TableHead>
-              <TableHead>漏洞</TableHead>
+              <TableHead>通知内容</TableHead>
               <TableHead className="w-40">渠道</TableHead>
               <TableHead className="w-24">状态</TableHead>
               <TableHead className="w-16">尝试</TableHead>
@@ -127,7 +127,9 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={toneClasses[statusMeta("severity", d.severity).tone]}>
-                        {statusMeta("severity", d.severity).label}
+                        {d.event_kind === "task_recovery_exhausted"
+                          ? "任务提醒"
+                          : statusMeta("severity", d.severity).label}
                       </Badge>
                       <span className="truncate text-sm">{d.title || "（无标题）"}</span>
                       {d.event_kind === "finding_status_changed" && (

@@ -43,6 +43,8 @@ const webhookDefaultTemplate = `{
 {{- if $i}},{{end}}
     {
       "finding_id": {{$it.FindingID}},
+      "task_id": {{$it.TaskID}},
+      "kind": {{json $it.Kind}},
       "name": {{json $it.Name}},
       "vulnclass": {{json $it.VulnClass}},
       "severity": {{json $it.Severity}},
@@ -66,6 +68,8 @@ type webhookTemplateData struct {
 }
 
 type webhookItem struct {
+	TaskID        int64
+	Kind          string
 	FindingID     int64
 	Name          string
 	VulnClass     string
@@ -205,6 +209,8 @@ func newWebhookTemplateData(m Message) webhookTemplateData {
 	for _, it := range m.Items {
 		wi := webhookItem{
 			FindingID:     it.FindingID,
+			TaskID:        it.TaskID,
+			Kind:          it.Kind,
 			Name:          it.Name,
 			VulnClass:     it.VulnClass,
 			Severity:      it.Severity,

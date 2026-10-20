@@ -10,6 +10,7 @@ import (
 // right wrap-up words (per-run vs task-timeout). Attached to the run ctx by the
 // engine. Zero value = no task-level timeout (behaves exactly as before).
 type TaskClock struct {
+	Flexible     bool  // coordinator owns the movable task deadline; per-run budgets stay independent
 	DeadlineUnix int64 // absolute deadline (unix seconds); 0 = no task timeout
 	Final        bool  // coordinator-driven FINAL planner round (task ending now)
 }
@@ -51,4 +52,13 @@ func clampMaxDuration(deadlineUnix int64, ownBudget time.Duration) (eff time.Dur
 		eff = ownBudget
 	}
 	return eff, clamped
+}
+
+// A movable task cutoff is enforced by the engine coordinator, not an immutable
+// SDK timer. Final settlement and independent per-worker limits remain bounded.
+func runMaxDuration(tc TaskClock, ownBudget time.Duration) (time.Duration, bool) {
+	if tc.Flexible && !tc.Final {
+		return ownBudget, false
+	}
+	return clampMaxDuration(tc.DeadlineUnix, ownBudget)
 }

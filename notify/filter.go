@@ -10,6 +10,7 @@ import (
 // Filter 是 notification_channels.filter 这一 JSONB 列的契约：渠道实例的过滤条件。
 // 所有字段都可选，缺省即「不过滤」——这正是畸形配置的兜底语义，见 ParseFilter。
 type Filter struct {
+	OnRecoveryFailure bool `json:"on_recovery_failure"`
 	// MinSeverity 是最低级别门槛（low/medium/high/critical），空=不设门槛。
 	MinSeverity string `json:"min_severity"`
 	// TaskIDs / AssetIDs 为空数组表示不限；非空则要求事件与它有交集。
@@ -36,7 +37,9 @@ func ParseFilter(raw []byte) Filter {
 		return f
 	}
 	// 解析失败时 f 保持零值，即不过滤。
-	_ = json.Unmarshal(raw, &f)
+	if json.Unmarshal(raw, &f) != nil {
+		return Filter{}
+	}
 	return f
 }
 
@@ -71,6 +74,9 @@ func (f Filter) Validate() error {
 // **永不返回 error**，理由同 ParseFilter：任何内部异常都按「命中」处理。
 // 判定顺序：事件类型 → 级别门槛 → 任务/资产范围 → 漏洞类型关键词。
 func Match(f Filter, s Snapshot) bool {
+	if s.Kind == EventRecoveryExhausted {
+		return f.OnRecoveryFailure && (len(f.TaskIDs) == 0 || slices.Contains(f.TaskIDs, s.TaskID))
+	}
 	// 状态变更事件只有显式开启的渠道才接收。默认关，因为绝大多数使用者
 	// 期望「推送」指的是「发现新漏洞」，而不是流水账式地跟进每个状态流转。
 	if s.Kind == EventFindingStatusChanged && !f.OnStatusChange {

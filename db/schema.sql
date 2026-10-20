@@ -1427,8 +1427,8 @@ CREATE TABLE IF NOT EXISTS asset_honeypot_pending (
 CREATE OR REPLACE FUNCTION mark_honeypot_stale() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
  IF NEW.type='service' AND (TG_OP='INSERT' OR NEW.type IS DISTINCT FROM OLD.type OR
- ROW(NEW.service_name,NEW.page_title,NEW.technologies,NEW.extra->'banner',NEW.extra->'server_header',NEW.extra->'powered_by',NEW.extra->'response_summary')
- IS DISTINCT FROM ROW(OLD.service_name,OLD.page_title,OLD.technologies,OLD.extra->'banner',OLD.extra->'server_header',OLD.extra->'powered_by',OLD.extra->'response_summary')) THEN
+ ROW(NEW.service_name,NEW.page_title,NEW.technologies,NEW.extra->'banner',NEW.extra->'server_header',NEW.extra->'powered_by',NEW.extra->'response_summary',NEW.extra->'tls_subject',NEW.extra->'tls_issuer',NEW.extra->'tls_fingerprint')
+ IS DISTINCT FROM ROW(OLD.service_name,OLD.page_title,OLD.technologies,OLD.extra->'banner',OLD.extra->'server_header',OLD.extra->'powered_by',OLD.extra->'response_summary',OLD.extra->'tls_subject',OLD.extra->'tls_issuer',OLD.extra->'tls_fingerprint')) THEN
   NEW.extra=jsonb_set(COALESCE(NEW.extra,'{}'),'{honeypot_stale}','true',true);
   IF NEW.extra ? 'honeypot_review' THEN
    NEW.extra=jsonb_set(NEW.extra,'{honeypot_review,stale}','true',true);
@@ -1447,8 +1447,9 @@ DROP TRIGGER IF EXISTS trg_honeypot_stale ON assets;
 CREATE TRIGGER trg_honeypot_stale BEFORE INSERT OR UPDATE ON assets FOR EACH ROW EXECUTE FUNCTION mark_honeypot_stale();
 DROP TRIGGER IF EXISTS trg_honeypot_queue ON assets;
 CREATE TRIGGER trg_honeypot_queue AFTER INSERT OR UPDATE ON assets FOR EACH ROW EXECUTE FUNCTION queue_honeypot_refresh();
+UPDATE assets SET extra=jsonb_set(COALESCE(extra,'{}'),'{honeypot_stale}','true',true) WHERE type='service' AND NOT (COALESCE(extra->'honeypot','{}') ? 'rule_revision') AND extra->>'honeypot_stale' IS DISTINCT FROM 'true';
 INSERT INTO asset_honeypot_pending(asset_id) SELECT id FROM assets WHERE type='service'
- AND (NOT (extra ? 'honeypot') OR NOT (extra->'honeypot' ? 'assessed_at') OR extra->>'honeypot_stale'='true') ON CONFLICT DO NOTHING;
+ AND (NOT (extra ? 'honeypot') OR NOT (extra->'honeypot' ? 'rule_revision') OR extra->>'honeypot_stale'='true') ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS finding_review_history (
  id BIGSERIAL PRIMARY KEY,
@@ -1469,3 +1470,25 @@ CREATE TRIGGER trg_review_history AFTER INSERT OR UPDATE ON finding_reviews FOR 
 INSERT INTO finding_review_history(finding_id,kind,fingerprint,result,created_at)
  SELECT r.finding_id,'manual',r.fingerprint,to_jsonb(r),r.updated_at FROM finding_reviews r
  WHERE NOT EXISTS(SELECT 1 FROM finding_review_history h WHERE h.finding_id=r.finding_id AND h.kind='manual');
+
+-- Clock discontinuities are audit records, with one durable shift per engine sample.
+CREATE TABLE IF NOT EXISTS clock_compensations (
+ id BIGSERIAL PRIMARY KEY,
+ event_key TEXT NOT NULL UNIQUE,
+ observed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ previous_unix BIGINT NOT NULL,
+ current_unix BIGINT NOT NULL,
+ shift_seconds BIGINT NOT NULL,
+ reason TEXT NOT NULL,
+ affected_tasks JSONB NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS task_recovery_ack (
+ history_id BIGINT PRIMARY KEY REFERENCES task_recovery_history(id) ON DELETE CASCADE,
+ note TEXT NOT NULL,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS task_recovery_notifications (
+ history_id BIGINT PRIMARY KEY REFERENCES task_recovery_history(id) ON DELETE CASCADE,
+ event_id BIGINT REFERENCES notification_events(id) ON DELETE SET NULL
+);

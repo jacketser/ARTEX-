@@ -26,8 +26,33 @@ export interface Task {
   findings?: { critical: number; high: number; medium: number; low: number }; // 已登记漏洞数(按严重度分档)
   last_activity?: string;
   stalled?: boolean;
-  auto_recovery?: { history: {id:number;task_id:string;attempt:number;started_at:number;observe_until:number;finished_at:number;status:string}[]; needs_attention:boolean; enabled: boolean; attempts: number; max_attempts: number; last_attempt: number; available: boolean; message: string };
-  diagnostic?: { code: string; message: string; advice: string; pending_approvals: number; active_tools: number; tool_elapsed_seconds: number };
+  auto_recovery?: {
+    history: {
+      id: number;
+      task_id: string;
+      attempt: number;
+      started_at: number;
+      observe_until: number;
+      finished_at: number;
+      status: string;
+      acknowledged_note?: string;
+    }[];
+    needs_attention: boolean;
+    enabled: boolean;
+    attempts: number;
+    max_attempts: number;
+    last_attempt: number;
+    available: boolean;
+    message: string;
+  };
+  diagnostic?: {
+    code: string;
+    message: string;
+    advice: string;
+    pending_approvals: number;
+    active_tools: number;
+    tool_elapsed_seconds: number;
+  };
   goals_total?: number;
   goals_met?: number;
   engine_mode?: EngineMode;
@@ -222,8 +247,10 @@ export interface TaskAssetView {
 export type NewAssetType = "root_domain" | "ip" | "subdomain" | "app" | "service" | "endpoint";
 
 export interface HoneypotResult {
- stale?: boolean;
- assessed_at?: number;
+  sources?: string[];
+  rule_revision?: string;
+  stale?: boolean;
+  assessed_at?: number;
   version: string;
   fingerprint: string;
   matched: boolean;
@@ -237,7 +264,13 @@ export interface HoneypotResult {
 
 export interface Asset {
   honeypot?: HoneypotResult;
- honeypot_review?: {fingerprint:string;verdict:"confirmed"|"excluded"|"unreviewed";note:string;updated_at:number;stale:boolean};
+  honeypot_review?: {
+    fingerprint: string;
+    verdict: "confirmed" | "excluded" | "unreviewed";
+    note: string;
+    updated_at: number;
+    stale: boolean;
+  };
   id: number;
   type: NewAssetType;
   company_id?: number;
@@ -531,7 +564,20 @@ export interface Finding {
 }
 
 export interface AutoReviewResult {
- comparisons?: {baseline_id:string;proof_id:string;differences:string[];limitation:string;bodies:{side:string;status:string;baseline_length:number;proof_length:number;first_difference?:number;details:string}[]}[];
+  comparisons?: {
+    baseline_id: string;
+    proof_id: string;
+    differences: string[];
+    limitation: string;
+    bodies: {
+      side: string;
+      status: string;
+      baseline_length: number;
+      proof_length: number;
+      first_difference?: number;
+      details: string;
+    }[];
+  }[];
   basis: string;
   suggestions: string[];
   verdict: "supported" | "refuted" | "inconclusive";
@@ -988,6 +1034,7 @@ export interface NotificationFilter {
   asset_ids?: number[]; // 空=不限；非空则要求与漏洞锚定资产有交集
   vulnclass_include?: string[]; // 空=全收；非空则要求漏洞类型命中任一关键词（大小写不敏感子串）
   vulnclass_exclude?: string[]; // 命中任一关键词即排除（排除优先于包含）
+  on_recovery_failure?: boolean;
   on_status_change?: boolean; // 是否也接收漏洞处置状态变更事件
 }
 

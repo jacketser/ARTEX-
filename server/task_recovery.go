@@ -2,12 +2,14 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/Autumn-27/artex/db"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -65,6 +67,11 @@ func (sc *Scheduler) recoverStalledTasks() {
 		log.Printf("[recovery] observe failed: %v", err)
 		return
 	}
+	ctx, cancel = context.WithTimeout(sc.s.ctx, 2*time.Second)
+	if err := sc.pg.QueueRecoveryNotifications(ctx); err != nil {
+		log.Printf("[recovery] enqueue notice failed: %v", err)
+	}
+	cancel()
 	// Fail closed on unavailable/corrupt settings; unset means enabled.
 	value, ok, err := sc.pg.GetSetting(settingAutoRecovery)
 	if err != nil || (ok && value != "true" && value != "1") {
@@ -243,4 +250,33 @@ func (s *Server) recoveryAlerts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, rows)
+}
+
+func (s *Server) acknowledgeRecovery(w http.ResponseWriter, r *http.Request) {
+	t := s.m.ResolveTask(r.PathValue("id"))
+	if t == nil {
+		writeErr(w, 404, "任务不存在")
+		return
+	}
+	var in struct {
+		HistoryID int64  `json:"history_id"`
+		Note      string `json:"note"`
+	}
+	if !decodeEnhancement(w, r, &in) {
+		return
+	}
+	in.Note = strings.TrimSpace(in.Note)
+	if in.HistoryID <= 0 || in.Note == "" || len(in.Note) > 2000 {
+		writeErr(w, 400, "请指定记录并填写 1–2000 字节的处理说明")
+		return
+	}
+	if err := s.m.pg.AcknowledgeRecovery(r.Context(), t.ID, in.HistoryID, in.Note); err != nil {
+		if err == sql.ErrNoRows {
+			writeErr(w, 409, "记录已处理或不属于该任务")
+			return
+		}
+		writeErr(w, 500, "保存处理说明失败")
+		return
+	}
+	writeJSON(w, 200, map[string]bool{"ok": true})
 }

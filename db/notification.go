@@ -326,6 +326,9 @@ WHERE NOT fanned_out ORDER BY id FOR UPDATE SKIP LOCKED LIMIT $1`, limit)
 	var toInsert []pending
 	for i, snap := range parsedSnaps {
 		for _, ch := range channels {
+			if snap.Kind == notify.EventRecoveryExhausted && ch.Mode != NotifyModeRealtime {
+				continue
+			}
 			if !notify.Match(notify.ParseFilter(ch.Filter), snap) {
 				continue
 			}

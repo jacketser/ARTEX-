@@ -28,10 +28,10 @@ func (s *AssetStore) SetHoneypot(id int64, result any) error {
 
 func HoneypotInput(a *Asset) honeydetect.Input {
 	get := func(k string) string { v, _ := a.Extra[k].(string); return v }
-	return honeydetect.Input{Service: a.ServiceName, Title: a.PageTitle, Technologies: a.Technologies, Banner: get("banner"), ServerHeader: get("server_header"), PoweredBy: get("powered_by"), ResponseSummary: get("response_summary")}
+	return honeydetect.Input{Service: a.ServiceName, Title: a.PageTitle, Technologies: a.Technologies, Banner: get("banner"), ServerHeader: get("server_header"), PoweredBy: get("powered_by"), ResponseSummary: get("response_summary"), TLSSubject: get("tls_subject"), TLSIssuer: get("tls_issuer"), TLSFingerprint: get("tls_fingerprint")}
 }
 
-var ErrHoneypotStale = errors.New("资产元数据已变化，请刷新后重新复核")
+var ErrHoneypotStale = errors.New("资产元数据或规则已变化，请刷新后重新复核")
 
 // AssessHoneypot locks source metadata and preserves unrelated extra keys atomically.
 func (s *AssetStore) AssessHoneypot(ctx context.Context, id int64, manual map[string]string) (honeydetect.Result, error) {
@@ -40,6 +40,23 @@ func (s *AssetStore) AssessHoneypot(ctx context.Context, id int64, manual map[st
 		return honeydetect.Result{}, err
 	}
 	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock_shared(722681)"); err != nil {
+		return honeydetect.Result{}, err
+	}
+	rules := honeydetect.DefaultRules()
+	var config string
+	err = tx.QueryRowContext(ctx, "SELECT value FROM settings WHERE key=$1", HoneyRulesKey).Scan(&config)
+	if err != nil && err != sql.ErrNoRows {
+		return honeydetect.Result{}, err
+	}
+	if err == nil {
+		if err = json.Unmarshal([]byte(config), &rules); err != nil {
+			return honeydetect.Result{}, err
+		}
+	}
+	if err = rules.Validate(); err != nil {
+		return honeydetect.Result{}, err
+	}
 	var raw []byte
 	err = tx.QueryRowContext(ctx, `SELECT jsonb_build_object('service_name',COALESCE(service_name,''),'page_title',COALESCE(page_title,''),'technologies',technologies,'extra',extra) FROM assets WHERE id=$1 FOR UPDATE`, id).Scan(&raw)
 	if err != nil {
@@ -49,7 +66,7 @@ func (s *AssetStore) AssessHoneypot(ctx context.Context, id int64, manual map[st
 	if err = json.Unmarshal(raw, &a); err != nil {
 		return honeydetect.Result{}, err
 	}
-	result := honeydetect.Detect(HoneypotInput(&a))
+	result := honeydetect.DetectWithRules(HoneypotInput(&a), rules)
 	result.AssessedAt = time.Now().Unix()
 	if manual != nil && manual["fingerprint"] != result.Fingerprint {
 		return result, ErrHoneypotStale

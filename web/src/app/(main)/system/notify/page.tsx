@@ -102,6 +102,7 @@ export default function NotifyPage() {
       excludeText: (f.vulnclass_exclude ?? []).join("\n"),
       taskIDsText: (f.task_ids ?? []).join(","),
       assetIDsText: (f.asset_ids ?? []).join(","),
+      onRecoveryFailure: f.on_recovery_failure ?? false,
       onStatusChange: f.on_status_change ?? false,
     });
     setOpen(true);
@@ -159,6 +160,7 @@ export default function NotifyPage() {
       vulnclass_exclude: parseKeywords(form.excludeText),
       task_ids: parseIDs(form.taskIDsText),
       asset_ids: parseIDs(form.assetIDsText),
+      on_recovery_failure: form.onRecoveryFailure,
       on_status_change: form.onStatusChange,
     };
   }
@@ -577,6 +579,19 @@ export default function NotifyPage() {
                       aria-label="接收状态变更"
                     />
                     漏洞处置状态变更时也推送（仅实时模式）
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <label className="flex items-center gap-2">
+                      <Switch
+                        checked={form.onRecoveryFailure}
+                        onCheckedChange={(v) => setF({ onRecoveryFailure: v })}
+                        aria-label="接收恢复失败通知"
+                      />
+                      连续恢复失败时推送（仅实时模式，默认关闭）
+                    </label>
+                    <p className="text-muted-foreground text-xs">
+                      按任务 ID 过滤，忽略漏洞级别及资产过滤；只发送任务编号和恢复状态。
+                    </p>
                   </div>
                 </div>
               </div>

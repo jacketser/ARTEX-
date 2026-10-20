@@ -15,6 +15,7 @@ export type RecoveryEvent = {
   observe_until: number;
   finished_at: number;
   status: string;
+  acknowledged_note?: string;
 };
 const labels: Record<string, string> = {
   observing: "观察中",
@@ -121,6 +122,7 @@ export function RecoveryHistory({ taskId, recent }: { taskId: string; recent: Re
       {items.map((e) => (
         <p key={e.id} className="mt-1 text-xs">
           {new Date(e.started_at * 1000).toLocaleString("zh-CN")} · 第 {e.attempt} 次 · {labels[e.status] ?? e.status}
+          {e.acknowledged_note && <span> · 人工确认：{e.acknowledged_note}</span>}
         </p>
       ))}
       {error && <p role="alert">{error}</p>}
@@ -164,12 +166,51 @@ export function RecoveryAlerts() {
         <div role="alert" className="mx-4 rounded border border-amber-500 p-3 text-sm">
           <p>以下任务连续 3 次自动唤醒后仍无有效进展，需要人工检查：</p>
           {items.map((e) => (
-            <Link key={e.id} href={`/function/tasks/detail?id=${e.task_id}`} className="mr-4 underline">
-              任务 #{e.task_id}
-            </Link>
+            <div key={e.id} className="mt-2 space-y-2">
+              <Link href={`/function/tasks/detail?id=${e.task_id}`} className="underline">
+                任务 #{e.task_id}
+              </Link>
+              <RecoveryAck item={e} onDone={() => setItems((rows) => rows.filter((row) => row.id !== e.id))} />
+            </div>
           ))}
         </div>
       )}
     </>
+  );
+}
+
+function RecoveryAck({ item, onDone }: { item: RecoveryEvent; onDone: () => void }) {
+  const [note, setNote] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  async function acknowledge() {
+    setBusy(true);
+    try {
+      await http(`/tasks/${encodeURIComponent(item.task_id)}/recovery-ack`, {
+        method: "POST",
+        body: JSON.stringify({ history_id: item.id, note }),
+      });
+      toast.success("已记录人工确认；恢复次数和任务状态保持不变");
+      onDone();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input
+        aria-label={`任务 #${item.task_id} 处理备注`}
+        className="max-w-md"
+        placeholder="填写检查结果或后续安排"
+        value={note}
+        maxLength={500}
+        disabled={busy}
+        onChange={(e) => setNote(e.target.value)}
+      />
+      <Button size="sm" variant="outline" disabled={busy || !note.trim()} onClick={() => void acknowledge()}>
+        确认已检查
+      </Button>
+    </div>
   );
 }

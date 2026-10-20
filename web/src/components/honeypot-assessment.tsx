@@ -48,8 +48,15 @@ export function HoneypotAssessment({ asset, onChanged }: { asset: Asset; onChang
         </Badge>
       </summary>
       <div className="mt-2 space-y-1 whitespace-normal">
-        <p>{result.stale ? "元数据已变化，后台将重新评估。" : "元数据变化后会自动重评；人工结论需重新确认。"}</p>
+        <p>
+          {result.stale ? "元数据或规则已变化，后台将重新评估。" : "元数据或规则变化后会自动重评；人工结论需重新确认。"}
+        </p>
         {result.assessed_at && <p>评估时间：{new Date(result.assessed_at * 1000).toLocaleString("zh-CN")}</p>}
+        {result.sources?.map((source) => (
+          <p key={source} className="text-muted-foreground">
+            依据：{source}
+          </p>
+        ))}
         <p>规则评分：{result.score}/100（不是概率）</p>
         {result.provider && <p>名称标记：{result.provider}</p>}
         {result.evidence.map((item) => (

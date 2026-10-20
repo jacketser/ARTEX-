@@ -23,6 +23,7 @@ const (
 
 // 事件类型，对应 notification_events.kind。
 const (
+	EventRecoveryExhausted    = "task_recovery_exhausted"
 	EventFindingCreated       = "finding_created"
 	EventFindingStatusChanged = "finding_status_changed"
 )
@@ -46,6 +47,8 @@ func SeverityRank(severity string) int { return severityRank[severity] }
 // 未知级别原样回显，不臆造。
 func SeverityLabel(severity string) string {
 	switch severity {
+	case "notice":
+		return "任务提醒"
 	case "critical":
 		return "🔴 严重"
 	case "high":

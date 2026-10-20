@@ -11,9 +11,12 @@ import (
 	"unicode"
 )
 
-const Version = "metadata-v1"
+const Version = "metadata-v2"
 
 type Input struct {
+	TLSSubject      string   `json:"tls_subject"`
+	TLSIssuer       string   `json:"tls_issuer"`
+	TLSFingerprint  string   `json:"tls_fingerprint"`
 	Service         string   `json:"service"`
 	Title           string   `json:"title"`
 	Technologies    []string `json:"technologies"`
@@ -23,17 +26,19 @@ type Input struct {
 	ResponseSummary string   `json:"response_summary"`
 }
 type Result struct {
-	Stale       bool     `json:"stale"`
-	AssessedAt  int64    `json:"assessed_at"`
-	Version     string   `json:"version"`
-	Fingerprint string   `json:"fingerprint"`
-	Matched     bool     `json:"matched"`
-	Score       int      `json:"score"`
-	Confidence  string   `json:"confidence"`
-	Provider    string   `json:"provider,omitempty"`
-	Signals     []string `json:"signals"`
-	Evidence    []string `json:"evidence"`
-	Limitations string   `json:"limitations"`
+	RuleRevision string   `json:"rule_revision"`
+	Sources      []string `json:"sources"`
+	Stale        bool     `json:"stale"`
+	AssessedAt   int64    `json:"assessed_at"`
+	Version      string   `json:"version"`
+	Fingerprint  string   `json:"fingerprint"`
+	Matched      bool     `json:"matched"`
+	Score        int      `json:"score"`
+	Confidence   string   `json:"confidence"`
+	Provider     string   `json:"provider,omitempty"`
+	Signals      []string `json:"signals"`
+	Evidence     []string `json:"evidence"`
+	Limitations  string   `json:"limitations"`
 }
 
 func Normalize(in Input) Input {
@@ -44,6 +49,9 @@ func Normalize(in Input) Input {
 		}
 		return strings.ToLower(strings.TrimSpace(string(r)))
 	}
+	in.TLSSubject = clip(in.TLSSubject)
+	in.TLSIssuer = clip(in.TLSIssuer)
+	in.TLSFingerprint = clip(in.TLSFingerprint)
 	in.Service = clip(in.Service)
 	in.Title = clip(in.Title)
 	in.Banner = clip(in.Banner)
@@ -77,25 +85,34 @@ func containsToken(s, token string) bool {
 	}
 	return false
 }
-func Detect(input Input) Result {
+func Detect(input Input) Result { return DetectWithRules(input, DefaultRules()) }
+func DetectWithRules(input Input, rules RuleSet) Result {
 	in := Normalize(input)
-	out := Result{Version: Version, Fingerprint: Fingerprint(in), Confidence: "none", Signals: []string{}, Evidence: []string{}, Limitations: "仅检查已保存元数据中的显式名称；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"}
-	fields := []struct{ name, value string }{{"service", in.Service}, {"title", in.Title}, {"technologies", strings.Join(in.Technologies, " ")}, {"banner", in.Banner}, {"server_header", in.ServerHeader}, {"powered_by", in.PoweredBy}, {"response_summary", in.ResponseSummary}}
+	revision := rules.Revision()
+	sum := sha256.Sum256([]byte(Fingerprint(in) + ":" + revision))
+	out := Result{RuleRevision: revision, Sources: []string{}, Version: Version, Fingerprint: hex.EncodeToString(sum[:]), Confidence: "none", Signals: []string{}, Evidence: []string{}, Limitations: "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"}
+	fields := []struct{ name, value string }{{"service", in.Service}, {"title", in.Title}, {"technologies", strings.Join(in.Technologies, " ")}, {"banner", in.Banner}, {"server_header", in.ServerHeader}, {"powered_by", in.PoweredBy}, {"response_summary", in.ResponseSummary}, {"tls_subject", in.TLSSubject}, {"tls_issuer", in.TLSIssuer}, {"tls_fingerprint", in.TLSFingerprint}}
 	providers := map[string]bool{}
+	sources := map[string]bool{}
 	surfaces := map[string]bool{}
 	values := map[string]bool{}
 	for _, field := range fields {
 		// Count the same string once even if copied into multiple asset fields.
 		matched := false
-		for _, marker := range []string{"cowrie", "dionaea", "hfish", "honeypot", "蜜罐"} {
-			if !containsToken(field.value, marker) {
+		for _, rule := range rules.Rules {
+			marker := rule.ID
+			if !rule.matches(field.name, field.value) {
 				continue
 			}
 			matched = true
 			out.Signals = append(out.Signals, field.name+":"+marker)
-			out.Evidence = append(out.Evidence, field.name+" 包含显式标记「"+marker+"」（仍可能是产品介绍或模拟内容）")
-			if marker != "honeypot" && marker != "蜜罐" {
-				providers[marker] = true
+			if !sources[rule.ID] {
+				out.Sources = append(out.Sources, rule.ID+": "+rule.Source)
+				sources[rule.ID] = true
+			}
+			out.Evidence = append(out.Evidence, field.name+" 命中规则「"+marker+"」（仍可能是正常产品介绍或模拟内容）")
+			if rule.Provider != "" && marker != "honeypot" && marker != "蜜罐" {
+				providers[rule.Provider] = true
 			}
 		}
 		if matched && !values[field.value] {
@@ -103,6 +120,9 @@ func Detect(input Input) Result {
 			group := "application"
 			if field.name == "banner" || field.name == "service" {
 				group = "service"
+			}
+			if strings.HasPrefix(field.name, "tls_") {
+				group = "tls"
 			}
 			if field.name == "server_header" || field.name == "powered_by" {
 				group = "headers"

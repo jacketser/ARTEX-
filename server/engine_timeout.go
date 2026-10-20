@@ -68,6 +68,9 @@ func (e *Engine) inflightCount(taskID string) int64 {
 // map (stamped this session); falls back to the DB-loaded value (restart), seeding
 // the map. 0 = no timeout / not yet stamped.
 func (e *Engine) taskDeadline(t *Task) int64 {
+	if !e.checkClock() {
+		return 0
+	} // Do not expire tasks while a clock adjustment is unresolved.
 	if v, ok := e.deadline.Load(t.ID); ok {
 		return v.(int64)
 	}
@@ -120,7 +123,8 @@ func (e *Engine) clockCtx(base context.Context, t *Task, final bool) context.Con
 	if dl <= 0 && !final {
 		return base // no timeout → unchanged behavior
 	}
-	return agent.WithTaskClock(base, agent.TaskClock{DeadlineUnix: dl, Final: final})
+	cfg, err := e.m.freezeConfig()
+	return agent.WithTaskClock(base, agent.TaskClock{DeadlineUnix: dl, Final: final, Flexible: err == nil && cfg.Enabled})
 }
 
 // ---------- 协调器 ----------
@@ -173,6 +177,9 @@ func (e *Engine) deadlineCoordinator(ctx context.Context, t *Task) {
 			if sleepCtx(ctx, nap) {
 				return
 			}
+			continue
+		}
+		if updated := e.taskDeadline(t); updated <= 0 || updated > time.Now().Unix() {
 			continue
 		}
 		e.settleTask(ctx, t)
