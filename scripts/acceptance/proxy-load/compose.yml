@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: verify
+      POSTGRES_PASSWORD: isolated-proxy-load-only
+      POSTGRES_DB: verify
+    mem_limit: 256m
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U verify -d verify]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+  fixture:
+    image: ${ARTEX_ACCEPTANCE_IMAGE:-jacketser/artex:local}
+    entrypoint: [/load/proxy-load, serve]
+    environment:
+      GOMAXPROCS: '2'
+    volumes:
+      - ${ARTEX_LOAD_DIR:?set output directory}:/load
+    mem_limit: 256m
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8080/metrics]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+  app:
+    image: ${ARTEX_ACCEPTANCE_IMAGE:-jacketser/artex:local}
+    command: [-addr, ":8787", -proxy, ":8788"]
+    environment:
+      ARTEX_PG_DSN: postgres://verify:isolated-proxy-load-only@postgres:5432/verify?sslmode=disable
+      OPENAI_API_KEY: isolated-platform-load-key-abcdefghijklmnopqrstuvwxyz
+      GOMAXPROCS: '2'
+    volumes:
+      - ./:/acceptance:ro
+    mem_limit: 1g
+    cpus: 2
+    init: true
+    depends_on:
+      postgres: {condition: service_healthy}
+      fixture: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8787/api/health]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+  driver:
+    image: ${ARTEX_ACCEPTANCE_IMAGE:-jacketser/artex:local}
+    entrypoint: [/load/proxy-load, run]
+    environment:
+      GOMAXPROCS: '2'
+    volumes:
+      - ${ARTEX_LOAD_DIR:?set output directory}:/load
+    mem_limit: 384m
+    profiles: [driver]
+networks:
+  default:
+    internal: true

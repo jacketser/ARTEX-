@@ -1,7 +1,9 @@
 package traffic
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -177,5 +179,79 @@ func TestCaptureSwitchDoesNotSaveInflightResponse(t *testing.T) {
 			t.Fatalf("in-flight response saved: count=%d err=%v", n, err)
 		}
 		target.Close()
+	}
+}
+
+func TestCaptureAtGuardBodyLimit(t *testing.T) {
+	tr := captureTestProxy(t)
+	payload := bytes.Repeat([]byte("x"), maxGuardBody)
+	expected := sha256.Sum256(payload)
+	var hits atomic.Int32
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		b, e := io.ReadAll(r.Body)
+		if e != nil || sha256.Sum256(b) != expected {
+			t.Error("request body changed", e)
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write(payload) // Both request and response sit at the exact buffer boundary.
+	})
+	plain, secure := httptest.NewServer(handler), httptest.NewTLSServer(handler)
+	defer plain.Close()
+	defer secure.Close()
+	for _, origin := range []string{plain.URL, secure.URL} {
+		client := captureClient(t, tr.ProxyAddr())
+		client.Timeout = 20 * time.Second
+		for _, chunked := range []bool{false, true} {
+			before, e := tr.Count()
+			if e != nil {
+				t.Fatal(e)
+			}
+			var body io.Reader = bytes.NewReader(payload)
+			if chunked {
+				body = io.NopCloser(body)
+			}
+			req, _ := http.NewRequest("POST", origin, body)
+			req.Header.Set("Content-Type", "text/plain")
+			resp, e := client.Do(req)
+			if e != nil {
+				t.Fatal(e)
+			}
+			b, e := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if e != nil || resp.StatusCode != 200 || sha256.Sum256(b) != expected {
+				t.Fatal("response changed", e)
+			}
+			after, e := tr.Count()
+			if e != nil || after != before+1 {
+				t.Fatalf("exact-limit capture missing: chunked=%t before=%d after=%d err=%v", chunked, before, after, e)
+			}
+			var id string
+			if e = tr.db.QueryRow(`SELECT id FROM exchanges ORDER BY rowid DESC LIMIT 1`).Scan(&id); e != nil {
+				t.Fatal(e)
+			}
+			if e = tr.ReadEvidence(t.Context(), []string{id}, func(saved EvidenceExchange) error {
+				for _, reader := range []io.Reader{saved.Request, saved.Response} {
+					h := sha256.New()
+					n, e := io.Copy(h, reader)
+					if e != nil || n != maxGuardBody || !bytes.Equal(h.Sum(nil), expected[:]) {
+						return fmt.Errorf("saved exact-limit body incomplete: bytes=%d err=%v", n, e)
+					}
+				}
+				return nil
+			}); e != nil {
+				t.Fatal(e)
+			}
+		}
+		before := hits.Load()
+		resp, e := client.Post(origin, "text/plain", io.NopCloser(bytes.NewReader(append(append([]byte{}, payload...), 'x'))))
+		if e != nil {
+			t.Fatal(e)
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != 413 || hits.Load() != before {
+			t.Fatal("oversized chunked request reached target")
+		}
 	}
 }

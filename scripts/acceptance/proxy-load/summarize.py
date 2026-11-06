@@ -1,0 +1,46 @@
+"""Join bounded load results with half-second application resource samples."""
+import datetime as dt
+import json
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+results = json.loads((root / 'results.json').read_text())
+samples = [json.loads(line) for line in (root / 'resources.jsonl').read_text().splitlines()]
+assert samples, 'no application resource samples'
+rows = []
+for result in results:
+    start = dt.datetime.fromisoformat(result['start'].replace('Z', '+00:00')).timestamp()
+    end = dt.datetime.fromisoformat(result['end'].replace('Z', '+00:00')).timestamp()
+    selected = [s for s in samples if start <= s['time'] <= end]
+    result['resource_samples'] = len(selected)
+    if selected:
+        result['rss_peak_mib'] = max(s['rss_kib'] for s in selected) / 1024
+        result['fds_peak'] = max(s['fds'] for s in selected)
+        result['threads_peak'] = max(s['threads'] for s in selected)
+        if len(selected) > 1:
+            result['cpu_cores_mean'] = (selected[-1]['cpu_seconds'] - selected[0]['cpu_seconds']) / (selected[-1]['time'] - selected[0]['time'])
+    rows.append(result)
+last = samples[-1]
+summary = dict(cases=rows, total_requests=sum(r['requests'] for r in rows),
+    total_errors=sum(r['errors'] for r in rows), rss_peak_mib=max(s['rss_kib'] for s in samples)/1024,
+    rss_end_mib=last['rss_kib']/1024, fds_start=samples[0]['fds'], fds_end=last['fds'],
+    fds_peak=max(s['fds'] for s in samples), last_cgroup=last,
+    complete=(root/'security-stats.json').exists())
+(root/'summary.json').write_text(json.dumps(summary, indent=2))
+lines = ['| Scenario | Requests | RPS | p50 ms | p95 ms | p99 ms | Errors | RSS peak MiB |',
+         '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
+for r in rows:
+    rss = f"{r['rss_peak_mib']:.1f}" if 'rss_peak_mib' in r else 'unsampled'
+    lines.append(f"| {r['scenario']['name']} | {r['requests']} | {r['rps']:.1f} | {r['p50_ms']:.1f} | {r['p95_ms']:.1f} | {r['p99_ms']:.1f} | {r['errors']} | {rss} |")
+(root/'summary.md').write_text('\n'.join(lines)+'\n')
+print(json.dumps({k:v for k,v in summary.items() if k not in ('cases','last_cgroup')}))
+if (root/'app-state.json').exists():
+    state=json.loads((root/'app-state.json').read_text())
+    assert not state['OOMKilled'] and state['Running'], 'app died or OOM killed'
+    assert state.get('Health',{}).get('Status') == 'healthy', 'app unhealthy'
+assert summary['complete'] and not summary['total_errors'], 'incomplete or failed run'
+
+if 'memory.events' in last:
+    events = dict(line.split() for line in last['memory.events'].splitlines())
+    assert int(events.get('oom_kill', '0')) == 0, 'cgroup reported an OOM kill'

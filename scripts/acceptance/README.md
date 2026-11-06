@@ -54,3 +54,33 @@ ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:privacy-candidate bash scripts/acceptance
 证据引用／哈希、旧报告和审阅过期、事务失败回滚、符号链接逃逸及凭据变更拒绝由 `historyprivacy` Go 集成测试覆盖。
 
 历史脱敏的 `privacy-run.sh` 还验证三批处理（包含旧目录格式及两级目录 blob 迁移）、成功游标在新命令进程间恢复、第二批注入失败后的原指纹重试，以及失败审计不产生下一游标、旧报文提交后清理、用户其他文件保留和恢复文件继承迁移开关。宿主机 `--resume` 文件校验另用 Docker 参数替身验证，不访问正式部署。
+
+## 完整代理链路压测
+
+```sh
+ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:local bash scripts/acceptance/proxy-load/run.sh
+```
+
+需要 Docker Compose、宿主机 Python 3 和可用的 `golang:1.26-bookworm` 构建镜像。脚本编译仓库内的施压器，
+测试 `ARTEX_ACCEPTANCE_IMAGE` 指定的应用镜像；应用改动必须先构建候选镜像。默认过程约数分钟。
+只在内部 Docker 网络连接合成目标，无宿主机端口，不挂载正式数据，也不读取正式配置或密钥。
+测试实例单独将代理监听设为容器网卡以供施压器连接，正式实例的回环监听不受影响。
+
+测试经过真实 PostgreSQL 凭据查询、HTTP/HTTPS 解密代理和 SQLite/正文存储。包含匹配负载的直连基线、
+捕获开关、1/8/16 并发、1 KiB/64 KiB 请求及响应、4 并发 5 MiB 请求、认证 HTTP 上游及 HTTPS CONNECT，
+并进行 90 秒、最高 80 请求/秒的 HTTPS+上游+捕获持续负载。突发场景按固定请求数执行，
+包含建连和 TLS 初始开销，无预热；持续场景按时间限速。保留全程延迟，包含失败请求，不对性能数字设通过阈值。
+
+为区分正常防护限流与处理能力，测试库请求配额临时提高到允许的 30000/分钟；正式设置不变。
+每轮核对目标实际收到的请求数、请求/响应 SHA-256、目标认证保留、上游确实使用、捕获记录数一致。
+额外混合并发验证普通请求通过、平台凭据原文/Base64 与超限正文在目标前被阻止，最后验证主动触发 429。
+出现错误或缺失记录会退出非零；不会修改断言来将遗漏抓取视为成功。
+
+每 0.5 秒采集应用进程 RSS、CPU 时间、线程数和 FD，以及可用的 cgroup 内存/事件计数。
+结果保存在 `/tmp/artex-proxy-load-*` 的 `summary.json`、`summary.md`、`results.json`、`resources.jsonl`、
+`guard.json` 和 `security-stats.json`；镜像、健康版本和主机信息一并保存。清理测试容器、卷与网络后保留结果。
+原始容器日志含测试实例初始化信息，不应直接作为正式日志发布。
+
+这是同机合成负载下的基线：采样可能错过短时峰值，90 秒不是数小时稳定性证明；
+未覆盖多任务身份并发、HTTP/2、WebSocket、HTTPS/SOCKS5 上游的负载表现、真实互联网延迟或未知凭据。
+这些路径已有的功能回归不能代替对应负载测试。超过缓冲阈值的响应及 SSE 流式捕获不在本次完整记录断言范围。

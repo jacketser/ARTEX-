@@ -205,6 +205,9 @@ func Open(dir, addr string) (*Traffic, error) {
 		Addr:        addr,
 		SslInsecure: true,
 		CaRootPath:  filepath.Join(dir, "_ca"),
+		// The library switches to streaming at >= this threshold and skips
+		// Response callbacks. Include bodies exactly at our accepted guard limit.
+		StreamLargeBodies: maxGuardBody + 1,
 	})
 	if err != nil {
 		db.Close()
