@@ -206,8 +206,12 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 		return r, err
 	}
 	r.ArchiveID = opts.ArchiveID
-	if opts.Scope == "archive-traffic" {
+	if isArchiveScope(opts.Scope) {
 		r.Limitations[0] = "仅处理指定冷归档的流量副本；归档证据、报告、会话、任务文件及活动库和备份不处理"
+		if opts.Scope == "archive-evidence" {
+			r.Limitations[0] = "仅处理指定冷归档的漏洞名称、摘要、证据、报告、流量快照和绑定备注；活动库、归档普通流量、会话、任务文件及备份不处理"
+			r.Limitations = append(r.Limitations, "当前归档格式不保存复测和审阅历史；不会补造缺失内容，含这些扩展表的未知归档须另行核查")
+		}
 		r.Limitations = append(r.Limitations, "单包维护不支持游标；提交中断可能遗留未引用的旧包或候选包，须核对目录与备份")
 	}
 	if err := ValidateBatch(opts.Scope, opts.BatchSize, opts.Cursor); err != nil {
@@ -216,7 +220,7 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 	if opts.BatchSize == 0 {
 		opts.BatchSize = DefaultBatchSize
 	}
-	if opts.Scope == "archive-traffic" {
+	if isArchiveScope(opts.Scope) {
 		opts.BatchSize = maxRows // One package, never partial row pagination.
 	}
 	r.BatchSize, r.Cursor = opts.BatchSize, opts.Cursor
@@ -274,8 +278,8 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 	var apply func() error
 	if opts.Scope == "traffic" {
 		apply, err = planTraffic(ctx, opts, p)
-	} else if opts.Scope == "archive-traffic" {
-		apply, err = planArchiveTraffic(ctx, pg, tx, opts, p)
+	} else if isArchiveScope(opts.Scope) {
+		apply, err = planArchive(ctx, pg, tx, opts, p)
 	} else {
 		apply, err = planEvidence(ctx, tx, opts, p)
 	}

@@ -2,10 +2,14 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/Autumn-27/artex/db"
@@ -106,5 +110,170 @@ func TestTaskArchivePrivacyPackageCompatibility(t *testing.T) {
 	_, resp, err := tr.Get("cold-compatible")
 	if err != nil || bytes.Contains([]byte(resp), []byte("original-token")) || !bytes.Contains([]byte(resp), []byte("9007199254740993")) {
 		t.Fatal("bad restored content", err)
+	}
+}
+
+func TestTaskArchiveEvidencePrivacyRestoreAndSharedHotSnapshot(t *testing.T) {
+	s, f, _ := trafficEvidenceServer(t)
+	s.ctx = context.Background()
+	secret := "synthetic-cold-evidence-credential"
+	body := []byte(`{"token":"archive-unknown-token","number":9007199254740993,"value":"` + secret + `"}`)
+	seedServerEvidenceFlow(t, s, "archive-evidence-source", body)
+	if _, e := s.m.traffic.DB().Exec(`UPDATE exchange_bodies SET req_head=?,resp_head=? WHERE id=?`, "POST / HTTP/1.1\nAuthorization: Bearer "+secret+"\n", "HTTP/1.1 200 OK\nContent-Type: application/json\n", "archive-evidence-source"); e != nil {
+		t.Fatal(e)
+	}
+	list, e := s.evidenceStore().Bind(s.ctx, f.FindingID, []db.TrafficRef{{TrafficID: "archive-evidence-source", Role: "proof", Note: secret}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	finding, e := s.m.pg.GetFinding(f.FindingID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	tid := *finding.TaskID
+	if _, e = s.m.pg.Exec(`UPDATE findings SET name=$2,evidence=$2,report=$2,status='confirmed',report_evidence_version=evidence_version WHERE id=$1`, f.FindingID, secret); e != nil {
+		t.Fatal(e)
+	}
+	// An independent live task shares the exact same original snapshot and blob.
+	sharedTask, e := s.m.CreateTask("shared privacy evidence", "fixture", nil, 0, 0)
+	if e != nil {
+		t.Fatal(e)
+	}
+	sharedID, e := strconv.ParseInt(sharedTask.ID, 10, 64)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer s.m.pg.DeleteTask(sharedID)
+	shared, e := s.evidenceStore().Record(s.ctx, db.RecordFindingInput{TaskID: sharedID, ExplorationID: sharedTask.ExpID, Summary: "shared", Severity: "low"}, []db.TrafficRef{{TrafficID: "archive-evidence-source"}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = s.m.SetTaskPaused(fmt.Sprint(tid), true); e != nil {
+		t.Fatal(e)
+	}
+	job, e := s.m.pg.QueueTaskArchive(tid)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = s.runOneTaskArchiveJob(); e != nil {
+		t.Fatal(e)
+	}
+	archived, e := s.m.pg.GetTaskArchive(job.ID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	beforeDir := t.TempDir()
+	if e = extractTaskArchivePackage(archived.ArchivePath, archived.SHA256, beforeDir); e != nil {
+		t.Fatal(e)
+	}
+	originalManifest, e := os.ReadFile(filepath.Join(beforeDir, "manifest.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var original db.TaskArchiveSnapshot
+	if e = json.Unmarshal(originalManifest, &original); e != nil {
+		t.Fatal(e)
+	}
+	dsn, _, e := db.DSN()
+	if e != nil {
+		t.Fatal(e)
+	}
+	opts := historyprivacy.Options{DSN: dsn, Data: s.m.dir, Scope: "archive-evidence", ArchiveID: job.ID, Secrets: []string{secret}}
+	preview, e := historyprivacy.Run(t.Context(), opts)
+	if e != nil || preview.Changes != 3 {
+		t.Fatal(preview, e)
+	}
+	opts.Apply = preview.Fingerprint
+	if r, e := historyprivacy.Run(t.Context(), opts); e != nil || !r.Applied {
+		t.Fatal(r, e)
+	}
+	opts.Apply = ""
+	if r, e := historyprivacy.Run(t.Context(), opts); e != nil || r.Changes != 0 {
+		t.Fatal("repeat preview", r, e)
+	}
+	changed, e := s.m.pg.GetTaskArchive(job.ID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	afterDir := t.TempDir()
+	if e = extractTaskArchivePackage(changed.ArchivePath, changed.SHA256, afterDir); e != nil {
+		t.Fatal(e)
+	}
+	raw, e := os.ReadFile(filepath.Join(afterDir, "manifest.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var sanitized db.TaskArchiveSnapshot
+	if e = json.Unmarshal(raw, &sanitized); e != nil {
+		t.Fatal(e)
+	}
+	for name, old := range original.Tables {
+		if name == "findings" || name == "traffic_evidence_snapshots" || name == "finding_traffic_bindings" {
+			continue
+		}
+		var a, b bytes.Buffer
+		if e = json.Compact(&a, old); e != nil {
+			t.Fatal(e)
+		}
+		if e = json.Compact(&b, sanitized.Tables[name]); e != nil {
+			t.Fatal(e)
+		}
+		if !bytes.Equal(a.Bytes(), b.Bytes()) {
+			t.Fatal("unrelated table changed", name)
+		}
+	}
+	// Validate both archive cleanup and preservation of the independently live copy.
+	oldSnap := list.Bindings[0].Snapshot
+	if _, e = os.Stat(filepath.Join(afterDir, "evidence", "blobs", oldSnap.RespHash[:2], oldSnap.RespHash+".bin")); !os.IsNotExist(e) {
+		t.Fatal("original cold blob retained", e)
+	}
+	if e = s.evidenceStore().WithBinding(s.ctx, shared.FindingID, shared.Traffic.Bindings[0].ID, func(b db.FindingTrafficBinding) error {
+		r, _, e := s.evidenceStore().OpenBody(b.Snapshot, "response")
+		if e != nil {
+			return e
+		}
+		defer r.Close()
+		got, e := io.ReadAll(r)
+		if !bytes.Equal(got, body) {
+			t.Fatal("shared hot evidence changed")
+		}
+		return e
+	}); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = s.m.pg.QueueTaskArchiveRestore(job.ID); e != nil {
+		t.Fatal(e)
+	}
+	if e = s.runOneTaskArchiveJob(); e != nil {
+		t.Fatal(e)
+	}
+	restored, e := s.m.pg.GetFindingTraffic(s.ctx, f.FindingID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if restored.Version != list.Version+1 || restored.ReportVersion != list.Version || len(restored.Bindings) != 1 {
+		t.Fatal("staleness lost", restored)
+	}
+	b := restored.Bindings[0]
+	if b.ID != list.Bindings[0].ID || b.SnapshotID == oldSnap.ID || b.Role != "proof" || strings.Contains(b.Note, secret) {
+		t.Fatal("restored binding invalid")
+	}
+	found, e := s.m.pg.GetFinding(f.FindingID)
+	if e != nil || found.Status != "confirmed" || strings.Contains(found.Report, secret) || strings.Contains(found.Evidence, secret) {
+		t.Fatal("restored finding invalid", e)
+	}
+	if e = s.evidenceStore().WithBinding(s.ctx, f.FindingID, b.ID, func(b db.FindingTrafficBinding) error {
+		r, _, e := s.evidenceStore().OpenBody(b.Snapshot, "response")
+		if e != nil {
+			return e
+		}
+		defer r.Close()
+		got, e := io.ReadAll(r)
+		if bytes.Contains(got, []byte(secret)) || bytes.Contains(got, []byte("archive-unknown-token")) || !bytes.Contains(got, []byte("9007199254740993")) {
+			t.Fatal("restored evidence incorrect")
+		}
+		return e
+	}); e != nil {
+		t.Fatal(e)
 	}
 }

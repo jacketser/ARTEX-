@@ -175,6 +175,18 @@ cli -scope archive-traffic -archive-id 900000001 -apply "$archive_fp" -backup /b
 cli -scope archive-traffic -archive-id 900000001 > "$privacy_work/archive-after.json"
 docker exec "$privacy_pg" psql -U verify -d verify -Atc "SELECT json_build_object('path',archive_path,'sha256',sha256,'original_size',original_size,'compressed_size',compressed_size) FROM task_archives WHERE id=900000001" > "$privacy_work/archive-catalog.json"
 python3 "$(dirname -- "${BASH_SOURCE[0]}")/privacy-archive.py" verify "$privacy_work"
+# Evidence/report maintenance has a separate scope and fingerprint.
+python3 "$(dirname -- "${BASH_SOURCE[0]}")/privacy-archive.py" seed-evidence "$privacy_work"
+docker exec -i "$privacy_pg" psql -U verify -d verify -v ON_ERROR_STOP=1 < "$privacy_work/archive-evidence-seed.sql" > "$privacy_work/archive-evidence-seed.log"
+docker exec "$privacy_pg" pg_dump -U verify -d verify -Fc > "$privacy_work/backup/postgres.dump"
+tar -czf "$privacy_work/backup/files.tar.gz" -C "$privacy_work" data
+cli -scope archive-evidence -archive-id 900000002 > "$privacy_work/archive-evidence-preview.json"
+evidence_fp=$(python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["rows"]==3 and r["changes"]==3 and not r["applied"]; print(r["fingerprint"])' "$privacy_work/archive-evidence-preview.json")
+cli -scope archive-evidence -archive-id 900000002 -apply "$evidence_fp" -backup /backup > "$privacy_work/archive-evidence-applied.json"
+cli -scope archive-evidence -archive-id 900000002 > "$privacy_work/archive-evidence-after.json"
+docker exec "$privacy_pg" psql -U verify -d verify -Atc "SELECT json_build_object('path',archive_path,'sha256',sha256,'original_size',original_size,'compressed_size',compressed_size) FROM task_archives WHERE id=900000002" > "$privacy_work/archive-evidence-catalog.json"
+python3 "$(dirname -- "${BASH_SOURCE[0]}")/privacy-archive.py" verify-evidence "$privacy_work"
+
 docker start "$privacy_app" >/dev/null
 for attempt in {1..60}; do
   if docker exec "$privacy_app" curl --fail --silent http://127.0.0.1:8787/api/health > "$privacy_work/archive-health-after.json" 2>/dev/null; then break; fi
@@ -216,3 +228,10 @@ import pathlib,sys
 a=pathlib.Path(sys.argv[1]).read_text().splitlines()
 assert a[a.index('-scope')+1]=='archive-traffic' and a[a.index('-archive-id')+1]=='900000001'
 PYARCHIVEWRAPPER
+
+PATH="$privacy_work/bin:$PATH" PRIVACY_ARGV="$privacy_work/evidence-wrapper-argv.txt" bash "$wrapper" preview archive-evidence --archive-id 900000002
+python3 - "$privacy_work/evidence-wrapper-argv.txt" <<'PYEVIDENCEWRAPPER'
+import pathlib,sys
+a=pathlib.Path(sys.argv[1]).read_text().splitlines()
+assert a[a.index('-scope')+1]=='archive-evidence' and a[a.index('-archive-id')+1]=='900000002'
+PYEVIDENCEWRAPPER

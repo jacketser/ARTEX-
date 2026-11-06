@@ -32,7 +32,7 @@ Go 后端 · Next.js 前端 · PostgreSQL · 源码 Docker Compose 部署
 [部署与维护](DEPLOYMENT.md) · [功能范围与后续计划](SECONDARY-DEVELOPMENT-PLAN.md) ·
 [开发及发布验收](LOCAL-ENHANCEMENTS-VERIFICATION.md)
 
-历史数据维护：[历史流量与证据脱敏](HISTORY-REDACTION.md)（停机分批预览、备份后按指纹执行、成功审计续跑、旧目录格式迁移及冷归档流量副本脱敏）。
+历史数据维护：[历史流量与证据脱敏](HISTORY-REDACTION.md)（停机分批预览、备份后按指纹执行、成功审计续跑、旧目录格式迁移及冷归档流量／证据／报告脱敏）。
 
 ## 原版能力与二开范围
 

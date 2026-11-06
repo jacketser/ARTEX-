@@ -22,20 +22,24 @@ import (
 // A compressed package is the unit of publication; active-store page cursors
 // cannot be used to partially rewrite one package and its catalog checksum.
 func ValidateArchiveOptions(scope string, id int64, cursor string, migrate bool) error {
-	if scope != "traffic" && scope != "evidence" && scope != "archive-traffic" {
-		return errors.New("scope 须为 traffic、evidence 或 archive-traffic")
+	if scope != "traffic" && scope != "evidence" && scope != "archive-traffic" && scope != "archive-evidence" {
+		return errors.New("scope 须为 traffic、evidence、archive-traffic 或 archive-evidence")
 	}
-	if scope == "archive-traffic" {
+	if isArchiveScope(scope) {
 		if id <= 0 || cursor != "" || migrate {
-			return errors.New("archive-traffic 须指定正整数 archive-id，且不能使用游标或旧目录迁移")
+			return errors.New("归档范围须指定正整数 archive-id，且不能使用游标或旧目录迁移")
 		}
 	} else if id != 0 {
-		return errors.New("archive-id 仅用于 archive-traffic")
+		return errors.New("archive-id 仅用于 archive-traffic 或 archive-evidence")
 	}
 	if migrate && scope != "traffic" {
 		return errors.New("旧格式迁移仅用于 traffic 范围")
 	}
 	return nil
+}
+
+func isArchiveScope(scope string) bool {
+	return scope == "archive-traffic" || scope == "archive-evidence"
 }
 
 type archiveMember struct {
@@ -262,6 +266,9 @@ func redactArchiveMembers(members []archiveMember, c archiveCatalog, p *plan) ([
 
 // Re-encode with a bounded tar buffer so compression cannot conceal expansion.
 func encodePrivacyArchive(members []archiveMember) ([]byte, int64, error) {
+	if len(members) > maxRows {
+		return nil, 0, errors.New("重写归档成员数超过 10000")
+	}
 	var plain bytes.Buffer
 	tw := tar.NewWriter(&plain)
 	var original int64
@@ -304,7 +311,7 @@ func encodePrivacyArchive(members []archiveMember) ([]byte, int64, error) {
 	return packed.Bytes(), original, nil
 }
 
-func planArchiveTraffic(ctx context.Context, pg *sql.DB, tx *sql.Tx, opts Options, p *plan) (func() error, error) {
+func planArchive(ctx context.Context, pg *sql.DB, tx *sql.Tx, opts Options, p *plan) (func() error, error) {
 	c := archiveCatalog{ID: opts.ArchiveID}
 	var state string
 	err := tx.QueryRowContext(ctx, `SELECT task_id,state,format_version,archive_path,sha256,original_size,compressed_size FROM task_archives WHERE id=$1`, c.ID).Scan(&c.TaskID, &state, &c.Version, &c.Path, &c.Hash, &c.Original, &c.Compressed)
@@ -337,10 +344,15 @@ func planArchiveTraffic(ctx context.Context, pg *sql.DB, tx *sql.Tx, opts Option
 	if original != c.Original {
 		return nil, errors.New("归档展开大小与目录不匹配")
 	}
-	if err = p.absorb([]any{"archive-traffic-v1", c}); err != nil {
+	if err = p.absorb([]any{opts.Scope + "-v1", c}); err != nil {
 		return nil, err
 	}
-	safe, err := redactArchiveMembers(members, c, p)
+	var safe []archiveMember
+	if opts.Scope == "archive-evidence" {
+		safe, err = redactArchiveEvidence(members, c, p)
+	} else {
+		safe, err = redactArchiveMembers(members, c, p)
+	}
 	if err != nil {
 		return nil, err
 	}
