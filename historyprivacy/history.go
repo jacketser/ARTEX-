@@ -26,7 +26,10 @@ import (
 const maxRows = 10000
 const maxBody = 16 << 20
 const maxTotal = 128 << 20
-const maintenanceKey = 7337741010
+
+// Reserved separately from schema/evidence/company locks and retest bootstrap
+// (7337741010), which must remain usable while the application is running.
+const maintenanceKey = 7337741099
 
 type Report struct {
 	Scope       string   `json:"scope"`

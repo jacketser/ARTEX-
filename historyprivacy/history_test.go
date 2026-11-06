@@ -136,12 +136,16 @@ func TestHistoryTrafficPreviewApplyAndStalePlan(t *testing.T) {
 	if !bytes.Contains(body, []byte("9007199254740993")) {
 		t.Fatal("JSON number corrupted")
 	}
-	d.QueryRow(`SELECT url FROM exchanges`).Scan(&rawURL)
+	if err = d.QueryRow(`SELECT url FROM exchanges`).Scan(&rawURL); err != nil {
+		t.Fatal(err)
+	}
 	if strings.Contains(rawURL, "unknown-query") {
 		t.Fatal("URL not sanitized")
 	}
 	var hits int
-	d.QueryRow(`SELECT count(*) FROM ex_fts WHERE ex_fts MATCH '"synthetic-history-secret"'`).Scan(&hits)
+	if err = d.QueryRow(`SELECT count(*) FROM ex_fts WHERE ex_fts MATCH '"synthetic-history-secret"'`).Scan(&hits); err != nil {
+		t.Fatal(err)
+	}
 	if hits != 0 {
 		t.Fatal("FTS retained secret")
 	}
@@ -164,8 +168,12 @@ func TestHistoryTrafficRejectsMissingOrEscapingBody(t *testing.T) {
 		t.Fatal("missing blob accepted")
 	}
 	outside := filepath.Join(t.TempDir(), "secret.bin")
-	os.WriteFile(outside, body, 0600)
-	os.Symlink(outside, path)
+	if err := os.WriteFile(outside, body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, path); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := Run(t.Context(), opts); err == nil {
 		t.Fatal("escaping symlink accepted")
 	}
@@ -178,6 +186,30 @@ func TestHistoryRuntimeGuardAndFingerprintSecrets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Runtime maintenance protection must not deadlock normal startup work.
+	check, err := sql.Open("pgx", opts.DSN)
+	if err != nil {
+		release()
+		t.Fatal(err)
+	}
+	conn, err := check.Conn(t.Context())
+	if err != nil {
+		check.Close()
+		release()
+		t.Fatal(err)
+	}
+	for _, key := range []int64{7337741001, 7337741002, 7337741003, 7337741004, 7337741010, 722681, 722683} {
+		var acquired bool
+		if err = conn.QueryRowContext(t.Context(), `SELECT pg_try_advisory_lock($1)`, key).Scan(&acquired); err != nil || !acquired {
+			conn.Close()
+			check.Close()
+			release()
+			t.Fatal("maintenance conflicts with application lock", key, err)
+		}
+		conn.ExecContext(t.Context(), `SELECT pg_advisory_unlock($1)`, key)
+	}
+	conn.Close()
+	check.Close()
 	if _, err = Run(t.Context(), opts); err == nil {
 		t.Fatal("maintenance raced live server")
 	}
@@ -229,7 +261,9 @@ func TestHistoryEvidencePreservesHashesBindingsAndStalesReviews(t *testing.T) {
 		t.Fatal(r, err)
 	}
 	var original string
-	pg.QueryRow(`SELECT summary FROM findings WHERE id=$1`, id).Scan(&original)
+	if err = pg.QueryRow(`SELECT summary FROM findings WHERE id=$1`, id).Scan(&original); err != nil {
+		t.Fatal(err)
+	}
 	if original != testSecret {
 		t.Fatal("preview mutated findings")
 	}
@@ -253,8 +287,12 @@ func TestHistoryEvidencePreservesHashesBindingsAndStalesReviews(t *testing.T) {
 	}
 	var version, report int
 	var status, fingerprint string
-	pg.QueryRow(`SELECT evidence_version,report_evidence_version,status,summary FROM findings WHERE id=$1`, id).Scan(&version, &report, &status, &original)
-	pg.QueryRow(`SELECT fingerprint FROM finding_reviews WHERE finding_id=$1`, id).Scan(&fingerprint)
+	if err = pg.QueryRow(`SELECT evidence_version,report_evidence_version,status,summary FROM findings WHERE id=$1`, id).Scan(&version, &report, &status, &original); err != nil {
+		t.Fatal(err)
+	}
+	if err = pg.QueryRow(`SELECT fingerprint FROM finding_reviews WHERE finding_id=$1`, id).Scan(&fingerprint); err != nil {
+		t.Fatal(err)
+	}
 	if version != 5 || report != 4 || status != "confirmed" || original == testSecret || fingerprint != "old-fingerprint" {
 		t.Fatal("evidence/report state invalid", version, report, status)
 	}
@@ -268,7 +306,9 @@ func TestHistoryEvidencePreservesHashesBindingsAndStalesReviews(t *testing.T) {
 		t.Fatal("evidence body not sanitized", err)
 	}
 	var leaks int
-	pg.QueryRow(`SELECT count(*) FROM finding_review_history WHERE result::text LIKE $1`, "%"+testSecret+"%").Scan(&leaks)
+	if err = pg.QueryRow(`SELECT count(*) FROM finding_review_history WHERE result::text LIKE $1`, "%"+testSecret+"%").Scan(&leaks); err != nil {
+		t.Fatal(err)
+	}
 	if leaks != 0 {
 		t.Fatal("history retained secret")
 	}
