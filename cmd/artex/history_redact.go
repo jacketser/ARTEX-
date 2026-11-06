@@ -23,6 +23,7 @@ func runHistoryRedact(args []string, out io.Writer) int {
 	scope := fs.String("scope", "traffic", "traffic 或 evidence；默认只预览")
 	apply := fs.String("apply", "", "填写刚预览的 fingerprint 后执行")
 	batchSize := fs.Int("batch-size", historyprivacy.DefaultBatchSize, "每批最多记录数，1–10000")
+	migrateLegacy := fs.Bool("migrate-legacy", false, "迁移旧目录格式流量并同步脱敏（仅 traffic）")
 	cursor := fs.String("cursor", "", "上一成功批次的 next_cursor；省略则从头扫描")
 	backup := fs.String("backup", "", "执行前的备份目录，须包含 postgres.dump 和 files.tar.gz")
 	if fs.Parse(args) != nil || fs.NArg() != 0 {
@@ -30,6 +31,10 @@ func runHistoryRedact(args []string, out io.Writer) int {
 	}
 	if *scope != "traffic" && *scope != "evidence" {
 		fmt.Fprintln(out, "scope 须为 traffic 或 evidence")
+		return 2
+	}
+	if *migrateLegacy && *scope != "traffic" {
+		fmt.Fprintln(out, "旧格式迁移仅用于 traffic 范围")
 		return 2
 	}
 	if *batchSize < 1 {
@@ -68,7 +73,7 @@ func runHistoryRedact(args []string, out io.Writer) int {
 				return 2
 			}
 		}
-		if err = historyprivacy.Audit(abs, historyprivacy.Report{Scope: *scope, Fingerprint: *apply, BatchSize: *batchSize, Cursor: *cursor}, "started"); err != nil {
+		if err = historyprivacy.Audit(abs, historyprivacy.Report{Scope: *scope, Fingerprint: *apply, BatchSize: *batchSize, Cursor: *cursor, MigrateLegacy: *migrateLegacy}, "started"); err != nil {
 			fmt.Fprintln(out, "无法写入维护审计，未执行")
 			return 1
 		}
@@ -83,7 +88,7 @@ func runHistoryRedact(args []string, out io.Writer) int {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	r, err := historyprivacy.Run(ctx, historyprivacy.Options{DSN: dsn, Data: abs, Scope: *scope, Apply: *apply, Secrets: keys, BatchSize: *batchSize, Cursor: *cursor})
+	r, err := historyprivacy.Run(ctx, historyprivacy.Options{DSN: dsn, Data: abs, Scope: *scope, Apply: *apply, Secrets: keys, BatchSize: *batchSize, Cursor: *cursor, MigrateLegacy: *migrateLegacy})
 	if *apply != "" {
 		status := "complete"
 		if err != nil {

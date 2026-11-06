@@ -77,7 +77,7 @@ func ValidateBatch(scope string, size int, cursor string) error {
 		return errors.New("续跑游标过长")
 	}
 	b, err := base64.RawURLEncoding.DecodeString(cursor)
-	if err != nil || json.Unmarshal(b, &c) != nil || c.Version != 2 || c.Scope != scope || !validHash(c.Store) || c.Phase < 0 || c.Phase > len(evidenceTextTables) {
+	if err != nil || json.Unmarshal(b, &c) != nil || c.Version != 3 || c.Scope != scope || !validHash(c.Store) || c.Phase < 0 || c.Phase > len(evidenceTextTables) {
 		return errors.New("续跑游标无效或范围不匹配")
 	}
 	if scope == "traffic" && c.Phase != 0 {
@@ -106,16 +106,18 @@ const maxTotal = 128 << 20
 const maintenanceKey = 7337741099
 
 type Report struct {
-	Scope       string   `json:"scope"`
-	Rows        int      `json:"rows"`
-	Changes     int      `json:"changes"`
-	Fingerprint string   `json:"fingerprint"`
-	Applied     bool     `json:"applied"`
-	BatchSize   int      `json:"batch_size"`
-	Cursor      string   `json:"cursor,omitempty"`
-	More        bool     `json:"more"`
-	NextCursor  string   `json:"next_cursor,omitempty"`
-	Limitations []string `json:"limitations"`
+	Scope         string   `json:"scope"`
+	Rows          int      `json:"rows"`
+	Changes       int      `json:"changes"`
+	Fingerprint   string   `json:"fingerprint"`
+	Applied       bool     `json:"applied"`
+	BatchSize     int      `json:"batch_size"`
+	MigrateLegacy bool     `json:"migrate_legacy"`
+	LegacyRows    int      `json:"legacy_rows"`
+	Cursor        string   `json:"cursor,omitempty"`
+	More          bool     `json:"more"`
+	NextCursor    string   `json:"next_cursor,omitempty"`
+	Limitations   []string `json:"limitations"`
 }
 
 // RuntimeGuard is held for the whole normal server lifetime. Maintenance takes
@@ -159,6 +161,7 @@ type Options struct {
 	Secrets                 []string
 	BatchSize               int
 	Cursor                  string
+	MigrateLegacy           bool
 }
 type plan struct {
 	report           Report
@@ -207,6 +210,13 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 		opts.BatchSize = DefaultBatchSize
 	}
 	r.BatchSize, r.Cursor = opts.BatchSize, opts.Cursor
+	r.MigrateLegacy = opts.MigrateLegacy
+	if opts.MigrateLegacy {
+		r.Limitations = append(r.Limitations, "旧目录仅清理本批核验的报文与元数据；未知文件、提交后中断残留及延后回收的正文文件需另行核查")
+	}
+	if opts.MigrateLegacy && opts.Scope != "traffic" {
+		return r, errors.New("旧格式迁移仅用于 traffic 范围")
+	}
 	if opts.Apply != "" {
 		if b, e := hex.DecodeString(opts.Apply); e != nil || len(b) != 32 {
 			return r, errors.New("apply 须为预览指纹")
@@ -232,9 +242,9 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 		return r, errors.New("凭据来源不可用，未执行清理")
 	}
 	h := sha256.New()
-	binding, _ := json.Marshal([]any{"history-redaction-v2", opts.DSN, filepath.Clean(opts.Data), keys})
+	binding, _ := json.Marshal([]any{"history-redaction-v3", opts.DSN, filepath.Clean(opts.Data), keys, opts.MigrateLegacy})
 	store := bodyHash(binding)
-	position := continuation{Version: 2, Scope: opts.Scope, Store: store}
+	position := continuation{Version: 3, Scope: opts.Scope, Store: store}
 	if opts.Cursor != "" {
 		b, _ := base64.RawURLEncoding.DecodeString(opts.Cursor)
 		_ = json.Unmarshal(b, &position)
@@ -248,7 +258,7 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 			p.cleanup[i]()
 		}
 	}()
-	if err = p.absorb([]any{"history-redaction-v2", opts.Scope, store, keys, opts.BatchSize, opts.Cursor}); err != nil {
+	if err = p.absorb([]any{"history-redaction-v3", opts.Scope, store, keys, opts.BatchSize, opts.Cursor}); err != nil {
 		return r, err
 	}
 	var apply func() error

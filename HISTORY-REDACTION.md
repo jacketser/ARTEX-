@@ -6,7 +6,7 @@
 
 | scope | 处理内容 | 一致性保证 |
 | --- | --- | --- |
-| `traffic` | 活动 SQLite 流量的 URL、请求／响应头、完整正文；包括引用的大正文文件 | 保留流量 ID 和时间，更新长度、全文索引及 blob 引用；提交后仅回收不再被引用的已替换正文 |
+| `traffic` | 活动 SQLite 流量的 URL、请求／响应头、完整正文；包括引用的大正文文件；显式开启后可迁移旧目录格式 | 保留流量 ID 和时间，更新长度、全文索引及 blob 引用；提交后仅回收不再被引用的已替换正文 |
 | `evidence` | PostgreSQL 证据快照及正文、漏洞名称／摘要／证据／报告、复测内容、人工复核、审阅历史和流量绑定备注 | 重新计算正文哈希与快照 ID，更新绑定；相关漏洞证据版本递增，旧报告和审阅保持过期，处置状态不变 |
 
 脱敏规则包括当前已知平台凭据及其常见编码、PEM 私钥、HTTP 敏感头、URL 敏感参数，以及 JSON／表单中的敏感字段。带 `Content-Encoding` 的正文以省略标记替代。保存内容带有“非线上原始报文”标记。
@@ -34,7 +34,7 @@ bash scripts/history-redact.sh preview evidence
 
 若部署没有 `.deployment-credentials`，从打包命令中移除该文件名；不要忽略其他打包错误。
 
-预览返回本批的 `scope`、`rows`、`changes`、`fingerprint`、`batch_size`、`more`、`applied:false` 和范围限制。预览不迁移数据库，不更改业务行或正文，也不创建脱敏审计文件。两个 scope 的指纹不同，不能互换。`more:false` 才表示已扫描到末尾；单批 `changes:0` 不表示整个库已经清理。预览不会返回可推进进度的 `next_cursor`。
+预览返回本批的 `scope`、`rows`、`changes`、`fingerprint`、`batch_size`、`more`、`migrate_legacy`、`legacy_rows`、`applied:false` 和范围限制。预览不迁移数据库，不更改业务行或正文，也不创建脱敏审计文件。两个 scope 的指纹不同，不能互换。`more:false` 才表示已扫描到末尾；单批 `changes:0` 不表示整个库已经清理。预览不会返回可推进进度的 `next_cursor`。
 
 脚本检查应用容器确实已停止；新版本应用与维护命令还通过 PostgreSQL 共享／独占维护锁互斥。旧版本不持有该锁，维护旧数据时仍必须通过脚本检查停机，不要直接绕过脚本运行命令。
 
@@ -91,11 +91,40 @@ bash scripts/history-redact.sh apply traffic "$privacy_fp" "$privacy_backup" --b
 - 流量按 SQLite rowid 扫描；证据先处理快照，再依次处理漏洞、复测、人工复核、审阅历史和绑定备注。快照 ID 改变后，新产生的已脱敏快照可能再被扫描一次，所以 `rows` 累计值可能超过最初记录数，但不会重复增加证据版本。审阅更新触发的新历史记录在后续阶段覆盖。同一漏洞在不同批次出现实际变更时，每个相关批次都递增证据版本。
 - 只替换当前批次的全文索引条目；其他批次仍可搜索。共享正文直到最后一个活动引用被替换才会回收。不得在批次之间压缩／重建 SQLite 行号或手工改动数据。
 
+## 旧目录格式迁移
+
+已经由当前版本初始化过流量存储的安装，可以用同一命令迁移仍带 `exchanges.path` 的旧记录。所需的 `exchange_bodies`、`blob_refs` 等表由正常应用初始化；维护命令不会自动补建未知／残缺表结构。迁移默认关闭，仅对 `traffic` 范围开放，**迁移会同步脱敏，不是原始字节保真的格式转换**。
+
+按前文停机并备份后执行第一批：
+
+```bash
+bash scripts/history-redact.sh preview traffic --migrate-legacy --batch-size 500 > "$privacy_backup/legacy-preview-001.json"
+privacy_fp=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["fingerprint"])' "$privacy_backup/legacy-preview-001.json")
+bash scripts/history-redact.sh apply traffic "$privacy_fp" "$privacy_backup" --migrate-legacy --batch-size 500 > "$privacy_backup/legacy-applied-001.json"
+
+# 有 more:true 时继续下一批，预览和执行使用同一个上一批结果。
+bash scripts/history-redact.sh preview traffic --batch-size 500 --resume "$privacy_backup/legacy-applied-001.json" > "$privacy_backup/legacy-preview-002.json"
+```
+
+`legacy_rows` 表示本批计划迁移的旧格式记录数，包含在 `rows` 和 `changes` 内，不代表全库总数。`--resume` 会从成功结果／审计中继承迁移开关；手工使用 `--cursor` 时，必须同时保持 `--migrate-legacy`。二进制对应参数为 `-migrate-legacy`。开关变化会拒绝原游标和指纹；此次格式升级前的游标／预览也需清空并从头重新生成。
+
+支持范围和完整性检查：
+
+- 读取每个目录的 `request.http`、`response.http`；兼容 LF／CRLF 头部以及无正文时省略末尾空行的旧记录。拆分头部时不改变正文的换行或二进制字节，之后再应用正常脱敏规则。
+- 识别原版整个正文为 `@blob sha256:<64位哈希> (len=<长度>)` 的引用，支持 `_blobs/sha256/HH/hash.bin` 与旧版 `HH/HH/hash.bin` 两种目录。校验完整文件 SHA-256 和索引长度，绝不把截断预览当成完整正文。若正文长度本就与索引相符，字面量指针文本按普通正文保留，不擅自解释为文件引用。
+- 两个 HTTP 文件必须存在；`meta.json` 可缺省，存在时其 ID、主机、方法、URL、模板、状态码及类型须与 SQLite 一致。未知字段／无效 JSON、双份正文（同一行同时有目录路径和 SQLite 正文）、缺失／损坏／超限内容均拒绝本批，须先核对原始备份。
+- 拒绝目录越界、保留目录、文件或父目录符号链接及非普通文件。未知的预览／截断标记变体不会猜测恢复；它们仍需单独分析，不能承诺任意旧分支格式均可迁移。
+- 在同一个 SQLite 事务中保存完整脱敏正文、清空旧路径、保留 ID／时间／rowid、更新长度和当前行全文索引。SQL 失败时原目录文件完整保留；迁移成功后正常流量读取和归档使用 SQLite 正文。已独立保存的证据快照仍需执行 `evidence` 范围维护。
+
+提交成功后，只清理预览中核验过的 `request.http`、`response.http` 和存在的 `meta.json`，并再次验证它们的哈希及目录引用。不会递归删除目录，空目录与用户其他文件会保留。提交后进程中断或清理失败可能留下不再关联的原件，此时审计会失败或停在开始状态；重新预览可恢复业务迁移进度，但不自动清扫这些无引用残留，须对照备份核查，不能把它们当作已脱敏。
+
+旧格式的正文引用没有完整登记在 `blob_refs` 中。因此，只要还有旧格式记录，维护会保守延后旧 blob 回收，防止前面批次误删后面记录的正文。最后一批可回收它所替换且无引用的 blob；较早批次延后的无引用 blob 由后续正常存储回收处理，不保证迁移结束立即释放全部空间。这也不是物理擦除功能。
+
 ## 有界维护与剩余限制
 
 - 每批最多 10000 条记录，默认 1000；单正文最多 16 MiB，总计划序列化计量上限为 128 MiB，单次命令最多五分钟。整库条数不再限制为 10000。单条记录超限仍拒绝本批；超时可减小批量后在原位置重新预览。
 - 历史流量重写后将完整正文放回 SQLite，不再引用旧 blob；后续新捕获仍按正常阈值存储。这可能增大 SQLite 文件，不是空间压缩功能。
-- 旧目录格式流量（`exchanges.path` 非空）、缺失／损坏的正文或哈希、不可解析的头／URL会阻止对应 scope 的维护。越界文件路径和逃逸符号链接不会读取。
+- 未显式开启迁移的旧目录格式流量（`exchanges.path` 非空）、缺失／损坏的正文或哈希、不可解析的头／URL会阻止对应批次的维护。越界文件路径和逃逸符号链接不会读取。
 - 不处理备份、冷归档包、已导出报告、日志、对话、资产元数据及未关联的旧文件。恢复旧备份或导入旧归档后，需重新预览；不能把一次活动库清理当作所有历史副本都已脱敏。
 - 不保证识别自由文本中的未知密码、已轮换且不再配置的密钥、任意编码或加密内容。没有命中不代表没有敏感信息。
 - SQLite 全文索引按当前批次更新，已替换且无引用的正文文件会回收；数据库历史页、WAL、磁盘快照和备份不保证物理擦除。旧备份保留策略与物理介质清除需独立管理。

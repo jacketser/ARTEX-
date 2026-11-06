@@ -15,6 +15,7 @@ import (
 type trafficChange struct {
 	old, safe traffic.ArchiveExchange
 	rowid     int64
+	legacy    *legacySource
 }
 
 func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, error) {
@@ -50,10 +51,10 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 	// Inspect only the selected page. Missing bodies must fail, not disappear in a JOIN.
 	var invalid int
 	if err = tx.QueryRowContext(ctx, `WITH batch AS (SELECT rowid,id,path FROM exchanges WHERE rowid>? ORDER BY rowid LIMIT ?)
- SELECT count(*) FROM batch e LEFT JOIN exchange_bodies b ON b.id=e.id WHERE e.path<>'' OR b.id IS NULL OR length(b.req_body)>? OR length(b.resp_body)>? OR length(b.req_head)>1048576 OR length(b.resp_head)>1048576`, after, opts.BatchSize, maxBody, maxBody).Scan(&invalid); err != nil || invalid > 0 {
-		return nil, errors.New("本批存在旧目录格式、缺失正文或超限字段，未清理")
+ SELECT count(*) FROM batch e LEFT JOIN exchange_bodies b ON b.id=e.id WHERE (e.path<>'' AND (?=0 OR b.id IS NOT NULL)) OR (e.path='' AND b.id IS NULL) OR length(b.req_body)>? OR length(b.resp_body)>? OR length(b.req_head)>1048576 OR length(b.resp_head)>1048576`, after, opts.BatchSize, opts.MigrateLegacy, maxBody, maxBody).Scan(&invalid); err != nil || invalid > 0 {
+		return nil, errors.New("本批存在未启用迁移的旧格式、双份正文冲突、缺失正文或超限字段，未清理")
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT e.rowid,e.id,e.ts,e.host,e.method,e.url_template,e.url,e.status,e.content_type,e.req_len,e.resp_len,b.req_head,b.req_body,coalesce(b.req_blob,''),b.resp_head,b.resp_body,coalesce(b.resp_blob,'') FROM exchanges e LEFT JOIN exchange_bodies b ON b.id=e.id WHERE e.rowid>? ORDER BY e.rowid LIMIT ?`, after, opts.BatchSize)
+	rows, err := tx.QueryContext(ctx, `SELECT e.rowid,e.id,e.ts,e.host,e.method,e.url_template,e.url,e.status,e.content_type,e.req_len,e.resp_len,coalesce(b.req_head,''),b.req_body,coalesce(b.req_blob,''),coalesce(b.resp_head,''),b.resp_body,coalesce(b.resp_blob,''),e.path FROM exchanges e LEFT JOIN exchange_bodies b ON b.id=e.id WHERE e.rowid>? ORDER BY e.rowid LIMIT ?`, after, opts.BatchSize)
 	if err != nil {
 		return nil, errors.New("无法读取历史流量正文")
 	}
@@ -66,11 +67,18 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 		}
 		var c trafficChange
 		v := &c.old
-		if err = rows.Scan(&c.rowid, &v.ID, &v.TS, &v.Host, &v.Method, &v.URLTemplate, &v.URL, &v.Status, &v.ContentType, &v.ReqLen, &v.RespLen, &v.ReqHead, &v.ReqBody, &v.ReqBlob, &v.RespHead, &v.RespBody, &v.RespBlob); err != nil {
+		var legacyDir string
+		if err = rows.Scan(&c.rowid, &v.ID, &v.TS, &v.Host, &v.Method, &v.URLTemplate, &v.URL, &v.Status, &v.ContentType, &v.ReqLen, &v.RespLen, &v.ReqHead, &v.ReqBody, &v.ReqBlob, &v.RespHead, &v.RespBody, &v.RespBlob, &legacyDir); err != nil {
 			break
 		}
 		// Include both stored previews and complete bodies atomically in the budget.
 		stored := *v
+		if legacyDir != "" {
+			c.legacy, err = loadLegacy(root, legacyDir, v)
+			if err != nil {
+				break
+			}
+		}
 		for _, b := range []struct {
 			hash string
 			body *[]byte
@@ -78,15 +86,11 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 			if b.hash == "" {
 				continue
 			}
-			if !validHash(b.hash) {
-				err = errors.New("流量正文哈希无效")
-				break
+			// loadLegacy already resolved and validated its complete bodies.
+			if c.legacy != nil {
+				continue
 			}
-			path := filepath.Join("_blobs", "sha256", b.hash[:2], b.hash+".bin")
-			if _, e := os.Stat(filepath.Join(root, path)); os.IsNotExist(e) {
-				path = filepath.Join("_blobs", "sha256", b.hash[:2], b.hash[2:4], b.hash+".bin")
-			}
-			*b.body, err = readBody(root, path, b.hash)
+			*b.body, err = readTrafficBlob(root, b.hash)
 			if err != nil {
 				break
 			}
@@ -98,7 +102,7 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 			err = errors.New("历史流量正文长度不匹配")
 			break
 		}
-		if err = p.absorb([]any{c.rowid, stored, v}); err != nil {
+		if err = p.absorb([]any{c.rowid, stored, v, c.legacy}); err != nil {
 			if errors.Is(err, errBatchFull) {
 				more = true
 				err = nil
@@ -109,8 +113,11 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 		if err != nil {
 			break
 		}
-		if !same(c.old, c.safe) {
+		if c.legacy != nil || !same(c.old, c.safe) {
 			p.report.Changes++
+		}
+		if c.legacy != nil {
+			p.report.LegacyRows++
 		}
 		all = append(all, c)
 		p.report.Rows++
@@ -140,14 +147,21 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 			return err
 		}
 		oldBlobs := map[string]bool{}
+		oldSources := []*legacySource{}
 		for _, c := range all {
 			v := c.safe
-			if !same(c.old, c.safe) {
-				if _, err = tx.ExecContext(ctx, `UPDATE exchanges SET host=?,url_template=?,url=?,content_type=?,req_len=?,resp_len=? WHERE id=?`, v.Host, v.URLTemplate, v.URL, v.ContentType, v.ReqLen, v.RespLen, v.ID); err != nil {
+			if c.legacy != nil || !same(c.old, c.safe) {
+				if _, err = tx.ExecContext(ctx, `UPDATE exchanges SET host=?,url_template=?,url=?,content_type=?,req_len=?,resp_len=?,path='' WHERE id=?`, v.Host, v.URLTemplate, v.URL, v.ContentType, v.ReqLen, v.RespLen, v.ID); err != nil {
 					return err
 				}
 				// The bounded maintenance batch stores complete sanitized bodies inline.
-				if _, err = tx.ExecContext(ctx, `UPDATE exchange_bodies SET req_head=?,req_body=?,req_blob=NULL,resp_head=?,resp_body=?,resp_blob=NULL WHERE id=?`, v.ReqHead, v.ReqBody, v.RespHead, v.RespBody, v.ID); err != nil {
+				if c.legacy != nil {
+					_, err = tx.ExecContext(ctx, `INSERT INTO exchange_bodies(id,req_head,req_body,resp_head,resp_body) VALUES(?,?,?,?,?)`, v.ID, v.ReqHead, v.ReqBody, v.RespHead, v.RespBody)
+					oldSources = append(oldSources, c.legacy)
+				} else {
+					_, err = tx.ExecContext(ctx, `UPDATE exchange_bodies SET req_head=?,req_body=?,req_blob=NULL,resp_head=?,resp_body=?,resp_blob=NULL WHERE id=?`, v.ReqHead, v.ReqBody, v.RespHead, v.RespBody, v.ID)
+				}
+				if err != nil {
 					return err
 				}
 				if _, err = tx.ExecContext(ctx, `DELETE FROM blob_refs WHERE exchange_id=?`, v.ID); err != nil {
@@ -171,6 +185,20 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 		}
 		if err = tx.Commit(); err != nil {
 			return err
+		}
+		if len(oldSources) > 0 {
+			if err = retireLegacy(ctx, d, root, oldSources); err != nil {
+				return err
+			}
+		}
+		// Legacy pointer references are not in blob_refs. Keep candidates while any
+		// legacy rows remain; regular store GC can reclaim deferred orphans later.
+		var legacyRemaining int
+		if err = d.QueryRowContext(ctx, `SELECT count(*) FROM exchanges WHERE path<>''`).Scan(&legacyRemaining); err != nil {
+			return err
+		}
+		if legacyRemaining > 0 {
+			return nil
 		}
 		// Remove only affected blobs with no live body or reference-table use.
 		for h := range oldBlobs {

@@ -41,13 +41,26 @@ fi
 grep -q '请先停机' "$privacy_work/live-rejected.txt"
 docker stop "$privacy_app" >/dev/null
 docker run --rm -i -v "$privacy_work/data:/app/data" --entrypoint python3 "$privacy_image" - <<'PY'
-import sqlite3
+import sqlite3, pathlib, hashlib, json
 c = sqlite3.connect('/app/data/traffic/_index/index.sqlite')
 body = b'{"token":"synthetic-cli-only","number":9007199254740993}'
 c.execute("INSERT INTO exchanges(id,ts,host,method,url_template,url,status,content_type,req_len,resp_len,path) VALUES('privacy-one',1,'fixture.test','GET','/','http://fixture.test/',200,'application/json',0,?,'')", (len(body),))
 c.execute("INSERT INTO exchange_bodies(id,req_head,req_body,resp_head,resp_body) VALUES('privacy-one',?,?,?,?)", ('GET / HTTP/1.1\nAuthorization: Bearer synthetic-cli-only\n', b'', 'HTTP 200\nContent-Type: application/json\n', body))
 c.execute("INSERT INTO exchanges SELECT 'privacy-two',ts,host,method,url_template,url,status,content_type,req_len,resp_len,path FROM exchanges WHERE id='privacy-one'")
 c.execute("INSERT INTO exchange_bodies SELECT 'privacy-two',req_head,req_body,req_blob,resp_head,resp_body,resp_blob FROM exchange_bodies WHERE id='privacy-one'")
+# Original per-directory format, including the old two-level blob layout.
+legacy_body=body+b' '*300000
+legacy_hash=hashlib.sha256(legacy_body).hexdigest()
+legacy_dir=pathlib.Path('/app/data/traffic/fixture.test/GET/privacy-legacy')
+legacy_dir.mkdir(parents=True)
+blob=pathlib.Path('/app/data/traffic/_blobs/sha256')/legacy_hash[:2]/legacy_hash[2:4]/(legacy_hash+'.bin')
+blob.parent.mkdir(parents=True,exist_ok=True)
+blob.write_bytes(legacy_body)
+(legacy_dir/'request.http').write_bytes(b'GET / HTTP/1.1\nAuthorization: Bearer synthetic-cli-only\n\n')
+(legacy_dir/'response.http').write_text('HTTP 200\nContent-Type: application/json\n\n@blob sha256:'+legacy_hash+' (len='+str(len(legacy_body))+')')
+(legacy_dir/'meta.json').write_text(json.dumps(dict(id='privacy-legacy',host='fixture.test',method='GET',url='http://fixture.test/',template='/',status=200,content_type='application/json')))
+(legacy_dir/'keep.txt').write_text('user-owned file')
+c.execute("INSERT INTO exchanges(id,ts,host,method,url_template,url,status,content_type,req_len,resp_len,path) VALUES('privacy-legacy',3,'fixture.test','GET','/','http://fixture.test/',200,'application/json',0,?,'fixture.test/GET/privacy-legacy')",(len(legacy_body),))
 c.commit()
 PY
 docker exec "$privacy_pg" pg_dump -U verify -d verify -Fc > "$privacy_work/backup/postgres.dump"
@@ -57,7 +70,7 @@ cli() {
     -v "$privacy_work/data:/app/data" -v "$privacy_work/backup:/backup:ro" \
     --entrypoint /app/artex "$privacy_image" history-redact "$@"
 }
-cli -scope traffic -batch-size 1 > "$privacy_work/preview.json"
+cli -scope traffic -migrate-legacy -batch-size 1 > "$privacy_work/preview.json"
 fingerprint=$(python3 - "$privacy_work/preview.json" <<'PY'
 import json, sys
 r=json.load(open(sys.argv[1]))
@@ -66,7 +79,7 @@ assert 'next_cursor' not in r
 print(r['fingerprint'])
 PY
 )
-cli -scope traffic -batch-size 1 -apply "$fingerprint" -backup /backup > "$privacy_work/applied.json"
+cli -scope traffic -migrate-legacy -batch-size 1 -apply "$fingerprint" -backup /backup > "$privacy_work/applied.json"
 # A new process recovers the successful page's cursor; previews cannot advance it.
 cursor=$(python3 - "$privacy_work/applied.json" <<'PYRESUME'
 import json,sys
@@ -75,11 +88,11 @@ assert r['applied'] is True and r['more'] is True
 print(r['next_cursor'])
 PYRESUME
 )
-cli -scope traffic -batch-size 1 -cursor "$cursor" > "$privacy_work/preview-two.json"
+cli -scope traffic -migrate-legacy -batch-size 1 -cursor "$cursor" > "$privacy_work/preview-two.json"
 fingerprint_two=$(python3 - "$privacy_work/preview-two.json" <<'PYPREVIEW'
 import json,sys
 r=json.load(open(sys.argv[1]))
-assert r['rows']==1 and r['changes']==1 and r['more'] is False
+assert r['rows']==1 and r['changes']==1 and r['more'] is True
 print(r['fingerprint'])
 PYPREVIEW
 )
@@ -89,7 +102,7 @@ c=sqlite3.connect('/app/data/traffic/_index/index.sqlite')
 c.execute("CREATE TRIGGER fail_batch BEFORE UPDATE ON exchanges BEGIN SELECT RAISE(ABORT,'synthetic failure'); END")
 c.commit()
 PYFAIL
-if cli -scope traffic -batch-size 1 -cursor "$cursor" -apply "$fingerprint_two" -backup /backup > "$privacy_work/failed.txt"; then
+if cli -scope traffic -migrate-legacy -batch-size 1 -cursor "$cursor" -apply "$fingerprint_two" -backup /backup > "$privacy_work/failed.txt"; then
  echo 'Injected batch failure unexpectedly succeeded' >&2
  exit 1
 fi
@@ -99,8 +112,24 @@ c=sqlite3.connect('/app/data/traffic/_index/index.sqlite')
 c.execute('DROP TRIGGER fail_batch')
 c.commit()
 PYRETRY
-cli -scope traffic -batch-size 1 -cursor "$cursor" -apply "$fingerprint_two" -backup /backup > "$privacy_work/applied-two.json"
-cli -scope traffic > "$privacy_work/after.json"
+cli -scope traffic -migrate-legacy -batch-size 1 -cursor "$cursor" -apply "$fingerprint_two" -backup /backup > "$privacy_work/applied-two.json"
+cursor_three=$(python3 - "$privacy_work/applied-two.json" <<'PYTHREE'
+import json,sys
+r=json.load(open(sys.argv[1]))
+assert r['applied'] is True and r['more'] is True
+print(r['next_cursor'])
+PYTHREE
+)
+cli -scope traffic -migrate-legacy -batch-size 1 -cursor "$cursor_three" > "$privacy_work/preview-three.json"
+fingerprint_three=$(python3 - "$privacy_work/preview-three.json" <<'PYLEGACY'
+import json,sys
+r=json.load(open(sys.argv[1]))
+assert r['rows']==1 and r['legacy_rows']==1 and r['changes']==1 and r['more'] is False
+print(r['fingerprint'])
+PYLEGACY
+)
+cli -scope traffic -migrate-legacy -batch-size 1 -cursor "$cursor_three" -apply "$fingerprint_three" -backup /backup > "$privacy_work/applied-three.json"
+cli -scope traffic -migrate-legacy > "$privacy_work/after.json"
 cli -scope evidence > "$privacy_work/evidence.json"
 docker start "$privacy_app" >/dev/null
 for attempt in {1..60}; do
@@ -116,16 +145,22 @@ assert json.loads((p/'evidence.json').read_text())['rows']==0
 assert json.loads((p/'health-after.json').read_text())['ok'] is True
 c=sqlite3.connect((p/'data/traffic/_index/index.sqlite').as_uri()+'?mode=ro',uri=True)
 rows=c.execute('SELECT req_head,resp_body FROM exchange_bodies').fetchall()
-assert len(rows)==2
+assert len(rows)==3
 for head,body in rows:
  assert 'synthetic-cli-only' not in head and b'synthetic-cli-only' not in body
  assert b'9007199254740993' in body
-last=json.loads((p/'applied-two.json').read_text())
+last=json.loads((p/'applied-three.json').read_text())
 assert last['applied'] is True and last['more'] is False and 'next_cursor' not in last
+assert last['legacy_rows']==1 and last['migrate_legacy'] is True
+assert c.execute("SELECT count(*) FROM exchanges WHERE path<>''").fetchone()[0]==0
+legacy=p/'data/traffic/fixture.test/GET/privacy-legacy'
+assert all(not (legacy/name).exists() for name in ['request.http','response.http','meta.json'])
+assert (legacy/'keep.txt').read_text()=='user-owned file'
+assert not list((p/'data/traffic/_blobs/sha256').glob('*/*/*.bin'))
 audit=[json.loads(f.read_text()) for f in (p/'data/privacy-audit').glob('*.json')]
-assert sorted(a['status'] for a in audit)==['complete','complete','failed_or_partial','started','started','started']
+assert sorted(a['status'] for a in audit)==['complete','complete','complete','failed_or_partial','started','started','started','started']
 assert all('next_cursor' not in a for a in audit if a['status']!='complete')
-print(json.dumps({'live_rejected':True,'batches':2,'failed_batch_retried':True,'applied':True,'remaining_changes':0,'audit_complete':True,'restart_healthy':True}))
+print(json.dumps({'live_rejected':True,'batches':3,'legacy_migrated':1,'failed_batch_retried':True,'applied':True,'remaining_changes':0,'audit_complete':True,'restart_healthy':True}))
 PY
 
 # Test the host wrapper's resume-file gate with a Docker argument spy. It never
@@ -146,8 +181,9 @@ a=(p/'wrapper-argv.txt').read_text().splitlines()
 r=json.loads((p/'applied.json').read_text())
 assert a[a.index('-cursor')+1]==r['next_cursor']
 assert a[a.index('-batch-size')+1]=='1'
+assert '-migrate-legacy' in a
 PYWRAPPER
-for invalid in preview.json applied-two.json; do
+for invalid in preview.json applied-three.json; do
  if PATH="$privacy_work/bin:$PATH" PRIVACY_ARGV="$privacy_work/wrapper-argv.txt" bash "$wrapper" preview traffic --resume "$privacy_work/$invalid" > "$privacy_work/wrapper-rejected-$invalid.txt" 2>&1; then
   echo 'Wrapper accepted non-resumable result' >&2
   exit 1

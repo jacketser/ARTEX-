@@ -3,8 +3,8 @@
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 usage() {
-  echo 'Usage: bash scripts/history-redact.sh preview traffic|evidence [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
-  echo '       bash scripts/history-redact.sh apply traffic|evidence FINGERPRINT BACKUP_DIRECTORY [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
+  echo 'Usage: bash scripts/history-redact.sh preview traffic|evidence [--migrate-legacy] [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
+  echo '       bash scripts/history-redact.sh apply traffic|evidence FINGERPRINT BACKUP_DIRECTORY [--migrate-legacy] [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
 }
 if (( $# < 2 )); then usage; exit 2; fi
 action=$1
@@ -34,6 +34,7 @@ case "$action" in
 esac
 cursor_set=0
 while (( $# )); do
+  if [[ "$1" == --migrate-legacy ]]; then args+=(-migrate-legacy); shift; continue; fi
   [[ $# -ge 2 ]] || { usage; exit 2; }
   case "$1" in
     --batch-size)
@@ -54,10 +55,13 @@ try:
  if not isinstance(c,str) or not 0<len(c)<=2048:
   raise ValueError('invalid cursor')
  print(c)
+ print('true' if r.get('migrate_legacy',False) is True else 'false')
 except Exception:
  sys.exit('续跑文件须为同一范围的成功批次结果，且仍有下一批；预览、失败或已完成结果不能续跑')
 PYRESUME
 )
+        if [[ "${cursor##*$'\n'}" == true ]]; then args+=(-migrate-legacy); fi
+        cursor=${cursor%$'\n'*}
       else
         cursor=$2
       fi
