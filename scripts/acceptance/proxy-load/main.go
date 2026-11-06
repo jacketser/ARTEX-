@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"sort"
@@ -82,11 +83,19 @@ func serve() {
 		mu.Unlock()
 		n, _ := strconv.Atoi(r.URL.Query().Get("bytes"))
 		response, ok := targetResponses[n]
+		ctype := "application/octet-stream"
+		if id := r.Header.Get("X-Load-Corpus"); id != "" {
+			item, exists := corpusByID(id)
+			if !exists {
+				http.Error(w, "unknown corpus", 400)
+				return
+			}
+			response, ok, ctype = item.Response, true, item.ContentType
+		}
 		if !ok {
 			http.Error(w, "response size", 400)
 			return
 		}
-		ctype := "application/octet-stream"
 		if r.Header.Get("X-Load-Text") == "1" {
 			ctype = "text/plain"
 		}
@@ -133,8 +142,8 @@ func serve() {
 			}
 			defer client.Close()
 			defer dest.Close()
-			client.SetDeadline(time.Now().Add(180 * time.Second))
-			dest.SetDeadline(time.Now().Add(180 * time.Second))
+			client.SetDeadline(time.Now().Add(4 * time.Hour))
+			dest.SetDeadline(time.Now().Add(4 * time.Hour))
 			rw.WriteString("HTTP/1.1 200 Connection Established\r\n\r\n")
 			rw.Flush()
 			done := make(chan struct{})
@@ -166,13 +175,24 @@ func serve() {
 }
 
 type driver struct {
-	token     string
-	roots     *x509.CertPool
-	apiClient *http.Client
-	results   []result
+	token        string
+	roots        *x509.CertPool
+	apiClient    *http.Client
+	results      []result
+	refreshed    time.Time
+	refreshCount int
 }
 
 func (d *driver) api(method, path string, in, out any) {
+	if d.token != "" && path != "/api/auth/refresh" && time.Since(d.refreshed) > 10*time.Minute {
+		var auth struct{ Token string }
+		d.api("POST", "/api/auth/refresh", nil, &auth)
+		if auth.Token == "" {
+			panic("empty refreshed token")
+		}
+		d.token, d.refreshed = auth.Token, time.Now()
+		d.refreshCount++
+	}
 	var body io.Reader
 	if in != nil {
 		b, e := json.Marshal(in)
@@ -182,6 +202,7 @@ func (d *driver) api(method, path string, in, out any) {
 	r, e := http.NewRequest(method, "http://app:8787"+path, body)
 	must(e)
 	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("X-ARTEX-Session", "1")
 	if d.token != "" {
 		r.Header.Set("Authorization", "Bearer "+d.token)
 	}
@@ -227,6 +248,7 @@ func (d *driver) settings(capture, upstream bool) {
 }
 
 type scenario struct {
+	Corpus        string `json:"corpus,omitempty"`
 	Text          bool   `json:"text"`
 	Name          string `json:"name"`
 	Scheme        string `json:"scheme"`
@@ -293,11 +315,27 @@ func makeRequest(s scenario, body []byte) *http.Request {
 	return r
 }
 func (d *driver) runCase(s scenario) {
+	var item corpusItem
+	if s.Corpus != "" {
+		var ok bool
+		item, ok = corpusByID(s.Corpus)
+		if !ok {
+			panic("unknown corpus scenario")
+		}
+		s.BodyBytes, s.ResponseBytes = len(item.Request), len(item.Response)
+	}
 	d.settings(s.Capture, s.Upstream)
 	before := d.count()
 	m0 := metrics()
 	body := bytes.Repeat([]byte("x"), s.BodyBytes)
 	want := digest(targetResponses[s.ResponseBytes])
+	if s.Corpus != "" {
+		body, want = item.Request, digest(item.Response)
+	}
+	hardLimit := 120 * time.Second
+	if s.Seconds > 0 {
+		hardLimit = time.Duration(s.Seconds+30) * time.Second
+	}
 	bodyHash := digest(body)
 	client := d.client(s.Proxy, s.Concurrency)
 	defer client.CloseIdleConnections()
@@ -317,7 +355,7 @@ func (d *driver) runCase(s scenario) {
 	for range s.Concurrency {
 		wg.Go(func() {
 			for {
-				if stop.Load() || time.Since(r.Start) > 120*time.Second {
+				if stop.Load() || time.Since(r.Start) > hardLimit {
 					return
 				}
 				if s.Seconds > 0 && time.Since(r.Start) >= time.Duration(s.Seconds)*time.Second {
@@ -338,6 +376,10 @@ func (d *driver) runCase(s scenario) {
 				req.Header.Set("X-Body-SHA256", bodyHash)
 				req.Header.Set("Authorization", targetAuth)
 				req.Header.Set("Content-Type", "application/octet-stream")
+				if s.Corpus != "" {
+					req.Header.Set("Content-Type", "application/json")
+					req.Header.Set("X-Load-Corpus", s.Corpus)
+				}
 				if s.Text {
 					req.Header.Set("Content-Type", "text/plain")
 					req.Header.Set("X-Load-Text", "1")
@@ -402,7 +444,7 @@ func (d *driver) runCase(s scenario) {
 	d.results = append(d.results, r)
 	d.save()
 	fmt.Printf("%s requests=%d errors=%d rps=%.1f p95=%.1fms captured=%d\n", s.Name, r.Requests, r.Errors, r.RPS, r.P95, r.Captured)
-	if r.Requests == 0 || (s.Seconds == 0 && r.Requests != s.Requests) || r.Errors != 0 || r.TargetRequests != r.Requests || (s.Proxy && s.Capture && r.Captured != r.Requests) || ((!s.Proxy || !s.Capture) && r.Captured != 0) || (s.Upstream && r.UpstreamRequests == 0) || (!s.Upstream && r.UpstreamRequests != 0) || m1.Leaks != 0 || m1.BadBody != 0 || m1.BadAuth != 0 {
+	if r.Requests == 0 || (s.Seconds > 0 && r.Seconds < float64(s.Seconds)) || (s.Seconds == 0 && r.Requests != s.Requests) || r.Errors != 0 || r.TargetRequests != r.Requests || (s.Proxy && s.Capture && r.Captured != r.Requests) || ((!s.Proxy || !s.Capture) && r.Captured != 0) || (s.Upstream && r.UpstreamRequests == 0) || (!s.Upstream && r.UpstreamRequests != 0) || m1.Leaks != 0 || m1.BadBody != 0 || m1.BadAuth != 0 {
 		panic("load case assertion failed: " + s.Name)
 	}
 }
@@ -468,7 +510,9 @@ func (d *driver) guardChecks() {
 	fmt.Println("Mixed HTTP/HTTPS: 16 ordinary requests passed, 64 credentials/oversize requests blocked before target")
 }
 func run() {
-	d := &driver{apiClient: &http.Client{Timeout: 10 * time.Second}, roots: x509.NewCertPool()}
+	jar, e := cookiejar.New(nil)
+	must(e)
+	d := &driver{apiClient: &http.Client{Timeout: 30 * time.Second, Jar: jar}, roots: x509.NewCertPool()}
 	for _, name := range []string{"fixture-ca.pem", "proxy-ca.pem"} {
 		b, e := os.ReadFile("/load/" + name)
 		must(e)
@@ -484,6 +528,7 @@ func run() {
 	var auth struct{ Token string }
 	d.api("POST", "/api/auth/init", map[string]string{"password": "synthetic-proxy-load-password"}, &auth)
 	d.token = auth.Token
+	d.refreshed = time.Now()
 	var health map[string]any
 	d.api("GET", "/api/health", nil, &health)
 	b, _ := json.Marshal(health)
@@ -491,7 +536,9 @@ func run() {
 	policy := map[string]any{"host_requests_per_minute": 30000, "host_distinct_urls_per_minute": 3000, "url_requests_per_minute": 30000, "task_requests_per_minute": 30000, "unattributed_requests_per_minute": 30000, "cooldown_seconds": 1, "max_body_kib": 5120, "passthrough_mode": "block"}
 	d.api("PUT", "/api/settings/proxy-security", policy, nil)
 
-	if os.Getenv("ARTEX_LOAD_MODE") == "profile" {
+	if os.Getenv("ARTEX_LOAD_MODE") == "soak" {
+		d.runSoak()
+	} else if os.Getenv("ARTEX_LOAD_MODE") == "profile" {
 		for _, scheme := range []string{"http", "https"} {
 			for _, c := range []int{1, 16} {
 				d.runCase(scenario{Name: fmt.Sprintf("profile-%s-1k-c%d", scheme, c), Scheme: scheme, Proxy: true, Capture: true, Concurrency: c, BodyBytes: 1024, ResponseBytes: 1024, Requests: 1000})
@@ -552,12 +599,16 @@ func run() {
 }
 func main() {
 	if len(os.Args) != 2 {
-		log.Fatal("usage: proxy-load serve|run")
+		log.Fatal("usage: proxy-load serve|run|verify|verify-store")
 	}
 	if os.Args[1] == "serve" {
 		serve()
 	} else if os.Args[1] == "run" {
 		run()
+	} else if os.Args[1] == "verify" {
+		verifyRestart()
+	} else if os.Args[1] == "verify-store" {
+		verifyStore()
 	} else {
 		log.Fatal("unknown mode")
 	}

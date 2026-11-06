@@ -17,6 +17,7 @@ with open('/tmp/proxy-load-resources.jsonl', 'w') as out:
             row = dict(time=time.time(), rss_kib=int(status['VmRSS'].split()[0]),
                        threads=int(status['Threads']), fds=len(list((pid / 'fd').iterdir())),
                        cpu_seconds=(int(stat[11]) + int(stat[12])) / clock_ticks)
+            row['index_bytes'] = sum(p.stat().st_size for p in Path('/app/data/traffic/_index').glob('*') if p.is_file())
             for name in ('memory.current', 'memory.peak', 'memory.events', 'memory.stat', 'io.stat'):
                 p = Path('/sys/fs/cgroup') / name
                 if p.exists():

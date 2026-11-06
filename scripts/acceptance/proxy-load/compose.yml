@@ -47,10 +47,14 @@ services:
       retries: 60
   driver:
     image: ${ARTEX_ACCEPTANCE_IMAGE:-jacketser/artex:local}
-    entrypoint: [/load/proxy-load, run]
+    entrypoint: [/load/proxy-load]
+    command: [run]
     environment:
       GOMAXPROCS: '2'
       ARTEX_LOAD_MODE: ${ARTEX_LOAD_MODE:-full}
+      ARTEX_SOAK_WINDOWS: ${ARTEX_SOAK_WINDOWS:-20}
+      ARTEX_SOAK_SECONDS: ${ARTEX_SOAK_SECONDS:-60}
+      ARTEX_SOAK_RPS: ${ARTEX_SOAK_RPS:-8}
     volumes:
       - ${ARTEX_LOAD_DIR:?set output directory}:/load
     mem_limit: 384m

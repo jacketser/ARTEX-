@@ -27,6 +27,9 @@ cleanup() {
   exit "$result"
 }
 trap cleanup EXIT
+if [[ "${ARTEX_LOAD_MODE:-full}" == soak ]]; then
+  python3 corpus.py "$load_root" "$ARTEX_LOAD_DIR"
+fi
 docker run --rm -e GOMAXPROCS=2 -v "$load_root:/src:ro" -w /src \
   -v "$ARTEX_LOAD_DIR:/output" -v artex-dev-gomod:/go/pkg/mod -v artex-dev-gocache:/root/.cache/go-build \
   golang:1.26-bookworm go build -p 1 -o /output/proxy-load ./scripts/acceptance/proxy-load
@@ -43,3 +46,13 @@ dc up -d --wait --wait-timeout 150
 dc cp app:/app/data/traffic/_ca/mitmproxy-ca-cert.pem "$ARTEX_LOAD_DIR/proxy-ca.pem"
 dc exec -d app python3 /acceptance/monitor.py
 dc run --rm --no-deps driver | tee "$ARTEX_LOAD_DIR/run.log"
+if [[ "${ARTEX_LOAD_MODE:-full}" == soak ]]; then
+  dc exec -T app touch /tmp/proxy-load-monitor.stop
+  docker inspect --format '{{json .State}}' "$(dc ps -q app)" > "$ARTEX_LOAD_DIR/pre-stop-app-state.json"
+  dc stop app
+  dc cp app:/app/data/traffic/_index "$ARTEX_LOAD_DIR/index-snapshot"
+  docker run --rm --network none --memory 256m -e GOMAXPROCS=2 -v "$ARTEX_LOAD_DIR:/load" \
+    --entrypoint /load/proxy-load "${ARTEX_ACCEPTANCE_IMAGE:-jacketser/artex:local}" verify-store
+  dc up -d --no-deps --wait --wait-timeout 150 app
+  dc run --rm --no-deps driver verify | tee "$ARTEX_LOAD_DIR/restart.log"
+fi

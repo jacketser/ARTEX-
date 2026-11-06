@@ -86,3 +86,29 @@ ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:local bash scripts/acceptance/proxy-load/
 这些路径已有的功能回归不能代替对应负载测试。超过缓冲阈值的响应及 SSE 流式捕获不在本次完整记录断言范围。
 
 设置 `ARTEX_LOAD_MODE=profile` 可运行保存专用的 8 场景短轮：HTTP/HTTPS 各包含 1 KiB 单并发／16 并发、8 并发 64 KiB `text/plain`、4 并发 5 MiB 请求，全部开启捕获；共 4248 次正常请求，并保留混合拦截与配额验证。该模式不含直连、上游或 90 秒持续场景，不能代替完整模式。文本为重复合成内容，不能代替真实词汇分布。对比方法、阶段指标语义和结果见[保存性能报告](../../CAPTURE-PERFORMANCE.md)。
+
+## 文本持续负载与重启校验
+
+```sh
+ARTEX_LOAD_MODE=soak bash scripts/acceptance/proxy-load/run.sh
+```
+
+默认 20 个 60 秒窗口，每秒最多 8 次、4 并发，轮换 HTTP/HTTPS＋认证 HTTP 上游＋捕获。
+每窗口单独统计延迟与保存计数，窗口间会关闭客户端连接池并检查记录，应用和数据库全程保留，数据持续累积。
+这不是同一条连接不间断运行 20 分钟，也不是最大吞吐测试。
+`ARTEX_SOAK_WINDOWS`（1–120）、`ARTEX_SOAK_SECONDS`（1–300）、`ARTEX_SOAK_RPS`（1–30）可调整，延长时间会增加磁盘使用量。
+管理 API 使用测试实例的刷新 Cookie，每十分钟自动续期；凭据仅在施压器内存中保留。
+
+语料从当前 Git HEAD 的 `README.md` 和 `DEPLOYMENT.md` 生成，不读取工作区私密配置、不访问外部网站。
+包含 8 组文档 HTML／JSON，响应目标约 16／64 KiB，实际字节数与 SHA-256 存在 `corpus.json`；请求为文档摘要 JSON。
+保留文档词汇、中文、标点和嵌套 JSON，超过源文档长度时循环段落；并非真实网站抓包或广泛行业语料。
+每次先用八组语料做短烟雾，再跑持续窗口，最后验证凭据／正文大小／配额拒绝和全文检索。
+
+完成后只停止本轮隔离应用，复制其 SQLite 文件；离线校验使用项目相同版本的 Go SQLite 驱动，检查数据库完整性、
+每条语料请求／响应的落盘 SHA-256、正文与索引数量、检索标记命中数及目标 Authorization 脱敏。
+随后启动同一测试容器，重新登录并核对总数和全文检索。任一步失败整个脚本非零退出，缺少重启结果不计通过。
+`index-snapshot/`、`offline-integrity.json`、`restart-check.json`、逐窗口资源摘要和原始采样保留在输出目录；测试容器与网络仍自动清理。
+离线全量哈希覆盖本轮语料记录，混合防护样例另核对总数；仅普通停机／重启，不模拟断电或强杀。
+
+快速验证脚本本身可运行 `ARTEX_LOAD_MODE=soak ARTEX_SOAK_WINDOWS=2 ARTEX_SOAK_SECONDS=3 bash scripts/acceptance/proxy-load/run.sh`。
+这只验证流程，不能作为持续负载通过的依据。
