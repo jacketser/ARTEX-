@@ -4,9 +4,18 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-3635912`；本轮通过健康接口只读确认，未更新正式部署。
-- 本轮完成代理安全增强与登录自动续期；此前已完善蜜罐规则与恢复失败处理，并加入服务器冻结补偿、场景化提示词；已完成的 P1 包括恢复结果闭环、流量差异与审阅历史、蜜罐过期重评/人工结论/筛选，以及企业范围回归修复与持续回归配置；完整未移植项、使用方法和限制见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-protection-20261106-local`，应用源码对应 `befdce2`；保留已验收候选版本名，正式服务已更新。
+- 最新发布完成代理防护与流量保存拆分，并包含前轮浏览器验收和样本回归。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：代理防护与流量保存拆分（2026-11-06）
+
+- 发布应用源码：`befdce2`。直接使用通过隔离浏览器验收的 `jacketser/artex:protection-candidate` 镜像，正式标签更新为 `jacketser/artex:local`；运行版本保留为 `dev-protection-20261106-local`，没有因改版本名重新编译。
+- 发布前数据库任务总数和排队数均为 0。停止应用写入后备份到 `/home/ARTEX/backups/pre-protection-20261106-164459/`，包含 `postgres.dump`、`files.tar.gz`、镜像/源码记录和文件哈希。数据库备份通过 `pg_restore --list` 校验，文件包通过 `tar -tzf` 校验。
+- 回退镜像：`jacketser/artex:rollback-before-protection-split`，对应旧运行版本 `dev-3635912`。本次未更改数据库表结构；回退镜像会恢复旧版“捕获关闭即无代理防护”的行为。
+- 应用与 PostgreSQL 健康，仍绑定 `127.0.0.1:8787`。健康接口版本匹配；未登录访问代理统计返回 401。`doctor` 返回 0，唯一警告仍是未配置模型。
+- 正式库只读确认：流量捕获保持关闭；内置 browser MCP 已保留本地安全代理和 CA 配置。`.env`、`jwt.key`、`.deployment-credentials` 的 SHA-256 与发布前一致；未读取并输出其内容，也未重置密码。
+- 发布日志：`/tmp/artex-protection-publish.log`；自检日志：`/tmp/artex-protection-doctor.log`。以下候选验收段落为发布前记录。
 
 ## 本地候选：代理防护与流量保存拆分（2026-11-06）
 
