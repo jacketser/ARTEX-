@@ -6,9 +6,23 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-97b8349`，应用源码对应 `97b8349`，正式服务已更新。
-- 最新发布补齐历史活动流量和证据的分批预览／指纹脱敏与审计续跑；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-c9f56ec`，应用源码对应 `c9f56ec`，正式服务已更新。
+- 最新发布补齐旧目录格式流量的显式分批迁移与同步脱敏，沿用预览、指纹确认和审计续跑；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：旧目录格式流量迁移（2026-11-06）
+
+- 应用源码 `c9f56ec`，正式版本 `dev-c9f56ec`。候选镜像 `jacketser/artex:legacy-candidate`，镜像 ID `sha256:536a5c69d20f0f2bef40278a250084b0bbb659d239a3a05883097939641c217e`。复用现有运行环境与前端，无新增业务表或基础依赖升级。
+- `--migrate-legacy` 显式开启旧目录迁移，仅适用于 `traffic`。还原 `request.http`／`response.http` 和原版完整 blob 指针，支持两种哈希目录，校验长度、SHA-256 和可选元数据。迁移同步脱敏，并保留流量 ID、时间和 rowid，更新当前行全文索引。默认不开启，预览显示本批 `legacy_rows`，成功结果／审计继承开关续跑；版本变更后须从头生成预览和游标。
+- 数据库事务成功后才清理核验过的旧报文与元数据；再次核对文件哈希及旧路径引用。拒绝越界、符号链接、非普通文件、缺失／损坏／超限内容、未知引用变体以及双份正文冲突。用户其他文件及空目录保留；提交后中断残留和保守延后的 blob 回收边界见[维护说明](HISTORY-REDACTION.md)。
+- 混合批次中的现代记录不再回收可能被未迁移旧记录引用的 blob；只要旧行尚存就保守延后。迁移完成后，当前批次无引用 blob 可回收，较早批次延后对象交由正常存储回收处理，不宣称立即清空所有历史副本或物理擦除。
+- 完整 Go 回归通过：`/tmp/artex-legacy-full.log`；维护／脱敏／CLI 专项 race 通过：`/tmp/artex-legacy-race.log`。新增旧版内联与完整 blob 迁移、混合分页共享正文保护、原文件变更导致指纹失效、SQL 失败保留源文件、清理前文件和引用复查、未知文件保留、路径和元数据拒绝、二进制／CRLF／字面量指针解析、迁移后读取／搜索／归档和重复执行零变更验证。
+- 候选编译与镜像日志：`/tmp/artex-legacy-compile.log`、`/tmp/artex-legacy-image.log`。实际命令验收通过：运行中拒绝、停机三批处理（含一条旧目录及两级 blob 记录）、第二批故障重试、第三批旧记录迁移与原文件清理、用户附加文件保留、完整审计、复查零变更和重启健康；脚本参数替身验证恢复文件继承迁移开关。日志 `/tmp/artex-legacy-cli.log`，产物 `/tmp/artex-privacy-acceptance-FsEYdLAY/`。
+- Chromium 回归通过：四次行为请求经过上游、无目标凭据泄漏、原 Host 保留、冷却 429、策略保存及关闭捕获仍防护，页面错误 0。日志 `/tmp/artex-legacy-browser.log`，产物 `/tmp/artex-acceptance-EQwUYOxe/`。本次前端源码未改变。
+- 发布前正式库任务总数为 0；停机备份 `/home/ARTEX/backups/pre-legacy-traffic-20261106-192822/`，数据库与文件包可读性校验通过，环境、JWT 与初始登录文件哈希未变。普通流量、证据和开启迁移的流量预览均为 0 条、0 变更、0 旧格式记录，`more:false, applied:false`；未重写正式业务内容。发布日志 `/tmp/artex-legacy-publish.log`。
+- 健康接口版本为 `dev-c9f56ec`，管理端口仍只绑定 `127.0.0.1:8787`；运行中迁移拒绝检查通过。doctor 返回 0，唯一警告为未配置模型，日志 `/tmp/artex-legacy-doctor.log`。隔离验收容器和网络已清理。
+- 回退镜像 `jacketser/artex:rollback-before-legacy-traffic` 对应 `dev-97b8349`。已迁移行采用既有 SQLite 结构，可被回退版本读取；该版本不支持迁移开关，旧预览／游标不可跨版本复用。程序回退不恢复原始内容，恢复内容仍需同一份数据库和文件备份。
+- 后续主要范围：备份／冷归档／导出副本及日志／会话／资产元数据脱敏，真实样本效果评估和完整代理链路性能压测；未知分支旧格式与无引用残留需单独核查。系统级出网隔离仍按既定决定不实施。
 
 ## 正式发布：历史脱敏大库分批与续跑（2026-11-06）
 

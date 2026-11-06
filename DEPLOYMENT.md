@@ -6,7 +6,7 @@
 
 ## 当前运行方式
 
-截至 2026-11-06 最近一次正式发布版本为 `dev-97b8349`，源码提交 `97b8349`。版本变化与升级影响见[二开更新日志](CHANGELOG-LOCAL.md)；发布验证与备份见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
+截至 2026-11-06 最近一次正式发布版本为 `dev-c9f56ec`，源码提交 `c9f56ec`。版本变化与升级影响见[二开更新日志](CHANGELOG-LOCAL.md)；发布验证与备份见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
 
 - 标准部署使用 `Dockerfile.source` 从当前工作目录编译 Next.js 静态前端及 Go 后端。最近四次发布复用既有运行环境、更新程序及嵌入前端，未升级基础镜像依赖，具体见验收记录。
 - Compose 文件是 **`compose.source.yml`**，不是上游的 `docker-compose.yml`。
