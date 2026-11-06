@@ -20,6 +20,15 @@ for result in results:
         result['threads_peak'] = max(s['threads'] for s in selected)
         if len(selected) > 1:
             result['cpu_cores_mean'] = (selected[-1]['cpu_seconds'] - selected[0]['cpu_seconds']) / (selected[-1]['time'] - selected[0]['time'])
+    before, after = result.get('capture_before', {}), result.get('capture_after', {})
+    if after.get('stages'):
+        result['capture_ms_per_request'] = {
+            k: (v['nanoseconds'] - before.get('stages', {}).get(k, {}).get('nanoseconds', 0)) / 1e6 / max(1, result['requests'])
+            for k, v in after['stages'].items()
+        }
+        commits = after['stages']['commit']['calls'] - before['stages']['commit']['calls']
+        result['capture_commits'] = commits
+        result['records_per_commit'] = (after['written'] - before['written']) / max(1, commits)
     rows.append(result)
 last = samples[-1]
 summary = dict(cases=rows, total_requests=sum(r['requests'] for r in rows),

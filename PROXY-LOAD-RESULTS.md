@@ -4,6 +4,8 @@
 应用源码 `074305e`，测试版本 `dev-074305e`；[结构化结果](scripts/acceptance/results/proxy-load-20261106.json)保留各场景参数、延迟、资源采样、健康版本和镜像 ID。
 [复现步骤](scripts/acceptance/README.md#完整代理链路压测)使用所选镜像，正式服务的部署状态见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
 
+后续已完成保存分阶段计时及有界批量提交，见[流量保存性能报告](CAPTURE-PERFORMANCE.md)。本文保留优化前基线；下文“后续”是该次测试时的判断，当前计划以新报告为准。
+
 ## 测试范围
 
 - 云服务器为 2 CPU、约 3.82 GiB 内存，同时运行其他服务。测试应用限制 2 CPU／1 GiB，`GOMAXPROCS=2`；施压器、目标、上游和 PostgreSQL 分容器、共用宿主机资源。

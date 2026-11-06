@@ -17,7 +17,7 @@ with open('/tmp/proxy-load-resources.jsonl', 'w') as out:
             row = dict(time=time.time(), rss_kib=int(status['VmRSS'].split()[0]),
                        threads=int(status['Threads']), fds=len(list((pid / 'fd').iterdir())),
                        cpu_seconds=(int(stat[11]) + int(stat[12])) / clock_ticks)
-            for name in ('memory.current', 'memory.peak', 'memory.events'):
+            for name in ('memory.current', 'memory.peak', 'memory.events', 'memory.stat', 'io.stat'):
                 p = Path('/sys/fs/cgroup') / name
                 if p.exists():
                     row[name] = p.read_text().strip()

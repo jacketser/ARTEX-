@@ -60,9 +60,10 @@ func (s *Server) proxySecuritySettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, c)
 }
 func (s *Server) proxySecurityStats(w http.ResponseWriter, r *http.Request) {
-	var stats any
+	var stats, capture any
 	if s.m.traffic != nil {
 		stats = s.m.traffic.SecurityStats()
+		capture = s.m.traffic.CaptureStats()
 	}
-	writeJSON(w, 200, map[string]any{"proxy_configured": s.m.traffic != nil, "capture_enabled": s.m.TrafficEnabled(), "stats": stats, "scope": "process_lifetime"})
+	writeJSON(w, 200, map[string]any{"proxy_configured": s.m.traffic != nil, "capture_enabled": s.m.TrafficEnabled(), "stats": stats, "capture": capture, "scope": "process_lifetime"})
 }

@@ -50,6 +50,7 @@ services:
     entrypoint: [/load/proxy-load, run]
     environment:
       GOMAXPROCS: '2'
+      ARTEX_LOAD_MODE: ${ARTEX_LOAD_MODE:-full}
     volumes:
       - ${ARTEX_LOAD_DIR:?set output directory}:/load
     mem_limit: 384m

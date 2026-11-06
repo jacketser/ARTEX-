@@ -86,7 +86,11 @@ func serve() {
 			http.Error(w, "response size", 400)
 			return
 		}
-		w.Header().Set("Content-Type", "application/octet-stream")
+		ctype := "application/octet-stream"
+		if r.Header.Get("X-Load-Text") == "1" {
+			ctype = "text/plain"
+		}
+		w.Header().Set("Content-Type", ctype)
 		w.Header().Set("Content-Length", strconv.Itoa(len(response)))
 		w.Write(response)
 	})
@@ -223,6 +227,7 @@ func (d *driver) settings(capture, upstream bool) {
 }
 
 type scenario struct {
+	Text          bool   `json:"text"`
 	Name          string `json:"name"`
 	Scheme        string `json:"scheme"`
 	Proxy         bool   `json:"proxy"`
@@ -235,7 +240,26 @@ type scenario struct {
 	Seconds       int    `json:"duration_limit_seconds"`
 	Rate          int    `json:"rate_limit_rps"`
 }
+type captureProfile struct {
+	Stages map[string]struct {
+		Calls       uint64 `json:"calls"`
+		Nanoseconds uint64 `json:"nanoseconds"`
+	} `json:"stages"`
+	Written uint64 `json:"written"`
+	Failed  uint64 `json:"failed"`
+}
+
+func (d *driver) profile() captureProfile {
+	var v struct {
+		Capture captureProfile `json:"capture"`
+	}
+	d.api("GET", "/api/proxy-security/stats", nil, &v)
+	return v.Capture
+}
+
 type result struct {
+	ProfileBefore    captureProfile `json:"capture_before"`
+	ProfileAfter     captureProfile `json:"capture_after"`
 	Scenario         scenario       `json:"scenario"`
 	Start            time.Time      `json:"start"`
 	End              time.Time      `json:"end"`
@@ -277,7 +301,7 @@ func (d *driver) runCase(s scenario) {
 	bodyHash := digest(body)
 	client := d.client(s.Proxy, s.Concurrency)
 	defer client.CloseIdleConnections()
-	r := result{Scenario: s, ErrorKinds: map[string]int{}, Start: time.Now().UTC()}
+	r := result{ProfileBefore: d.profile(), Scenario: s, ErrorKinds: map[string]int{}, Start: time.Now().UTC()}
 	var mu sync.Mutex
 	latencies := []float64{}
 	var next atomic.Int64
@@ -314,6 +338,10 @@ func (d *driver) runCase(s scenario) {
 				req.Header.Set("X-Body-SHA256", bodyHash)
 				req.Header.Set("Authorization", targetAuth)
 				req.Header.Set("Content-Type", "application/octet-stream")
+				if s.Text {
+					req.Header.Set("Content-Type", "text/plain")
+					req.Header.Set("X-Load-Text", "1")
+				}
 				started := time.Now()
 				resp, e := client.Do(req)
 				kind := ""
@@ -365,6 +393,10 @@ func (d *driver) runCase(s scenario) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	m1 := metrics()
+	r.ProfileAfter = d.profile()
+	if r.ProfileAfter.Stages != nil && (r.ProfileAfter.Failed != r.ProfileBefore.Failed || r.ProfileAfter.Written-r.ProfileBefore.Written != uint64(r.Captured)) {
+		panic("capture accounting inconsistent")
+	}
 	r.TargetRequests = m1.Requests[s.Name] - m0.Requests[s.Name]
 	r.UpstreamRequests = m1.Upstream - m0.Upstream
 	d.results = append(d.results, r)
@@ -458,31 +490,43 @@ func run() {
 	must(os.WriteFile("/load/health.json", b, 0600))
 	policy := map[string]any{"host_requests_per_minute": 30000, "host_distinct_urls_per_minute": 3000, "url_requests_per_minute": 30000, "task_requests_per_minute": 30000, "unattributed_requests_per_minute": 30000, "cooldown_seconds": 1, "max_body_kib": 5120, "passthrough_mode": "block"}
 	d.api("PUT", "/api/settings/proxy-security", policy, nil)
-	for _, scheme := range []string{"http", "https"} {
-		d.runCase(scenario{Name: "proxy-smoke-" + scheme, Scheme: scheme, Proxy: true, Concurrency: 1, BodyBytes: 1024, ResponseBytes: 1024, Requests: 1})
-	}
-	for _, scheme := range []string{"http", "https"} {
-		for _, c := range []int{1, 16} {
-			d.runCase(scenario{Name: fmt.Sprintf("direct-%s-1k-c%d", scheme, c), Scheme: scheme, Concurrency: c, BodyBytes: 1024, ResponseBytes: 1024, Requests: 2000})
-		}
-		d.runCase(scenario{Name: "direct-" + scheme + "-64k", Scheme: scheme, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 500})
-		d.runCase(scenario{Name: "direct-" + scheme + "-5m", Scheme: scheme, Concurrency: 4, BodyBytes: 5 << 20, ResponseBytes: 65536, Requests: 24})
-	}
-	for _, capture := range []bool{false, true} {
+
+	if os.Getenv("ARTEX_LOAD_MODE") == "profile" {
 		for _, scheme := range []string{"http", "https"} {
 			for _, c := range []int{1, 16} {
-				d.runCase(scenario{Name: fmt.Sprintf("%s-capture-%t-1k-c%d", scheme, capture, c), Scheme: scheme, Proxy: true, Capture: capture, Concurrency: c, BodyBytes: 1024, ResponseBytes: 1024, Requests: 2000})
+				d.runCase(scenario{Name: fmt.Sprintf("profile-%s-1k-c%d", scheme, c), Scheme: scheme, Proxy: true, Capture: true, Concurrency: c, BodyBytes: 1024, ResponseBytes: 1024, Requests: 1000})
 			}
-			d.runCase(scenario{Name: fmt.Sprintf("%s-capture-%t-64k", scheme, capture), Scheme: scheme, Proxy: true, Capture: capture, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 500})
-			d.runCase(scenario{Name: fmt.Sprintf("%s-capture-%t-5m", scheme, capture), Scheme: scheme, Proxy: true, Capture: capture, Concurrency: 4, BodyBytes: 5 << 20, ResponseBytes: 65536, Requests: 24})
+			d.runCase(scenario{Name: "profile-" + scheme + "-text64k", Scheme: scheme, Proxy: true, Capture: true, Text: true, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 100})
+			d.runCase(scenario{Name: "profile-" + scheme + "-5m", Scheme: scheme, Proxy: true, Capture: true, Concurrency: 4, BodyBytes: 5 << 20, ResponseBytes: 65536, Requests: 24})
 		}
-	}
-	for _, capture := range []bool{false, true} {
+	} else {
 		for _, scheme := range []string{"http", "https"} {
-			d.runCase(scenario{Name: fmt.Sprintf("%s-upstream-capture-%t", scheme, capture), Scheme: scheme, Proxy: true, Capture: capture, Upstream: true, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 500})
+			d.runCase(scenario{Name: "proxy-smoke-" + scheme, Scheme: scheme, Proxy: true, Concurrency: 1, BodyBytes: 1024, ResponseBytes: 1024, Requests: 1})
 		}
+		for _, scheme := range []string{"http", "https"} {
+			for _, c := range []int{1, 16} {
+				d.runCase(scenario{Name: fmt.Sprintf("direct-%s-1k-c%d", scheme, c), Scheme: scheme, Concurrency: c, BodyBytes: 1024, ResponseBytes: 1024, Requests: 2000})
+			}
+			d.runCase(scenario{Name: "direct-" + scheme + "-64k", Scheme: scheme, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 500})
+			d.runCase(scenario{Name: "direct-" + scheme + "-5m", Scheme: scheme, Concurrency: 4, BodyBytes: 5 << 20, ResponseBytes: 65536, Requests: 24})
+		}
+		for _, capture := range []bool{false, true} {
+			for _, scheme := range []string{"http", "https"} {
+				for _, c := range []int{1, 16} {
+					d.runCase(scenario{Name: fmt.Sprintf("%s-capture-%t-1k-c%d", scheme, capture, c), Scheme: scheme, Proxy: true, Capture: capture, Concurrency: c, BodyBytes: 1024, ResponseBytes: 1024, Requests: 2000})
+				}
+				d.runCase(scenario{Name: fmt.Sprintf("%s-capture-%t-64k", scheme, capture), Scheme: scheme, Proxy: true, Capture: capture, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 500})
+				d.runCase(scenario{Name: fmt.Sprintf("%s-capture-%t-5m", scheme, capture), Scheme: scheme, Proxy: true, Capture: capture, Concurrency: 4, BodyBytes: 5 << 20, ResponseBytes: 65536, Requests: 24})
+			}
+		}
+		for _, capture := range []bool{false, true} {
+			for _, scheme := range []string{"http", "https"} {
+				d.runCase(scenario{Name: fmt.Sprintf("%s-upstream-capture-%t", scheme, capture), Scheme: scheme, Proxy: true, Capture: capture, Upstream: true, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 500})
+			}
+		}
+		d.runCase(scenario{Name: "https-upstream-soak", Scheme: "https", Proxy: true, Capture: true, Upstream: true, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 10000, Seconds: 90, Rate: 80})
 	}
-	d.runCase(scenario{Name: "https-upstream-soak", Scheme: "https", Proxy: true, Capture: true, Upstream: true, Concurrency: 8, BodyBytes: 65536, ResponseBytes: 65536, Requests: 10000, Seconds: 90, Rate: 80})
+
 	d.guardChecks()
 	// Intentional quota rejection must be distinguished from false positives.
 	policy["unattributed_requests_per_minute"] = 1

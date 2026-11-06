@@ -30,7 +30,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
 	mproxy "github.com/lqqyt2423/go-mitmproxy/proxy"
@@ -135,7 +134,9 @@ const TrafficSearchDescription = "查询记录代理已抓取的目标流量（�
 
 // Traffic runs the recording proxy and owns the file tree + index.
 type Traffic struct {
-	security securityGuard
+	security       securityGuard
+	captureMetrics captureMetrics
+	captureWriter  *captureWriter
 	// Low bit disables persistence; higher bits invalidate in-flight captures
 	// across a toggle. Zero preserves standalone Open's recording default.
 	captureState atomic.Uint64
@@ -195,7 +196,7 @@ func Open(dir, addr string) (*Traffic, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := &Traffic{dir: dir, addr: addr, db: db, closed: make(chan struct{})}
+	t := &Traffic{dir: dir, addr: addr, db: db, closed: make(chan struct{}), captureWriter: newCaptureWriter()}
 	if err := t.initIndex(); err != nil {
 		db.Close()
 		return nil, err
@@ -370,6 +371,9 @@ func (t *Traffic) Close() error {
 	if t.closed != nil {
 		t.closeOnce.Do(func() { close(t.closed) })
 	}
+	if t.captureWriter != nil {
+		t.captureWriter.close()
+	}
 	t.reaping.Wait()
 	return t.db.Close()
 }
@@ -432,88 +436,26 @@ func (t *Traffic) record(f *mproxy.Flow) {
 	if !t.captureAllowed(f) {
 		return
 	}
-	safe, err := t.sanitizedFlow(f)
-	if err != nil {
+	epoch := t.captureState.Load()
+	size := captureSize(f)
+	admitted := time.Now()
+	if !t.captureWriter.reserve(size) {
+		return
+	}
+	t.captureMetrics.admit.observe(admitted)
+	defer t.captureWriter.release(size)
+	if epoch != t.captureState.Load() || !t.captureAllowed(f) {
+		return
+	}
+	started := time.Now()
+	safe, e := t.sanitizedFlow(f)
+	t.captureMetrics.redact.observe(started)
+	if e != nil {
+		t.captureMetrics.failed.Add(1)
 		log.Printf("[security] recording skipped: credential redaction unavailable")
 		return
 	}
-	f = safe
-	// The write lock covers blob + index writes, so DeleteHost (and its blob GC)
-	// can run under the same lock without racing a concurrent record.
-	t.wmu.Lock()
-	defer t.wmu.Unlock()
-	if !t.captureAllowed(f) {
-		return
-	}
-	host := f.Request.URL.Hostname()
-	method := f.Request.Method
-	tmpl := db.TemplatePath(f.Request.URL.EscapedPath())
-	n := t.seq.Add(1)
-	now := time.Now()
-	id := fmt.Sprintf("%d-%04d", now.Unix(), n%10000)
-
-	ct := f.Response.Header.Get("Content-Type")
-	url := f.Request.URL.String()
-	reqHead := fmt.Sprintf("%s %s %s\n%s", method, f.Request.URL.RequestURI(), f.Request.Proto, requestHeaderLines(f.Request))
-	respHead := fmt.Sprintf("HTTP %d\n%s", f.Response.StatusCode, headerLines(f.Response.Header))
-	// Bodies are spilled before the transaction opens: blob writes are filesystem
-	// work and must not sit inside the SQLite write lock.
-	reqB := t.spill(f.Request.Body, f.Request.Header.Get("Content-Type"))
-	respB := t.spill(f.Response.Body, ct)
-
-	tx, err := t.db.Begin()
-	if err != nil {
-		log.Printf("[traffic] 记录 %s 失败（开启事务）：%v", url, err)
-		return
-	}
-	defer tx.Rollback() //nolint:errcheck // no-op once committed
-
-	// path stays empty for db-resident exchanges; a non-empty path marks a legacy
-	// row whose bodies still live in the old on-disk tree (see Get).
-	res, err := tx.Exec(`INSERT OR REPLACE INTO exchanges(id,ts,host,method,url_template,url,status,content_type,req_len,resp_len,path)
-VALUES(?,?,?,?,?,?,?,?,?,?,'')`,
-		id, now.Unix(), host, method, tmpl, url, f.Response.StatusCode, ct,
-		len(f.Request.Body), len(f.Response.Body))
-	if err != nil {
-		log.Printf("[traffic] 记录 %s 失败（写索引）：%v", url, err)
-		return
-	}
-	rowid, err := res.LastInsertId()
-	if err != nil {
-		log.Printf("[traffic] 记录 %s 失败（取 rowid）：%v", url, err)
-		return
-	}
-
-	if _, err := tx.Exec(`INSERT OR REPLACE INTO exchange_bodies(id,req_head,req_body,req_blob,resp_head,resp_body,resp_blob)
-VALUES(?,?,?,?,?,?,?)`,
-		id, reqHead, reqB.inline, nullIfEmpty(reqB.hash), respHead, respB.inline, nullIfEmpty(respB.hash)); err != nil {
-		log.Printf("[traffic] 记录 %s 失败（写正文）：%v", url, err)
-		return
-	}
-
-	for _, h := range []string{reqB.hash, respB.hash} {
-		if h == "" {
-			continue
-		}
-		if _, err := tx.Exec(`INSERT OR IGNORE INTO blob_refs(hash,exchange_id) VALUES(?,?)`, h, id); err != nil {
-			log.Printf("[traffic] 记录 %s 失败（登记 blob 引用）：%v", url, err)
-			return
-		}
-	}
-
-	if t.fts {
-		// The index is fed from memory, so a body that spilled to _blobs is still
-		// fully searchable even though only its preview is stored inline.
-		idx := strings.Join([]string{url, reqHead, reqB.index, respHead, respB.index}, "\n")
-		if _, err := tx.Exec(`INSERT INTO ex_fts(rowid,content) VALUES(?,?)`, rowid, idx); err != nil {
-			log.Printf("[traffic] 记录 %s 失败（写全文索引）：%v", url, err)
-			return
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		log.Printf("[traffic] 记录 %s 失败（提交）：%v", url, err)
-	}
+	t.queueCapture(&captureJob{flow: safe, epoch: epoch, queued: time.Now(), done: make(chan struct{})})
 }
 
 // storedBody is one body after the inline/spill decision: inline is what goes in
@@ -530,9 +472,9 @@ type storedBody struct {
 // reader can identify them without fetching the blob. Either way, text bodies
 // are handed to the full-text index in full (up to maxIndexBody) — indexing is
 // independent of where the bytes end up.
-func (t *Traffic) spill(body []byte, contentType string) storedBody {
+func (t *Traffic) spill(body []byte, contentType string) (storedBody, error) {
 	if len(body) == 0 {
-		return storedBody{}
+		return storedBody{}, nil
 	}
 	text := !isBinaryBody(contentType, body)
 	indexText := func() string {
@@ -542,7 +484,7 @@ func (t *Traffic) spill(body []byte, contentType string) storedBody {
 		return string(clipBytes(body, maxIndexBody))
 	}
 	if len(body) <= maxInlineBody {
-		return storedBody{inline: body, index: indexText()}
+		return storedBody{inline: body, index: indexText()}, nil
 	}
 
 	sum := sha256.Sum256(body)
@@ -551,15 +493,17 @@ func (t *Traffic) spill(body []byte, contentType string) storedBody {
 	// the store only ever holds bodies above maxInlineBody, deduplicated by hash.
 	blobDir := filepath.Join(t.dir, "_blobs", "sha256", h[:2])
 	if err := os.MkdirAll(blobDir, 0o755); err != nil {
-		log.Printf("[traffic] 创建 blob 目录失败：%v", err)
-		return storedBody{inline: clipBytes(body, blobPreview), index: indexText()}
+		return storedBody{}, fmt.Errorf("create capture blob directory: %w", err)
 	}
 	blobPath := filepath.Join(blobDir, h+".bin")
-	if _, err := os.Stat(blobPath); os.IsNotExist(err) {
+	if info, err := os.Stat(blobPath); os.IsNotExist(err) {
 		if err := os.WriteFile(blobPath, body, 0o644); err != nil {
-			log.Printf("[traffic] 写 blob %s 失败：%v", h, err)
-			return storedBody{inline: clipBytes(body, blobPreview), index: indexText()}
+			return storedBody{}, fmt.Errorf("write capture blob: %w", err)
 		}
+	} else if err != nil {
+		return storedBody{}, err
+	} else if !info.Mode().IsRegular() || info.Size() != int64(len(body)) {
+		return storedBody{}, fmt.Errorf("capture blob size or type mismatch")
 	}
 	sb := storedBody{hash: h, index: indexText()}
 	if text {
@@ -567,7 +511,7 @@ func (t *Traffic) spill(body []byte, contentType string) storedBody {
 	} else {
 		sb.inline = []byte(binaryTag(contentType, body))
 	}
-	return sb
+	return sb, nil
 }
 
 // binaryTypes are content-type prefixes whose bodies are never worth indexing or

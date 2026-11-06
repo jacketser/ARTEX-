@@ -76,7 +76,7 @@ ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:local bash scripts/acceptance/proxy-load/
 额外混合并发验证普通请求通过、平台凭据原文/Base64 与超限正文在目标前被阻止，最后验证主动触发 429。
 出现错误或缺失记录会退出非零；不会修改断言来将遗漏抓取视为成功。
 
-每 0.5 秒采集应用进程 RSS、CPU 时间、线程数和 FD，以及可用的 cgroup 内存/事件计数。
+每 0.5 秒采集应用进程 RSS、CPU 时间、线程数和 FD，以及可用的 cgroup 内存/事件计数、`memory.stat` 和 `io.stat`。每场景保留保存阶段计数器的前后快照；支持统计的镜像还要求写入失败不增加、成功计数与新增记录数一致。
 结果保存在 `/tmp/artex-proxy-load-*` 的 `summary.json`、`summary.md`、`results.json`、`resources.jsonl`、
 `guard.json` 和 `security-stats.json`；镜像、健康版本和主机信息一并保存。清理测试容器、卷与网络后保留结果。
 原始容器日志含测试实例初始化信息，不应直接作为正式日志发布。
@@ -84,3 +84,5 @@ ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:local bash scripts/acceptance/proxy-load/
 这是同机合成负载下的基线：采样可能错过短时峰值，90 秒不是数小时稳定性证明；
 未覆盖多任务身份并发、HTTP/2、WebSocket、HTTPS/SOCKS5 上游的负载表现、真实互联网延迟或未知凭据。
 这些路径已有的功能回归不能代替对应负载测试。超过缓冲阈值的响应及 SSE 流式捕获不在本次完整记录断言范围。
+
+设置 `ARTEX_LOAD_MODE=profile` 可运行保存专用的 8 场景短轮：HTTP/HTTPS 各包含 1 KiB 单并发／16 并发、8 并发 64 KiB `text/plain`、4 并发 5 MiB 请求，全部开启捕获；共 4248 次正常请求，并保留混合拦截与配额验证。该模式不含直连、上游或 90 秒持续场景，不能代替完整模式。文本为重复合成内容，不能代替真实词汇分布。对比方法、阶段指标语义和结果见[保存性能报告](../../CAPTURE-PERFORMANCE.md)。

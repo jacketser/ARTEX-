@@ -1,0 +1,852 @@
+{
+  "cases": [
+    {
+      "capture_before": {
+        "stages": {
+          "commit": {
+            "calls": 0,
+            "nanoseconds": 0
+          },
+          "prepare": {
+            "calls": 0,
+            "nanoseconds": 0
+          },
+          "redact": {
+            "calls": 0,
+            "nanoseconds": 0
+          },
+          "sql": {
+            "calls": 0,
+            "nanoseconds": 0
+          },
+          "wait": {
+            "calls": 0,
+            "nanoseconds": 0
+          }
+        },
+        "written": 0,
+        "failed": 0
+      },
+      "capture_after": {
+        "stages": {
+          "commit": {
+            "calls": 1000,
+            "nanoseconds": 4012220237
+          },
+          "prepare": {
+            "calls": 1000,
+            "nanoseconds": 10605187
+          },
+          "redact": {
+            "calls": 1000,
+            "nanoseconds": 310705945
+          },
+          "sql": {
+            "calls": 1000,
+            "nanoseconds": 254935559
+          },
+          "wait": {
+            "calls": 1000,
+            "nanoseconds": 107722
+          }
+        },
+        "written": 1000,
+        "failed": 0
+      },
+      "scenario": {
+        "text": false,
+        "name": "profile-http-1k-c1",
+        "scheme": "http",
+        "proxy": true,
+        "capture": true,
+        "upstream": false,
+        "concurrency": 1,
+        "body_bytes": 1024,
+        "response_bytes": 1024,
+        "request_limit": 1000,
+        "duration_limit_seconds": 0,
+        "rate_limit_rps": 0
+      },
+      "start": "2026-11-06T13:14:37.547424899Z",
+      "end": "2026-11-06T13:14:42.865978762Z",
+      "requests": 1000,
+      "errors": 0,
+      "error_kinds": {},
+      "seconds": 5.318553863,
+      "rps": 188.02103461934988,
+      "p50_ms": 4.551,
+      "p95_ms": 9.827,
+      "p99_ms": 12.649,
+      "target_requests": 1000,
+      "captured": 1000,
+      "upstream_requests": 0,
+      "resource_samples": 11,
+      "rss_peak_mib": 52.16796875,
+      "fds_peak": 18,
+      "threads_peak": 8,
+      "cpu_cores_mean": 0.2615784987350581,
+      "capture_ms_per_request": {
+        "commit": 4.012220237,
+        "prepare": 0.010605187,
+        "redact": 0.310705945,
+        "sql": 0.25493555900000003,
+        "wait": 0.000107722
+      },
+      "capture_commits": 1000,
+      "records_per_commit": 1.0
+    },
+    {
+      "capture_before": {
+        "stages": {
+          "commit": {
+            "calls": 1000,
+            "nanoseconds": 4012220237
+          },
+          "prepare": {
+            "calls": 1000,
+            "nanoseconds": 10605187
+          },
+          "redact": {
+            "calls": 1000,
+            "nanoseconds": 310705945
+          },
+          "sql": {
+            "calls": 1000,
+            "nanoseconds": 254935559
+          },
+          "wait": {
+            "calls": 1000,
+            "nanoseconds": 107722
+          }
+        },
+        "written": 1000,
+        "failed": 0
+      },
+      "capture_after": {
+        "stages": {
+          "commit": {
+            "calls": 2000,
+            "nanoseconds": 8232250740
+          },
+          "prepare": {
+            "calls": 2000,
+            "nanoseconds": 25599081
+          },
+          "redact": {
+            "calls": 2000,
+            "nanoseconds": 841817263
+          },
+          "sql": {
+            "calls": 2000,
+            "nanoseconds": 522874356
+          },
+          "wait": {
+            "calls": 2000,
+            "nanoseconds": 66608903139
+          }
+        },
+        "written": 2000,
+        "failed": 0
+      },
+      "scenario": {
+        "text": false,
+        "name": "profile-http-1k-c16",
+        "scheme": "http",
+        "proxy": true,
+        "capture": true,
+        "upstream": false,
+        "concurrency": 16,
+        "body_bytes": 1024,
+        "response_bytes": 1024,
+        "request_limit": 1000,
+        "duration_limit_seconds": 0,
+        "rate_limit_rps": 0
+      },
+      "start": "2026-11-06T13:14:42.877600307Z",
+      "end": "2026-11-06T13:14:47.47445646Z",
+      "requests": 1000,
+      "errors": 0,
+      "error_kinds": {},
+      "seconds": 4.596856153,
+      "rps": 217.53998096011338,
+      "p50_ms": 68.303,
+      "p95_ms": 118.091,
+      "p99_ms": 133.429,
+      "target_requests": 1000,
+      "captured": 1000,
+      "upstream_requests": 0,
+      "resource_samples": 9,
+      "rss_peak_mib": 55.91015625,
+      "fds_peak": 61,
+      "threads_peak": 9,
+      "cpu_cores_mean": 0.27940788341242995,
+      "capture_ms_per_request": {
+        "commit": 4.220030503,
+        "prepare": 0.014993893999999999,
+        "redact": 0.531111318,
+        "sql": 0.267938797,
+        "wait": 66.608795417
+      },
+      "capture_commits": 1000,
+      "records_per_commit": 1.0
+    },
+    {
+      "capture_before": {
+        "stages": {
+          "commit": {
+            "calls": 2000,
+            "nanoseconds": 8232250740
+          },
+          "prepare": {
+            "calls": 2000,
+            "nanoseconds": 25599081
+          },
+          "redact": {
+            "calls": 2000,
+            "nanoseconds": 841817263
+          },
+          "sql": {
+            "calls": 2000,
+            "nanoseconds": 522874356
+          },
+          "wait": {
+            "calls": 2000,
+            "nanoseconds": 66608903139
+          }
+        },
+        "written": 2000,
+        "failed": 0
+      },
+      "capture_after": {
+        "stages": {
+          "commit": {
+            "calls": 2100,
+            "nanoseconds": 9733002697
+          },
+          "prepare": {
+            "calls": 2100,
+            "nanoseconds": 29913755
+          },
+          "redact": {
+            "calls": 2100,
+            "nanoseconds": 1062910148
+          },
+          "sql": {
+            "calls": 2100,
+            "nanoseconds": 1259224544
+          },
+          "wait": {
+            "calls": 2100,
+            "nanoseconds": 81361952362
+          }
+        },
+        "written": 2100,
+        "failed": 0
+      },
+      "scenario": {
+        "text": true,
+        "name": "profile-http-text64k",
+        "scheme": "http",
+        "proxy": true,
+        "capture": true,
+        "upstream": false,
+        "concurrency": 8,
+        "body_bytes": 65536,
+        "response_bytes": 65536,
+        "request_limit": 100,
+        "duration_limit_seconds": 0,
+        "rate_limit_rps": 0
+      },
+      "start": "2026-11-06T13:14:47.492579477Z",
+      "end": "2026-11-06T13:14:49.760456829Z",
+      "requests": 100,
+      "errors": 0,
+      "error_kinds": {},
+      "seconds": 2.267877352,
+      "rps": 44.09409526128554,
+      "p50_ms": 163.184,
+      "p95_ms": 280.249,
+      "p99_ms": 312.38,
+      "target_requests": 100,
+      "captured": 100,
+      "upstream_requests": 0,
+      "resource_samples": 5,
+      "rss_peak_mib": 70.36328125,
+      "fds_peak": 45,
+      "threads_peak": 9,
+      "cpu_cores_mean": 0.7338118847586164,
+      "capture_ms_per_request": {
+        "commit": 15.00751957,
+        "prepare": 0.04314674,
+        "redact": 2.21092885,
+        "sql": 7.36350188,
+        "wait": 147.53049223
+      },
+      "capture_commits": 100,
+      "records_per_commit": 1.0
+    },
+    {
+      "capture_before": {
+        "stages": {
+          "commit": {
+            "calls": 2100,
+            "nanoseconds": 9733002697
+          },
+          "prepare": {
+            "calls": 2100,
+            "nanoseconds": 29913755
+          },
+          "redact": {
+            "calls": 2100,
+            "nanoseconds": 1062910148
+          },
+          "sql": {
+            "calls": 2100,
+            "nanoseconds": 1259224544
+          },
+          "wait": {
+            "calls": 2100,
+            "nanoseconds": 81361952362
+          }
+        },
+        "written": 2100,
+        "failed": 0
+      },
+      "capture_after": {
+        "stages": {
+          "commit": {
+            "calls": 2124,
+            "nanoseconds": 9986085254
+          },
+          "prepare": {
+            "calls": 2124,
+            "nanoseconds": 229471010
+          },
+          "redact": {
+            "calls": 2124,
+            "nanoseconds": 2802022374
+          },
+          "sql": {
+            "calls": 2124,
+            "nanoseconds": 1287684498
+          },
+          "wait": {
+            "calls": 2124,
+            "nanoseconds": 81530974455
+          }
+        },
+        "written": 2124,
+        "failed": 0
+      },
+      "scenario": {
+        "text": false,
+        "name": "profile-http-5m",
+        "scheme": "http",
+        "proxy": true,
+        "capture": true,
+        "upstream": false,
+        "concurrency": 4,
+        "body_bytes": 5242880,
+        "response_bytes": 65536,
+        "request_limit": 24,
+        "duration_limit_seconds": 0,
+        "rate_limit_rps": 0
+      },
+      "start": "2026-11-06T13:14:49.815095397Z",
+      "end": "2026-11-06T13:14:51.016674731Z",
+      "requests": 24,
+      "errors": 0,
+      "error_kinds": {},
+      "seconds": 1.201579334,
+      "rps": 19.97371236413092,
+      "p50_ms": 185.523,
+      "p95_ms": 267.817,
+      "p99_ms": 270.198,
+      "target_requests": 24,
+      "captured": 24,
+      "upstream_requests": 0,
+      "resource_samples": 2,
+      "rss_peak_mib": 233.203125,
+      "fds_peak": 37,
+      "threads_peak": 9,
+      "cpu_cores_mean": 1.3975782397635936,
+      "capture_ms_per_request": {
+        "commit": 10.545106541666668,
+        "prepare": 8.314885625,
+        "redact": 72.46300941666667,
+        "sql": 1.1858314166666666,
+        "wait": 7.042587208333334
+      },
+      "capture_commits": 24,
+      "records_per_commit": 1.0
+    },
+    {
+      "capture_before": {
+        "stages": {
+          "commit": {
+            "calls": 2124,
+            "nanoseconds": 9986085254
+          },
+          "prepare": {
+            "calls": 2124,
+            "nanoseconds": 229471010
+          },
+          "redact": {
+            "calls": 2124,
+            "nanoseconds": 2802022374
+          },
+          "sql": {
+            "calls": 2124,
+            "nanoseconds": 1287684498
+          },
+          "wait": {
+            "calls": 2124,
+            "nanoseconds": 81530974455
+          }
+        },
+        "written": 2124,
+        "failed": 0
+      },
+      "capture_after": {
+        "stages": {
+          "commit": {
+            "calls": 3124,
+            "nanoseconds": 14434448674
+          },
+          "prepare": {
+            "calls": 3124,
+            "nanoseconds": 238923450
+          },
+          "redact": {
+            "calls": 3124,
+            "nanoseconds": 3082461445
+          },
+          "sql": {
+            "calls": 3124,
+            "nanoseconds": 1530559130
+          },
+          "wait": {
+            "calls": 3124,
+            "nanoseconds": 81531042873
+          }
+        },
+        "written": 3124,
+        "failed": 0
+      },
+      "scenario": {
+        "text": false,
+        "name": "profile-https-1k-c1",
+        "scheme": "https",
+        "proxy": true,
+        "capture": true,
+        "upstream": false,
+        "concurrency": 1,
+        "body_bytes": 1024,
+        "response_bytes": 1024,
+        "request_limit": 1000,
+        "duration_limit_seconds": 0,
+        "rate_limit_rps": 0
+      },
+      "start": "2026-11-06T13:14:51.029386911Z",
+      "end": "2026-11-06T13:14:56.712472431Z",
+      "requests": 1000,
+      "errors": 0,
+      "error_kinds": {},
+      "seconds": 5.68308552,
+      "rps": 175.9607516868759,
+      "p50_ms": 4.487,
+      "p95_ms": 9.764,
+      "p99_ms": 16.399,
+      "target_requests": 1000,
+      "captured": 1000,
+      "upstream_requests": 0,
+      "resource_samples": 12,
+      "rss_peak_mib": 222.40625,
+      "fds_peak": 31,
+      "threads_peak": 9,
+      "cpu_cores_mean": 0.3029037984579361,
+      "capture_ms_per_request": {
+        "commit": 4.44836342,
+        "prepare": 0.00945244,
+        "redact": 0.28043907100000004,
+        "sql": 0.24287463199999998,
+        "wait": 6.841800000000001e-05
+      },
+      "capture_commits": 1000,
+      "records_per_commit": 1.0
+    },
+    {
+      "capture_before": {
+        "stages": {
+          "commit": {
+            "calls": 3124,
+            "nanoseconds": 14434448674
+          },
+          "prepare": {
+            "calls": 3124,
+            "nanoseconds": 238923450
+          },
+          "redact": {
+            "calls": 3124,
+            "nanoseconds": 3082461445
+          },
+          "sql": {
+            "calls": 3124,
+            "nanoseconds": 1530559130
+          },
+          "wait": {
+            "calls": 3124,
+            "nanoseconds": 81531042873
+          }
+        },
+        "written": 3124,
+        "failed": 0
+      },
+      "capture_after": {
+        "stages": {
+          "commit": {
+            "calls": 4124,
+            "nanoseconds": 18113885645
+          },
+          "prepare": {
+            "calls": 4124,
+            "nanoseconds": 254578561
+          },
+          "redact": {
+            "calls": 4124,
+            "nanoseconds": 3425282584
+          },
+          "sql": {
+            "calls": 4124,
+            "nanoseconds": 1830052567
+          },
+          "wait": {
+            "calls": 4124,
+            "nanoseconds": 139576828855
+          }
+        },
+        "written": 4124,
+        "failed": 0
+      },
+      "scenario": {
+        "text": false,
+        "name": "profile-https-1k-c16",
+        "scheme": "https",
+        "proxy": true,
+        "capture": true,
+        "upstream": false,
+        "concurrency": 16,
+        "body_bytes": 1024,
+        "response_bytes": 1024,
+        "request_limit": 1000,
+        "duration_limit_seconds": 0,
+        "rate_limit_rps": 0
+      },
+      "start": "2026-11-06T13:14:56.726093285Z",
+      "end": "2026-11-06T13:15:00.758686999Z",
+      "requests": 1000,
+      "errors": 0,
+      "error_kinds": {},
+      "seconds": 4.032593714,
+      "rps": 247.97935793241183,
+      "p50_ms": 61.918,
+      "p95_ms": 89.412,
+      "p99_ms": 112.242,
+      "target_requests": 1000,
+      "captured": 1000,
+      "upstream_requests": 0,
+      "resource_samples": 8,
+      "rss_peak_mib": 61.875,
+      "fds_peak": 61,
+      "threads_peak": 9,
+      "cpu_cores_mean": 0.3536140672794098,
+      "capture_ms_per_request": {
+        "commit": 3.679436971,
+        "prepare": 0.015655111,
+        "redact": 0.342821139,
+        "sql": 0.299493437,
+        "wait": 58.045785982
+      },
+      "capture_commits": 1000,
+      "records_per_commit": 1.0
+    },
+    {
+      "capture_before": {
+        "stages": {
+          "commit": {
+            "calls": 4124,
+            "nanoseconds": 18113885645
+          },
+          "prepare": {
+            "calls": 4124,
+            "nanoseconds": 254578561
+          },
+          "redact": {
+            "calls": 4124,
+            "nanoseconds": 3425282584
+          },
+          "sql": {
+            "calls": 4124,
+            "nanoseconds": 1830052567
+          },
+          "wait": {
+            "calls": 4124,
+            "nanoseconds": 139576828855
+          }
+        },
+        "written": 4124,
+        "failed": 0
+      },
+      "capture_after": {
+        "stages": {
+          "commit": {
+            "calls": 4224,
+            "nanoseconds": 19579300363
+          },
+          "prepare": {
+            "calls": 4224,
+            "nanoseconds": 260227643
+          },
+          "redact": {
+            "calls": 4224,
+            "nanoseconds": 3667386649
+          },
+          "sql": {
+            "calls": 4224,
+            "nanoseconds": 2551059777
+          },
+          "wait": {
+            "calls": 4224,
+            "nanoseconds": 153632619431
+          }
+        },
+        "written": 4224,
+        "failed": 0
+      },
+      "scenario": {
+        "text": true,
+        "name": "profile-https-text64k",
+        "scheme": "https",
+        "proxy": true,
+        "capture": true,
+        "upstream": false,
+        "concurrency": 8,
+        "body_bytes": 65536,
+        "response_bytes": 65536,
+        "request_limit": 100,
+        "duration_limit_seconds": 0,
+        "rate_limit_rps": 0
+      },
+      "start": "2026-11-06T13:15:00.779687873Z",
+      "end": "2026-11-06T13:15:03.007851296Z",
+      "requests": 100,
+      "errors": 0,
+      "error_kinds": {},
+      "seconds": 2.228163423,
+      "rps": 44.88001147840403,
+      "p50_ms": 162.689,
+      "p95_ms": 293.75,
+      "p99_ms": 329.493,
+      "target_requests": 100,
+      "captured": 100,
+      "upstream_requests": 0,
+      "resource_samples": 4,
+      "rss_peak_mib": 76.37109375,
+      "fds_peak": 45,
+      "threads_peak": 9,
+      "cpu_cores_mean": 0.6915964977479911,
+      "capture_ms_per_request": {
+        "commit": 14.65414718,
+        "prepare": 0.05649082,
+        "redact": 2.42104065,
+        "sql": 7.2100721,
+        "wait": 140.55790575999998
+      },
+      "capture_commits": 100,
+      "records_per_commit": 1.0
+    },
+    {
+      "capture_before": {
+        "stages": {
+          "commit": {
+            "calls": 4224,
+            "nanoseconds": 19579300363
+          },
+          "prepare": {
+            "calls": 4224,
+            "nanoseconds": 260227643
+          },
+          "redact": {
+            "calls": 4224,
+            "nanoseconds": 3667386649
+          },
+          "sql": {
+            "calls": 4224,
+            "nanoseconds": 2551059777
+          },
+          "wait": {
+            "calls": 4224,
+            "nanoseconds": 153632619431
+          }
+        },
+        "written": 4224,
+        "failed": 0
+      },
+      "capture_after": {
+        "stages": {
+          "commit": {
+            "calls": 4248,
+            "nanoseconds": 19761434195
+          },
+          "prepare": {
+            "calls": 4248,
+            "nanoseconds": 380034888
+          },
+          "redact": {
+            "calls": 4248,
+            "nanoseconds": 5661273545
+          },
+          "sql": {
+            "calls": 4248,
+            "nanoseconds": 2563986935
+          },
+          "wait": {
+            "calls": 4248,
+            "nanoseconds": 153756660123
+          }
+        },
+        "written": 4248,
+        "failed": 0
+      },
+      "scenario": {
+        "text": false,
+        "name": "profile-https-5m",
+        "scheme": "https",
+        "proxy": true,
+        "capture": true,
+        "upstream": false,
+        "concurrency": 4,
+        "body_bytes": 5242880,
+        "response_bytes": 65536,
+        "request_limit": 24,
+        "duration_limit_seconds": 0,
+        "rate_limit_rps": 0
+      },
+      "start": "2026-11-06T13:15:03.034830603Z",
+      "end": "2026-11-06T13:15:04.380446149Z",
+      "requests": 24,
+      "errors": 0,
+      "error_kinds": {},
+      "seconds": 1.3456155459999999,
+      "rps": 17.83570357175407,
+      "p50_ms": 199.393,
+      "p95_ms": 292.423,
+      "p99_ms": 309.534,
+      "target_requests": 24,
+      "captured": 24,
+      "upstream_requests": 0,
+      "resource_samples": 3,
+      "rss_peak_mib": 256.921875,
+      "fds_peak": 37,
+      "threads_peak": 9,
+      "cpu_cores_mean": 1.200110535516959,
+      "capture_ms_per_request": {
+        "commit": 7.588909666666667,
+        "prepare": 4.991968541666666,
+        "redact": 83.07862066666667,
+        "sql": 0.5386315833333334,
+        "wait": 5.168362166666667
+      },
+      "capture_commits": 24,
+      "records_per_commit": 1.0
+    }
+  ],
+  "total_requests": 4248,
+  "total_errors": 0,
+  "rss_peak_mib": 256.921875,
+  "rss_end_mib": 125.421875,
+  "fds_start": 15,
+  "fds_end": 28,
+  "fds_peak": 61,
+  "last_cgroup": {
+    "time": 1793970924.6694922,
+    "rss_kib": 128432,
+    "threads": 9,
+    "fds": 28,
+    "cpu_seconds": 12.69,
+    "memory.current": "208424960",
+    "memory.peak": "366440448",
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+    "memory.stat": "anon 106070016\nfile 97509376\nkernel 4595712\nkernel_stack 180224\npagetables 671744\nsec_pagetables 0\npercpu 1760\nsock 0\nvmalloc 24576\nshmem 0\nzswap 0\nzswapped 0\nfile_mapped 32768\nfile_dirty 53248\nfile_writeback 0\nswapcached 0\nanon_thp 0\nfile_thp 0\nshmem_thp 0\ninactive_anon 0\nactive_anon 106065920\ninactive_file 97509376\nactive_file 4096\nunevictable 0\nslab_reclaimable 3289680\nslab_unreclaimable 409208\nslab 3698888\nworkingset_refault_anon 0\nworkingset_refault_file 198\nworkingset_activate_anon 0\nworkingset_activate_file 0\nworkingset_restore_anon 0\nworkingset_restore_file 0\nworkingset_nodereclaim 0\npgdemote_kswapd 0\npgdemote_direct 0\npgdemote_khugepaged 0\npgdemote_proactive 0\npgpromote_success 0\npgscan 194\npgsteal 193\npswpin 0\npswpout 0\npgscan_kswapd 192\npgscan_direct 2\npgscan_khugepaged 0\npgscan_proactive 0\npgsteal_kswapd 191\npgsteal_direct 2\npgsteal_khugepaged 0\npgsteal_proactive 0\npgfault 449710\npgmajfault 0\npgrefill 5\npgactivate 1\npgdeactivate 0\npglazyfree 0\npglazyfreed 0\nswpin_zero 0\nswpout_zero 0\nzswpin 0\nzswpout 0\nzswpwb 0\nthp_fault_alloc 0\nthp_collapse_alloc 0\nthp_swpout 0\nthp_swpout_fallback 0\nnuma_pages_migrated 0\nnuma_pte_updates 0\nnuma_hint_faults 0",
+    "io.stat": "254:0 rbytes=835584 wbytes=779321344 rios=51 wios=13366 dbytes=0 dios=0"
+  },
+  "complete": true,
+  "host": {
+    "platform": "Linux-6.18.57-x64v3-xanmod1-x86_64-with-glibc2.36",
+    "cpus": 2,
+    "memory_total_kib": 4007300,
+    "source_commit": "b18078fad81fd0e0548f17deb618c713ab80f26f"
+  },
+  "health": {
+    "ok": true,
+    "service": "artex",
+    "version": "dev-capture-profile-baseline"
+  },
+  "image_id": "sha256:e8ece12c8bb067edfeaca0153f656190b863007703a0e2169743cb4d4c48c5c4",
+  "guard": {
+    "concurrency": 8,
+    "ordinary": 16,
+    "expected_403": 48,
+    "expected_413": 16,
+    "target_leaks": 0
+  },
+  "security_stats": {
+    "capture": {
+      "failed": 0,
+      "stages": {
+        "commit": {
+          "calls": 4264,
+          "nanoseconds": 19865313751
+        },
+        "prepare": {
+          "calls": 4264,
+          "nanoseconds": 380369867
+        },
+        "redact": {
+          "calls": 4264,
+          "nanoseconds": 5669874525
+        },
+        "sql": {
+          "calls": 4264,
+          "nanoseconds": 2571606806
+        },
+        "wait": {
+          "calls": 4264,
+          "nanoseconds": 153902193613
+        }
+      },
+      "written": 4264
+    },
+    "capture_enabled": true,
+    "proxy_configured": true,
+    "scope": "process_lifetime",
+    "stats": {
+      "active_cooldowns": 1,
+      "allowed": 4264,
+      "blocked": {
+        "platform_credential": 48,
+        "request_body_limit": 16,
+        "task_budget": 1
+      },
+      "passthrough_allowed": 0,
+      "passthrough_hosts": 0,
+      "tracked_hosts": 2,
+      "tracked_tasks": 1
+    }
+  },
+  "provenance": {
+    "base_commit": "b18078f",
+    "variant": "baseline",
+    "note": "Instrumented working tree; baseline is pre-batching, batched uses the candidate implementation. Release validation is recorded separately."
+  }
+}
