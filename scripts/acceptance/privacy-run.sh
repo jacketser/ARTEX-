@@ -163,6 +163,25 @@ assert all('next_cursor' not in a for a in audit if a['status']!='complete')
 print(json.dumps({'live_rejected':True,'batches':3,'legacy_migrated':1,'failed_batch_retried':True,'applied':True,'remaining_changes':0,'audit_complete':True,'restart_healthy':True}))
 PY
 
+# Cold archive maintenance uses the same stopped-application/backup lifecycle.
+docker stop "$privacy_app" >/dev/null
+python3 "$(dirname -- "${BASH_SOURCE[0]}")/privacy-archive.py" seed "$privacy_work"
+docker exec -i "$privacy_pg" psql -U verify -d verify -v ON_ERROR_STOP=1 < "$privacy_work/archive-seed.sql" > "$privacy_work/archive-seed.log"
+docker exec "$privacy_pg" pg_dump -U verify -d verify -Fc > "$privacy_work/backup/postgres.dump"
+tar -czf "$privacy_work/backup/files.tar.gz" -C "$privacy_work" data
+cli -scope archive-traffic -archive-id 900000001 > "$privacy_work/archive-preview.json"
+archive_fp=$(python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["rows"]==1 and r["changes"]==1 and not r["applied"]; print(r["fingerprint"])' "$privacy_work/archive-preview.json")
+cli -scope archive-traffic -archive-id 900000001 -apply "$archive_fp" -backup /backup > "$privacy_work/archive-applied.json"
+cli -scope archive-traffic -archive-id 900000001 > "$privacy_work/archive-after.json"
+docker exec "$privacy_pg" psql -U verify -d verify -Atc "SELECT json_build_object('path',archive_path,'sha256',sha256,'original_size',original_size,'compressed_size',compressed_size) FROM task_archives WHERE id=900000001" > "$privacy_work/archive-catalog.json"
+python3 "$(dirname -- "${BASH_SOURCE[0]}")/privacy-archive.py" verify "$privacy_work"
+docker start "$privacy_app" >/dev/null
+for attempt in {1..60}; do
+  if docker exec "$privacy_app" curl --fail --silent http://127.0.0.1:8787/api/health > "$privacy_work/archive-health-after.json" 2>/dev/null; then break; fi
+  sleep 1
+done
+docker exec "$privacy_app" curl --fail --silent http://127.0.0.1:8787/api/health >/dev/null
+
 # Test the host wrapper's resume-file gate with a Docker argument spy. It never
 # connects to production; the actual binary lifecycle above used real containers.
 mkdir -p "$privacy_work/bin"
@@ -190,3 +209,10 @@ for invalid in preview.json applied-three.json; do
  fi
 done
 echo 'Wrapper resume gate passed (argument spy).'
+
+PATH="$privacy_work/bin:$PATH" PRIVACY_ARGV="$privacy_work/archive-wrapper-argv.txt" bash "$wrapper" preview archive-traffic --archive-id 900000001
+python3 - "$privacy_work/archive-wrapper-argv.txt" <<'PYARCHIVEWRAPPER'
+import pathlib,sys
+a=pathlib.Path(sys.argv[1]).read_text().splitlines()
+assert a[a.index('-scope')+1]=='archive-traffic' and a[a.index('-archive-id')+1]=='900000001'
+PYARCHIVEWRAPPER

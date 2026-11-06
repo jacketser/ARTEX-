@@ -3,13 +3,13 @@
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 usage() {
-  echo 'Usage: bash scripts/history-redact.sh preview traffic|evidence [--migrate-legacy] [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
-  echo '       bash scripts/history-redact.sh apply traffic|evidence FINGERPRINT BACKUP_DIRECTORY [--migrate-legacy] [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
+  echo 'Usage: bash scripts/history-redact.sh preview traffic|evidence|archive-traffic [--archive-id ID] [--migrate-legacy] [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
+  echo '       bash scripts/history-redact.sh apply traffic|evidence|archive-traffic FINGERPRINT BACKUP_DIRECTORY [--archive-id ID] [--migrate-legacy] [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
 }
 if (( $# < 2 )); then usage; exit 2; fi
 action=$1
 scope=$2
-if [[ "$scope" != traffic && "$scope" != evidence ]]; then usage; exit 2; fi
+if [[ "$scope" != traffic && "$scope" != evidence && "$scope" != archive-traffic ]]; then usage; exit 2; fi
 dc() { docker compose -f compose.source.yml "$@"; }
 if [[ -n "$(dc ps -q --status running artex)" ]]; then
   echo '应用仍在运行。请先确认没有进行中的任务、完成备份并停止 artex，再执行预览或清理。' >&2
@@ -37,6 +37,9 @@ while (( $# )); do
   if [[ "$1" == --migrate-legacy ]]; then args+=(-migrate-legacy); shift; continue; fi
   [[ $# -ge 2 ]] || { usage; exit 2; }
   case "$1" in
+    --archive-id)
+      [[ "$2" =~ ^[1-9][0-9]{0,17}$ ]] || { usage; exit 2; }
+      args+=(-archive-id "$2") ;;
     --batch-size)
       [[ "$2" =~ ^[0-9]{1,5}$ ]] && (( 10#$2 >= 1 && 10#$2 <= 10000 )) || { usage; exit 2; }
       args+=(-batch-size "$((10#$2))") ;;

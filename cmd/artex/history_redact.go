@@ -20,7 +20,8 @@ func runHistoryRedact(args []string, out io.Writer) int {
 	fs := flag.NewFlagSet("history-redact", flag.ContinueOnError)
 	fs.SetOutput(out)
 	data := fs.String("data", filepath.Join(config.BaseDir(), "data"), "已停止应用的数据目录")
-	scope := fs.String("scope", "traffic", "traffic 或 evidence；默认只预览")
+	scope := fs.String("scope", "traffic", "traffic、evidence 或 archive-traffic；默认只预览")
+	archiveID := fs.Int64("archive-id", 0, "archive-traffic 必填，单个就绪冷归档 ID")
 	apply := fs.String("apply", "", "填写刚预览的 fingerprint 后执行")
 	batchSize := fs.Int("batch-size", historyprivacy.DefaultBatchSize, "每批最多记录数，1–10000")
 	migrateLegacy := fs.Bool("migrate-legacy", false, "迁移旧目录格式流量并同步脱敏（仅 traffic）")
@@ -29,12 +30,8 @@ func runHistoryRedact(args []string, out io.Writer) int {
 	if fs.Parse(args) != nil || fs.NArg() != 0 {
 		return 2
 	}
-	if *scope != "traffic" && *scope != "evidence" {
-		fmt.Fprintln(out, "scope 须为 traffic 或 evidence")
-		return 2
-	}
-	if *migrateLegacy && *scope != "traffic" {
-		fmt.Fprintln(out, "旧格式迁移仅用于 traffic 范围")
+	if err := historyprivacy.ValidateArchiveOptions(*scope, *archiveID, *cursor, *migrateLegacy); err != nil {
+		fmt.Fprintln(out, err.Error())
 		return 2
 	}
 	if *batchSize < 1 {
@@ -73,7 +70,7 @@ func runHistoryRedact(args []string, out io.Writer) int {
 				return 2
 			}
 		}
-		if err = historyprivacy.Audit(abs, historyprivacy.Report{Scope: *scope, Fingerprint: *apply, BatchSize: *batchSize, Cursor: *cursor, MigrateLegacy: *migrateLegacy}, "started"); err != nil {
+		if err = historyprivacy.Audit(abs, historyprivacy.Report{Scope: *scope, Fingerprint: *apply, BatchSize: *batchSize, Cursor: *cursor, MigrateLegacy: *migrateLegacy, ArchiveID: *archiveID}, "started"); err != nil {
 			fmt.Fprintln(out, "无法写入维护审计，未执行")
 			return 1
 		}
@@ -88,7 +85,7 @@ func runHistoryRedact(args []string, out io.Writer) int {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	r, err := historyprivacy.Run(ctx, historyprivacy.Options{DSN: dsn, Data: abs, Scope: *scope, Apply: *apply, Secrets: keys, BatchSize: *batchSize, Cursor: *cursor, MigrateLegacy: *migrateLegacy})
+	r, err := historyprivacy.Run(ctx, historyprivacy.Options{DSN: dsn, Data: abs, Scope: *scope, Apply: *apply, Secrets: keys, BatchSize: *batchSize, Cursor: *cursor, MigrateLegacy: *migrateLegacy, ArchiveID: *archiveID})
 	if *apply != "" {
 		status := "complete"
 		if err != nil {

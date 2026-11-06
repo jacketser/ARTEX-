@@ -107,6 +107,7 @@ const maintenanceKey = 7337741099
 
 type Report struct {
 	Scope         string   `json:"scope"`
+	ArchiveID     int64    `json:"archive_id,omitempty"`
 	Rows          int      `json:"rows"`
 	Changes       int      `json:"changes"`
 	Fingerprint   string   `json:"fingerprint"`
@@ -162,6 +163,7 @@ type Options struct {
 	BatchSize               int
 	Cursor                  string
 	MigrateLegacy           bool
+	ArchiveID               int64
 }
 type plan struct {
 	report           Report
@@ -200,14 +202,22 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 		"识别已知凭据、私钥及结构化敏感字段，不保证识别自由文本中的未知密码或任意编码",
 		"旧文件和数据库历史页不保证物理擦除；需另行管理备份与存储保留策略",
 	}}
-	if opts.Scope != "traffic" && opts.Scope != "evidence" {
-		return r, errors.New("scope 须为 traffic 或 evidence")
+	if err := ValidateArchiveOptions(opts.Scope, opts.ArchiveID, opts.Cursor, opts.MigrateLegacy); err != nil {
+		return r, err
+	}
+	r.ArchiveID = opts.ArchiveID
+	if opts.Scope == "archive-traffic" {
+		r.Limitations[0] = "仅处理指定冷归档的流量副本；归档证据、报告、会话、任务文件及活动库和备份不处理"
+		r.Limitations = append(r.Limitations, "单包维护不支持游标；提交中断可能遗留未引用的旧包或候选包，须核对目录与备份")
 	}
 	if err := ValidateBatch(opts.Scope, opts.BatchSize, opts.Cursor); err != nil {
 		return r, err
 	}
 	if opts.BatchSize == 0 {
 		opts.BatchSize = DefaultBatchSize
+	}
+	if opts.Scope == "archive-traffic" {
+		opts.BatchSize = maxRows // One package, never partial row pagination.
 	}
 	r.BatchSize, r.Cursor = opts.BatchSize, opts.Cursor
 	r.MigrateLegacy = opts.MigrateLegacy
@@ -264,6 +274,8 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 	var apply func() error
 	if opts.Scope == "traffic" {
 		apply, err = planTraffic(ctx, opts, p)
+	} else if opts.Scope == "archive-traffic" {
+		apply, err = planArchiveTraffic(ctx, pg, tx, opts, p)
 	} else {
 		apply, err = planEvidence(ctx, tx, opts, p)
 	}

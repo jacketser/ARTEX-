@@ -7,6 +7,7 @@
 | scope | 处理内容 | 一致性保证 |
 | --- | --- | --- |
 | `traffic` | 活动 SQLite 流量的 URL、请求／响应头、完整正文；包括引用的大正文文件；显式开启后可迁移旧目录格式 | 保留流量 ID 和时间，更新长度、全文索引及 blob 引用；提交后仅回收不再被引用的已替换正文 |
+| `archive-traffic` | 指定就绪冷归档中的流量副本和完整 blob，按包预览／执行 | 新包落盘校验后更新目录哈希与大小，再回收旧包；其他归档内容保持原字节 |
 | `evidence` | PostgreSQL 证据快照及正文、漏洞名称／摘要／证据／报告、复测内容、人工复核、审阅历史和流量绑定备注 | 重新计算正文哈希与快照 ID，更新绑定；相关漏洞证据版本递增，旧报告和审阅保持过期，处置状态不变 |
 
 脱敏规则包括当前已知平台凭据及其常见编码、PEM 私钥、HTTP 敏感头、URL 敏感参数，以及 JSON／表单中的敏感字段。带 `Content-Encoding` 的正文以省略标记替代。保存内容带有“非线上原始报文”标记。
@@ -34,7 +35,7 @@ bash scripts/history-redact.sh preview evidence
 
 若部署没有 `.deployment-credentials`，从打包命令中移除该文件名；不要忽略其他打包错误。
 
-预览返回本批的 `scope`、`rows`、`changes`、`fingerprint`、`batch_size`、`more`、`migrate_legacy`、`legacy_rows`、`applied:false` 和范围限制。预览不迁移数据库，不更改业务行或正文，也不创建脱敏审计文件。两个 scope 的指纹不同，不能互换。`more:false` 才表示已扫描到末尾；单批 `changes:0` 不表示整个库已经清理。预览不会返回可推进进度的 `next_cursor`。
+预览返回本批的 `scope`、`rows`、`changes`、`fingerprint`、`batch_size`、`more`、`migrate_legacy`、`legacy_rows`、`applied:false` 和范围限制。预览不迁移数据库，不更改业务行或正文，也不创建脱敏审计文件。不同 scope 的指纹不同，不能互换。`more:false` 才表示已扫描到末尾；单批 `changes:0` 不表示整个库已经清理。预览不会返回可推进进度的 `next_cursor`。
 
 脚本检查应用容器确实已停止；新版本应用与维护命令还通过 PostgreSQL 共享／独占维护锁互斥。旧版本不持有该锁，维护旧数据时仍必须通过脚本检查停机，不要直接绕过脚本运行命令。
 
@@ -125,8 +126,36 @@ bash scripts/history-redact.sh preview traffic --batch-size 500 --resume "$priva
 - 每批最多 10000 条记录，默认 1000；单正文最多 16 MiB，总计划序列化计量上限为 128 MiB，单次命令最多五分钟。整库条数不再限制为 10000。单条记录超限仍拒绝本批；超时可减小批量后在原位置重新预览。
 - 历史流量重写后将完整正文放回 SQLite，不再引用旧 blob；后续新捕获仍按正常阈值存储。这可能增大 SQLite 文件，不是空间压缩功能。
 - 未显式开启迁移的旧目录格式流量（`exchanges.path` 非空）、缺失／损坏的正文或哈希、不可解析的头／URL会阻止对应批次的维护。越界文件路径和逃逸符号链接不会读取。
-- 不处理备份、冷归档包、已导出报告、日志、对话、资产元数据及未关联的旧文件。恢复旧备份或导入旧归档后，需重新预览；不能把一次活动库清理当作所有历史副本都已脱敏。
+- 活动范围不处理冷归档；可用下节 `archive-traffic` 单独处理归档流量。备份、归档非流量内容、已导出报告、日志、对话、资产元数据及未关联的旧文件仍不处理。恢复旧备份或导入旧归档后，需重新预览；不能把一次活动库清理当作所有历史副本都已脱敏。
 - 不保证识别自由文本中的未知密码、已轮换且不再配置的密钥、任意编码或加密内容。没有命中不代表没有敏感信息。
 - SQLite 全文索引按当前批次更新，已替换且无引用的正文文件会回收；数据库历史页、WAL、磁盘快照和备份不保证物理擦除。旧备份保留策略与物理介质清除需独立管理。
 
 当前服务器首次核查时，活动流量、证据快照、漏洞、复测和审阅均为 0；无需对正式业务记录执行重写。正式预览结果与部署验证见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
+
+## 冷归档流量副本
+
+`archive-traffic` 处理一个就绪任务归档内的 `traffic/traffic.json` 和它引用的 `traffic/blobs/` 正文，防止恢复该流量副本时重新带回已清理的凭据。归档内的独立证据、报告、会话、LLM 记录、任务工作区和归档清单仍保留原字节；不能据此认定整个归档已脱敏。活动 `traffic`／`evidence` 范围仍须单独维护。
+
+沿用前文停机和完整备份流程。先只读查询归档 ID（不是任务 ID），再选择一条 `ready` 归档：
+
+```bash
+docker compose -f compose.source.yml exec -T postgres psql -U artex -d artex -c \
+  "SELECT id, task_id, state, format_version, compressed_size FROM task_archives ORDER BY id"
+
+# 将 123 替换为实际归档 ID。
+bash scripts/history-redact.sh preview archive-traffic --archive-id 123 > "$privacy_backup/archive-123-preview.json"
+privacy_fp=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["fingerprint"])' "$privacy_backup/archive-123-preview.json")
+bash scripts/history-redact.sh apply archive-traffic "$privacy_fp" "$privacy_backup" --archive-id 123 > "$privacy_backup/archive-123-applied.json"
+bash scripts/history-redact.sh preview archive-traffic --archive-id 123
+```
+
+预览和成功审计包含 `archive_id`。`rows`、`changes` 只计所选包的流量记录，`more:false` 表示这个包已完整检查，**不表示其他归档已经处理**。每个归档分别预览、执行；二进制参数为 `-scope archive-traffic -archive-id 123`。整包重写不支持游标、`--resume` 或 `--migrate-legacy`；`batch_size` 固定报告单包上限 10000，自定义 `--batch-size` 不会拆分归档，也不能通过缩小批次绕过包大小上限。
+
+- 支持当前任务归档格式 1–3、流量快照格式 1，且目录、清单、校验值、大小和流量计数一致。只接受 `data/archives/tasks/` 下的普通根目录包文件，拒绝符号链接、越界、非普通 tar 成员、重复路径、父子文件冲突、非零尾随数据和未知流量字段／文件。
+- 压缩包与展开 tar 各最多 128 MiB，最多 10000 个成员和 10000 条流量，单正文最多 16 MiB，单侧报文头最多 1 MiB；重写计划也有 128 MiB 预算。重复引用大正文在改为完整内联内容时可能超过预算。超过限制会整包拒绝，不截断或部分替换。
+- 校验每个完整 blob 的 SHA-256、引用和索引长度。旧导出器把整个 HTTP 文件塞入头字段的混合格式不自动迁移；未知格式、缺失正文、未关联 blob 或损坏文件需要先核查，不能通过修改目录校验值强行清理。
+- 流量 ID／时间保留，更新 URL、头、正文和长度；保存完整脱敏内联正文并移除旧流量 blob 成员。归档目录的路径、SHA-256 和两种大小同步更新；任务、归档状态和业务证据版本不改变。
+- 执行先写唯一的 `privacy-<归档ID>-<随机ID>.tar.zst` 候选包，落盘并复核完整性，再事务更新 PostgreSQL 目录。只有提交成功且旧路径无其他目录引用、旧包哈希仍匹配时才删除旧包。SQL 失败保留原包；提交回执丢失时保留新旧包，避免删掉可能已生效的候选包。
+- 进程中断可能留下未引用的候选包、原包或未完成文件。重新预览以目录当前引用为准，但**不会自动清扫无引用残留**；核对审计、归档目录、备份和包哈希后再处理。不要按 `privacy-*` 文件名批量删除，它也可能正被正式归档目录引用。旧包还被其他目录引用时会保留，其他归档需独立处理。
+
+执行后重新预览应为 `changes:0`，确认所有目标归档和活动范围都完成后再按前文重启。恢复旧备份仍可重新引入原内容；备份、导出副本和归档中非流量内容仍需单独管理。此次功能不增加工具放行配置，也不会自动改写正式归档。
