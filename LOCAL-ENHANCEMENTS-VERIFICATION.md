@@ -6,9 +6,23 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-3d72515`，应用源码对应 `3d72515`，正式服务已更新。
-- 最新发布加入历史活动流量和证据的停机预览／指纹脱敏命令；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-97b8349`，应用源码对应 `97b8349`，正式服务已更新。
+- 最新发布补齐历史活动流量和证据的分批预览／指纹脱敏与审计续跑；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：历史脱敏大库分批与续跑（2026-11-06）
+
+- 应用源码 `97b8349`，正式版本 `dev-97b8349`。候选镜像 `jacketser/artex:batch-candidate`，镜像 ID `sha256:c53a12fb2dc6cb6dc7866354089471ec71aa6ca48a96825e76762f79214c6ff8`。复用现有运行环境与前端，未升级基础依赖。
+- 默认每批 1000 条，最多 10000 条，按 128 MiB 序列化预算自动提前分页。单正文上限仍为 16 MiB；每批五分钟超时。整库不再限制为 10000 条；预览没有下一游标，成功执行后才返回进度。每批独立事务，前面成功批次不会因后续失败回滚。
+- `--resume` 读取同一范围的成功结果或成功审计 JSON；拒绝预览、失败及已到末尾的文件。游标绑定数据源配置、目录、规则与已知凭据；维护必须持续停机，恢复写入／导入／恢复备份后从头扫描。完整流程见[历史脱敏维护](HISTORY-REDACTION.md)。
+- 新增真实 SQLite／PostgreSQL 测试：分别处理 10001 条流量和漏洞；按字节预算拆分 600 条共享大正文记录；失败不推进、原指纹重试、审计恢复、未处理批次索引保留、最后引用才回收正文、缺失正文不跳过、范围和凭据变化拒绝。多快照单行批次覆盖快照 ID 改变、跨表文本与触发器新增审阅历史，完成后零变更。
+- 完整 Go 回归通过：`/tmp/artex-batch-full.log`；维护／脱敏／CLI 专项 race 通过：`/tmp/artex-batch-race.log`。编译和镜像日志：`/tmp/artex-batch-compile.log`、`/tmp/artex-batch-image.log`。
+- 实际命令验收通过：运行中拒绝维护，停机两批预览和执行，第二批注入 SQL 失败、审计无下一游标，故障移除后原指纹重试成功，最终零变更且重启健康。宿主机脚本的恢复文件校验使用 Docker 参数替身验证，不连接正式部署。日志 `/tmp/artex-batch-cli.log`，产物 `/tmp/artex-privacy-acceptance-fPkuFdgD/`。
+- Chromium 回归通过：四次行为请求走上游、无凭据泄漏、原 Host 保留、冷却 429、策略保存及关闭捕获继续防护，页面错误 0。日志 `/tmp/artex-batch-browser.log`，产物 `/tmp/artex-acceptance-btmI4jvk/`。本次未修改前端源码。
+- 发布前正式库任务总数为 0；停机备份 `/home/ARTEX/backups/pre-history-batches-20261106-190855/`，数据库与文件包可读性验证通过，环境、JWT 与初始登录文件哈希未变。正式两个 scope 预览均为 `rows:0, changes:0, more:false, applied:false`；无正式业务内容重写。发布日志 `/tmp/artex-batch-publish.log`。
+- 健康接口 `dev-97b8349`，管理端口仍只绑定 `127.0.0.1:8787`；运行中维护拒绝检查通过。doctor 返回 0，唯一警告仍为未配置模型，日志 `/tmp/artex-batch-doctor.log`。临时测试容器和网络已清理。
+- 回退镜像 `jacketser/artex:rollback-before-history-batches` 对应 `dev-3d72515`；无新增业务表。回退版本不支持本次游标，需重新预览；程序回退不恢复已脱敏内容，恢复内容需同一份数据库和文件备份。
+- 剩余范围：旧目录格式迁移，备份／冷归档／导出及日志／会话／资产元数据脱敏，真实样本效果评估和完整代理链路性能压测；未知凭据识别与物理擦除不作保证。系统级出网隔离按既定决定不实施。
 
 ## 正式发布：历史活动数据脱敏维护（2026-11-06）
 
