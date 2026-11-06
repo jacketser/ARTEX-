@@ -87,3 +87,5 @@ ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:local ARTEX_LOAD_MODE=profile \
 
 数小时／数天负载、真实文本语料、多任务身份、慢上游、HTTP/2／WebSocket／HTTPS 和 SOCKS5 上游性能仍需独立验证。
 本轮没有对真实蜜罐误报率或未知凭据识别效果作结论；独立历史副本脱敏、大归档及无引用文件维护沿用开发计划。
+
+后续已补充 [20 分钟文档语料持续负载](TEXT-SOAK-RESULTS.md)：9612 次语料请求零错误、逐条落盘哈希与重启检索通过。语料来自项目文档，不是外部站点抓包；数小时／数天及更广泛语料仍未验证。
