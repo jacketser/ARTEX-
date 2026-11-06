@@ -6,9 +6,24 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-da4fc54`，应用源码对应 `da4fc54`，正式服务已更新。
-- 最新发布补齐冷归档流量副本的单包脱敏与目录校验值同步，保留旧目录迁移、分批维护、预览和审计；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-523ce72`，应用源码对应 `523ce72`，正式服务已更新。
+- 最新发布补齐冷归档独立证据与报告脱敏、快照绑定和报告过期语义，保留归档流量脱敏、旧目录迁移、分批维护及审计；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：冷归档证据与报告脱敏（2026-11-06）
+
+- 应用源码 `523ce72`，正式版本 `dev-523ce72`；命令验收脚本校验修正为 `82f232b`。候选镜像 `jacketser/artex:archive-evidence-candidate`，镜像 ID `sha256:6acaed1172f86259d9066bd913bfbacbe4ff464ea8731e8dfe7bf6d2bd0541a0`。复用既有运行环境和嵌入前端，无新增业务表或运行依赖。
+- 增加 `archive-evidence --archive-id ID`：处理包内漏洞名称／摘要／证据／报告、独立流量证据快照／正文与绑定备注。重算正文哈希、快照 ID 和长度，更新绑定；每个受影响漏洞只递增一次证据版本，保留报告旧版本和处置状态。普通归档流量与活动库仍各自单独维护。
+- 复用单包停机预览、备份、指纹确认、唯一候选包落盘校验及目录事务提交；提交成功后才回收无引用旧包。检查计数／归属／引用完整性、版本和大小上限；未知证据字段、非空复测／审阅扩展表、未关联正文、缺失快照及脱敏后快照合并冲突整包拒绝，不自动丢弃证据。
+- 其他 JSON 表值和精确整数保留，清单可能规范化空白／键顺序；普通流量、LLM 记录和任务文件等其他成员保持原字节。当前归档写入和恢复流程未保存复测、人工审阅及审阅历史；本次不补造缺失内容，这些历史的完整归档／恢复仍待实现。完整边界见[维护说明](HISTORY-REDACTION.md)。
+- 全新测试库完整 Go 回归通过：`/tmp/artex-archive-evidence-full.log`。归档维护、CLI 参数及真实归档恢复专项 race 通过：`/tmp/artex-archive-evidence-race.log`。针对性测试日志：`/tmp/artex-archive-evidence-focused.log`、`/tmp/artex-archive-evidence-restore.log`。
+- 测试覆盖预览无写入、SQL 发布失败保留原包并重试、旧格式缺省版本、版本溢出、快照／绑定冲突、未知扩展、重复执行零变更、精确大整数、共享正文去重、同一漏洞仅递增一次和无变化漏洞不递增。真实服务器归档／脱敏／恢复链路确认绑定 ID／角色／位置、原采集时间及处置状态保留，证据正文可读且已脱敏、旧报告过期；另一个活动任务共享的原始快照和正文完整保留。
+- 编译和镜像日志：`/tmp/artex-archive-evidence-compile.log`、`/tmp/artex-archive-evidence-image.log`。实际 CLI 验收覆盖活动三批（含旧格式迁移及失败重试）、冷归档流量与证据两个范围、校验值和包大小、报告旧版本、绑定和快照一致性、独立普通流量／任务文件保留、审计、重复预览零变更及重启健康。最终日志 `/tmp/artex-archive-evidence-cli-final.log`，产物 `/tmp/artex-privacy-acceptance-cLH4h28u/`。
+- 首轮 CLI 结果校验因 Python 使用 JSON 出现顺序而非 Go 结构体固定顺序计算快照 ID 失败；生产实现和恢复测试没有该问题。修正验收脚本后，对原结果复核通过，再完整重跑 CLI 生命周期通过。原日志 `/tmp/artex-archive-evidence-cli.log`，原产物 `/tmp/artex-privacy-acceptance-Jr9vHt8S/`。本次未改前端，不重复浏览器回归。
+- 发布前正式库任务／归档总数均为 0；停机备份 `/home/ARTEX/backups/pre-archive-evidence-20261106-201622/`，数据库 dump 和文件包可读性校验通过，环境、JWT 及初始登录文件哈希未变。普通流量、证据、旧格式迁移预览均零记录／零变更；正式库无冷归档可执行本范围维护，未重写正式业务内容。发布日志 `/tmp/artex-archive-evidence-publish.log`。
+- 健康接口版本为 `dev-523ce72`，端口仅 `127.0.0.1:8787`，SSH 隧道访问不变；运行中执行新范围维护被拒绝。doctor 返回 0，唯一警告为未配置模型；日志 `/tmp/artex-archive-evidence-doctor.log`。临时测试容器与网络已清理。
+- 回退镜像 `jacketser/artex:rollback-before-archive-evidence` 对应 `dev-da4fc54`；原恢复器可读取重写后的包，旧命令不支持新范围。仅回退程序不能还原原文，恢复内容需配套数据库和文件备份。
+- 优先剩余项：复测／审阅历史的完整归档与恢复；备份／导出文件及日志／会话／资产元数据／工作区等独立副本脱敏；超大包和中断残留处理；真实蜜罐样本评估、完整代理链路压测。系统级出网隔离不实施。
 
 ## 正式发布：冷归档流量副本脱敏（2026-11-06）
 
