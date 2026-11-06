@@ -7,7 +7,7 @@ import (
 )
 
 func TestHistoryRedactRejectsUnsafeArgumentsBeforeDatabase(t *testing.T) {
-	for _, args := range [][]string{{"-scope", "synthetic-secret"}, {"-apply", "synthetic-secret"}, {"extra-positional"}} {
+	for _, args := range [][]string{{"-scope", "synthetic-secret"}, {"-apply", "synthetic-secret"}, {"extra-positional"}, {"-batch-size", "0"}, {"-batch-size", "10001"}, {"-cursor", "synthetic-secret"}} {
 		var out bytes.Buffer
 		if got := runHistoryRedact(args, &out); got != 2 || strings.Contains(out.String(), "synthetic-secret") {
 			t.Fatal(got, out.String())

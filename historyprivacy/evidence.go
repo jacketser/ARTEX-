@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Autumn-27/artex/db"
@@ -37,23 +38,21 @@ var evidenceTextTables = []textSpec{
 
 func planEvidence(ctx context.Context, tx *sql.Tx, opts Options, p *plan) (func() error, error) {
 	root := filepath.Join(opts.Data, "evidence")
-	var count int
-	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM traffic_evidence_snapshots`).Scan(&count); err != nil {
-		return nil, errors.New("证据结构不可用")
-	}
-	if count > maxRows {
-		return nil, errors.New("证据快照超过维护上限")
-	}
 	var oversize int
-	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM traffic_evidence_snapshots s WHERE octet_length(to_jsonb(s)::text)>$1`, maxBody).Scan(&oversize); err != nil || oversize > 0 {
-		return nil, errors.New("证据元数据超过维护上限或无法读取")
+	if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT * FROM traffic_evidence_snapshots WHERE $1=0 AND id>$2 ORDER BY id LIMIT $3) s WHERE octet_length(to_jsonb(s)::text)>$4`, p.position.Phase, p.position.After, opts.BatchSize, maxBody).Scan(&oversize); err != nil || oversize > 0 {
+		return nil, errors.New("本批证据元数据超过维护上限或无法读取")
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT id,source_traffic_id,captured_at,url,method,status,content_type,req_head,resp_head,req_hash,resp_hash,req_len,resp_len,created_at FROM traffic_evidence_snapshots ORDER BY id`)
+	rows, err := tx.QueryContext(ctx, `SELECT id,source_traffic_id,captured_at,url,method,status,content_type,req_head,resp_head,req_hash,resp_hash,req_len,resp_len,created_at FROM traffic_evidence_snapshots WHERE $1=0 AND id>$2 ORDER BY id LIMIT $3`, p.position.Phase, p.position.After, opts.BatchSize)
 	if err != nil {
 		return nil, errors.New("无法读取证据快照")
 	}
 	changes := []snapshotChange{}
+	more := false
 	for rows.Next() {
+		if p.report.Rows >= opts.BatchSize {
+			more = true
+			break
+		}
 		var v db.TrafficEvidenceSnapshot
 		if err = rows.Scan(&v.ID, &v.SourceTrafficID, &v.CapturedAt, &v.URL, &v.Method, &v.Status, &v.ContentType, &v.ReqHead, &v.RespHead, &v.ReqHash, &v.RespHash, &v.ReqLen, &v.RespLen, &v.CreatedAt); err != nil {
 			break
@@ -76,6 +75,10 @@ func planEvidence(ctx context.Context, tx *sql.Tx, opts Options, p *plan) (func(
 			break
 		}
 		if err = p.absorb([]any{v, req, resp}); err != nil {
+			if errors.Is(err, errBatchFull) {
+				more = true
+				err = nil
+			}
 			break
 		}
 		var out traffic.ArchiveExchange
@@ -98,6 +101,7 @@ func planEvidence(ctx context.Context, tx *sql.Tx, opts Options, p *plan) (func(
 			p.report.Changes++
 		}
 		p.report.Rows++
+		p.position.After = v.ID
 	}
 	if err == nil {
 		err = rows.Err()
@@ -106,27 +110,45 @@ func planEvidence(ctx context.Context, tx *sql.Tx, opts Options, p *plan) (func(
 	if err != nil {
 		return nil, errors.New("证据快照或正文无效、缺失或超过维护上限，未清理")
 	}
+	if !more && p.position.Phase == 0 {
+		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM traffic_evidence_snapshots WHERE id>$1)`, p.position.After).Scan(&more); err != nil {
+			return nil, errors.New("无法读取下一批证据边界")
+		}
+	}
+	if !more && p.position.Phase == 0 {
+		p.position.Phase = 1
+		p.position.After = ""
+	}
 	texts := []textChange{}
-	for _, spec := range evidenceTextTables {
-		var n, oversize int
-		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM "+spec.table).Scan(&n); err != nil {
-			return nil, errors.New("历史证据文本表不可用")
+	for phase, spec := range evidenceTextTables {
+		if more {
+			break
 		}
-		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM "+spec.table+" t WHERE octet_length(to_jsonb(t)::text)>$1", maxBody).Scan(&oversize); err != nil || oversize > 0 {
-			return nil, errors.New("历史证据文本超过维护上限或无法读取")
+		if phase+1 < p.position.Phase {
+			continue
 		}
-		if p.report.Rows+n > maxRows {
-			return nil, errors.New("历史证据超过 10000 条维护上限")
+		after := int64(0)
+		if p.position.After != "" {
+			after, _ = strconv.ParseInt(p.position.After, 10, 64)
+		}
+		remaining := opts.BatchSize - p.report.Rows
+		var oversize int
+		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM (SELECT * FROM "+spec.table+" WHERE "+spec.key+">$1 ORDER BY "+spec.key+" LIMIT $2) t WHERE octet_length(to_jsonb(t)::text)>$3", after, remaining, maxBody).Scan(&oversize); err != nil || oversize > 0 {
+			return nil, errors.New("本批历史证据文本超过维护上限或无法读取")
 		}
 		cols := []string{spec.key, spec.owner}
 		for _, f := range spec.fields {
 			cols = append(cols, f+"::text")
 		}
-		rows, err = tx.QueryContext(ctx, "SELECT "+strings.Join(cols, ",")+" FROM "+spec.table+" ORDER BY "+spec.key)
+		rows, err = tx.QueryContext(ctx, "SELECT "+strings.Join(cols, ",")+" FROM "+spec.table+" WHERE "+spec.key+">$1 ORDER BY "+spec.key+" LIMIT $2", after, remaining)
 		if err != nil {
 			return nil, errors.New("历史证据文本读取失败")
 		}
 		for rows.Next() {
+			if p.report.Rows >= opts.BatchSize {
+				more = true
+				break
+			}
 			c := textChange{spec: spec, values: map[string]string{}}
 			values := make([]string, len(spec.fields))
 			args := []any{&c.id, &c.owner}
@@ -137,6 +159,10 @@ func planEvidence(ctx context.Context, tx *sql.Tx, opts Options, p *plan) (func(
 				break
 			}
 			if err = p.absorb([]any{spec.table, c.id, c.owner, values}); err != nil {
+				if errors.Is(err, errBatchFull) {
+					more = true
+					err = nil
+				}
 				break
 			}
 			for i, f := range spec.fields {
@@ -150,6 +176,7 @@ func planEvidence(ctx context.Context, tx *sql.Tx, opts Options, p *plan) (func(
 				p.report.Changes++
 			}
 			p.report.Rows++
+			p.position.After = strconv.FormatInt(c.id, 10)
 		}
 		if err == nil {
 			err = rows.Err()
@@ -158,6 +185,18 @@ func planEvidence(ctx context.Context, tx *sql.Tx, opts Options, p *plan) (func(
 		if err != nil {
 			return nil, errors.New("历史证据文本无效或超过维护上限")
 		}
+		if !more {
+			if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM "+spec.table+" WHERE "+spec.key+">$1)", numericAfter(p.position.After)).Scan(&more); err != nil {
+				return nil, errors.New("无法读取下一批文本边界")
+			}
+		}
+		if !more {
+			p.position.Phase++
+			p.position.After = ""
+		}
+	}
+	if err = p.finish(more); err != nil {
+		return nil, err
 	}
 	return func() error {
 		affected := map[int64]bool{}

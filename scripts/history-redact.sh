@@ -3,8 +3,8 @@
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 usage() {
-  echo 'Usage: bash scripts/history-redact.sh preview traffic|evidence'
-  echo '       bash scripts/history-redact.sh apply traffic|evidence FINGERPRINT BACKUP_DIRECTORY'
+  echo 'Usage: bash scripts/history-redact.sh preview traffic|evidence [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
+  echo '       bash scripts/history-redact.sh apply traffic|evidence FINGERPRINT BACKUP_DIRECTORY [--batch-size N] [--cursor TOKEN | --resume RESULT_JSON]'
 }
 if (( $# < 2 )); then usage; exit 2; fi
 action=$1
@@ -18,9 +18,9 @@ fi
 args=(history-redact -data /app/data -scope "$scope")
 mounts=()
 case "$action" in
-  preview) [[ $# == 2 ]] || { usage; exit 2; } ;;
+  preview) shift 2 ;;
   apply)
-    [[ $# == 4 && "$3" =~ ^[0-9a-f]{64}$ ]] || { usage; exit 2; }
+    [[ $# -ge 4 && "$3" =~ ^[0-9a-f]{64}$ ]] || { usage; exit 2; }
     backup_dir=$(realpath -- "$4")
     [[ -s "$backup_dir/postgres.dump" && -s "$backup_dir/files.tar.gz" ]] || { echo '备份文件不存在或为空' >&2; exit 1; }
     # Validate archive readability before mounting it read-only into maintenance.
@@ -28,7 +28,42 @@ case "$action" in
     tar -tzf "$backup_dir/files.tar.gz" >/dev/null
     mounts=(-v "$backup_dir:/privacy-backup:ro")
     args+=(-apply "$3" -backup /privacy-backup)
+    shift 4
     ;;
   *) usage; exit 2 ;;
 esac
+cursor_set=0
+while (( $# )); do
+  [[ $# -ge 2 ]] || { usage; exit 2; }
+  case "$1" in
+    --batch-size)
+      [[ "$2" =~ ^[0-9]{1,5}$ ]] && (( 10#$2 >= 1 && 10#$2 <= 10000 )) || { usage; exit 2; }
+      args+=(-batch-size "$((10#$2))") ;;
+    --cursor|--resume)
+      (( cursor_set == 0 )) || { usage; exit 2; }
+      cursor_set=1
+      if [[ "$1" == --resume ]]; then
+        # Only successful execution output or its complete audit can advance.
+        cursor=$(python3 - "$2" "$scope" <<'PYRESUME'
+import json, sys
+try:
+ r=json.load(open(sys.argv[1]))
+ if r['scope']!=sys.argv[2] or r['applied'] is not True or r['more'] is not True or r.get('status','complete')!='complete':
+  raise ValueError('not resumable')
+ c=r['next_cursor']
+ if not isinstance(c,str) or not 0<len(c)<=2048:
+  raise ValueError('invalid cursor')
+ print(c)
+except Exception:
+ sys.exit('续跑文件须为同一范围的成功批次结果，且仍有下一批；预览、失败或已完成结果不能续跑')
+PYRESUME
+)
+      else
+        cursor=$2
+      fi
+      args+=(-cursor "$cursor") ;;
+    *) usage; exit 2 ;;
+  esac
+  shift 2
+done
 dc run --rm --no-deps -T "${mounts[@]}" --entrypoint /app/artex artex "${args[@]}"

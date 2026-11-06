@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +26,78 @@ import (
 )
 
 const maxRows = 10000
+const DefaultBatchSize = 1000
+
+var errBatchFull = errors.New("batch full")
+
+// continuation contains only numeric row keys or snapshot digests, never content.
+// Snapshot IDs can change during redaction: keyset traversal may visit a newly
+// sanitized snapshot again, but never skips an untouched original or uses OFFSET.
+type continuation struct {
+	Version int    `json:"v"`
+	Scope   string `json:"scope"`
+	Store   string `json:"store"`
+	Phase   int    `json:"phase"`
+	After   string `json:"after"`
+}
+
+func numericAfter(after string) int64 {
+	n, _ := strconv.ParseInt(after, 10, 64)
+	return n
+}
+
+func (p *plan) finish(more bool) error {
+	p.report.More = more
+	if more {
+		b, err := json.Marshal(p.position)
+		if err != nil {
+			return err
+		}
+		p.next = base64.RawURLEncoding.EncodeToString(b)
+	}
+	b, err := json.Marshal([]any{"boundary", p.position, more})
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(p.hash, "%d:", len(b))
+	_, err = p.hash.Write(b)
+	return err
+}
+
+// ValidateBatch rejects malformed cursors before opening either store.
+func ValidateBatch(scope string, size int, cursor string) error {
+	if size < 0 || size > maxRows {
+		return errors.New("batch-size 须为 1–10000（省略时为 1000）")
+	}
+	if cursor == "" {
+		return nil
+	}
+	var c continuation
+	if len(cursor) > 2048 {
+		return errors.New("续跑游标过长")
+	}
+	b, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil || json.Unmarshal(b, &c) != nil || c.Version != 2 || c.Scope != scope || !validHash(c.Store) || c.Phase < 0 || c.Phase > len(evidenceTextTables) {
+		return errors.New("续跑游标无效或范围不匹配")
+	}
+	if scope == "traffic" && c.Phase != 0 {
+		return errors.New("续跑游标无效")
+	}
+	if c.After != "" {
+		if scope == "evidence" && c.Phase == 0 {
+			if !validHash(c.After) {
+				return errors.New("续跑快照游标无效")
+			}
+		} else {
+			n, e := strconv.ParseInt(c.After, 10, 64)
+			if e != nil || n <= 0 {
+				return errors.New("续跑记录游标无效")
+			}
+		}
+	}
+	return nil
+}
+
 const maxBody = 16 << 20
 const maxTotal = 128 << 20
 
@@ -37,6 +111,10 @@ type Report struct {
 	Changes     int      `json:"changes"`
 	Fingerprint string   `json:"fingerprint"`
 	Applied     bool     `json:"applied"`
+	BatchSize   int      `json:"batch_size"`
+	Cursor      string   `json:"cursor,omitempty"`
+	More        bool     `json:"more"`
+	NextCursor  string   `json:"next_cursor,omitempty"`
 	Limitations []string `json:"limitations"`
 }
 
@@ -79,6 +157,8 @@ func guard(ctx context.Context, dsn string, shared bool) (func(), error) {
 type Options struct {
 	DSN, Data, Scope, Apply string
 	Secrets                 []string
+	BatchSize               int
+	Cursor                  string
 }
 type plan struct {
 	report           Report
@@ -87,6 +167,8 @@ type plan struct {
 	secrets          []string
 	cleanup          []func()
 	obsoleteEvidence map[string]bool
+	position         continuation
+	next             string
 }
 
 func (p *plan) absorb(v any) error {
@@ -94,10 +176,13 @@ func (p *plan) absorb(v any) error {
 	if err != nil {
 		return err
 	}
-	p.used += int64(len(b))
-	if p.used > maxTotal {
-		return errors.New("历史数据超过 128 MiB 维护上限，请分库维护")
+	if p.used+int64(len(b)) > maxTotal-4096 {
+		if p.report.Rows > 0 {
+			return errBatchFull
+		}
+		return errors.New("单条历史记录超过 128 MiB 维护上限")
 	}
+	p.used += int64(len(b))
 	fmt.Fprintf(p.hash, "%d:", len(b))
 	p.hash.Write(b)
 	return nil
@@ -115,6 +200,13 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 	if opts.Scope != "traffic" && opts.Scope != "evidence" {
 		return r, errors.New("scope 须为 traffic 或 evidence")
 	}
+	if err := ValidateBatch(opts.Scope, opts.BatchSize, opts.Cursor); err != nil {
+		return r, err
+	}
+	if opts.BatchSize == 0 {
+		opts.BatchSize = DefaultBatchSize
+	}
+	r.BatchSize, r.Cursor = opts.BatchSize, opts.Cursor
 	if opts.Apply != "" {
 		if b, e := hex.DecodeString(opts.Apply); e != nil || len(b) != 32 {
 			return r, errors.New("apply 须为预览指纹")
@@ -140,13 +232,23 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 		return r, errors.New("凭据来源不可用，未执行清理")
 	}
 	h := sha256.New()
-	p := &plan{report: r, hash: h, secrets: keys}
+	binding, _ := json.Marshal([]any{"history-redaction-v2", opts.DSN, filepath.Clean(opts.Data), keys})
+	store := bodyHash(binding)
+	position := continuation{Version: 2, Scope: opts.Scope, Store: store}
+	if opts.Cursor != "" {
+		b, _ := base64.RawURLEncoding.DecodeString(opts.Cursor)
+		_ = json.Unmarshal(b, &position)
+		if position.Store != store {
+			return r, errors.New("数据源、凭据或脱敏规则已变化，请从头预览")
+		}
+	}
+	p := &plan{report: r, hash: h, secrets: keys, position: position}
 	defer func() {
 		for i := len(p.cleanup) - 1; i >= 0; i-- {
 			p.cleanup[i]()
 		}
 	}()
-	if err = p.absorb([]any{"history-redaction-v1", opts.Scope, keys}); err != nil {
+	if err = p.absorb([]any{"history-redaction-v2", opts.Scope, store, keys, opts.BatchSize, opts.Cursor}); err != nil {
 		return r, err
 	}
 	var apply func() error
@@ -194,6 +296,7 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 		}
 	}
 	p.report.Applied = true
+	p.report.NextCursor = p.next
 	return p.report, nil
 }
 

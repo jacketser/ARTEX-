@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/Autumn-27/artex/traffic"
 )
@@ -42,34 +43,34 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 		return nil, errors.New("无法读取历史流量快照")
 	}
 	p.cleanup = append(p.cleanup, func() { tx.Rollback() })
-	var count, legacy, oversize int
-	if err = tx.QueryRowContext(ctx, `SELECT count(*),coalesce(sum(CASE WHEN path<>'' THEN 1 ELSE 0 END),0) FROM exchanges`).Scan(&count, &legacy); err != nil {
-		return nil, errors.New("历史流量结构不可用")
+	after := int64(0)
+	if p.position.After != "" {
+		after, _ = strconv.ParseInt(p.position.After, 10, 64)
 	}
-	if count > maxRows {
-		return nil, errors.New("历史流量超过 10000 条维护上限")
+	// Inspect only the selected page. Missing bodies must fail, not disappear in a JOIN.
+	var invalid int
+	if err = tx.QueryRowContext(ctx, `WITH batch AS (SELECT rowid,id,path FROM exchanges WHERE rowid>? ORDER BY rowid LIMIT ?)
+ SELECT count(*) FROM batch e LEFT JOIN exchange_bodies b ON b.id=e.id WHERE e.path<>'' OR b.id IS NULL OR length(b.req_body)>? OR length(b.resp_body)>? OR length(b.req_head)>1048576 OR length(b.resp_head)>1048576`, after, opts.BatchSize, maxBody, maxBody).Scan(&invalid); err != nil || invalid > 0 {
+		return nil, errors.New("本批存在旧目录格式、缺失正文或超限字段，未清理")
 	}
-	if legacy > 0 {
-		return nil, errors.New("存在旧目录格式流量，请先迁移；本次未清理")
-	}
-	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM exchange_bodies WHERE length(req_body)>? OR length(resp_body)>? OR length(req_head)>1048576 OR length(resp_head)>1048576`, maxBody, maxBody).Scan(&oversize); err != nil || oversize > 0 {
-		return nil, errors.New("历史流量字段超过维护上限或无法读取")
-	}
-	rows, err := tx.QueryContext(ctx, `SELECT e.rowid,e.id,e.ts,e.host,e.method,e.url_template,e.url,e.status,e.content_type,e.req_len,e.resp_len,b.req_head,b.req_body,coalesce(b.req_blob,''),b.resp_head,b.resp_body,coalesce(b.resp_blob,'') FROM exchanges e JOIN exchange_bodies b ON b.id=e.id ORDER BY e.id`)
+	rows, err := tx.QueryContext(ctx, `SELECT e.rowid,e.id,e.ts,e.host,e.method,e.url_template,e.url,e.status,e.content_type,e.req_len,e.resp_len,b.req_head,b.req_body,coalesce(b.req_blob,''),b.resp_head,b.resp_body,coalesce(b.resp_blob,'') FROM exchanges e LEFT JOIN exchange_bodies b ON b.id=e.id WHERE e.rowid>? ORDER BY e.rowid LIMIT ?`, after, opts.BatchSize)
 	if err != nil {
 		return nil, errors.New("无法读取历史流量正文")
 	}
 	all := []trafficChange{}
+	more := false
 	for rows.Next() {
+		if p.report.Rows >= opts.BatchSize {
+			more = true
+			break
+		}
 		var c trafficChange
 		v := &c.old
 		if err = rows.Scan(&c.rowid, &v.ID, &v.TS, &v.Host, &v.Method, &v.URLTemplate, &v.URL, &v.Status, &v.ContentType, &v.ReqLen, &v.RespLen, &v.ReqHead, &v.ReqBody, &v.ReqBlob, &v.RespHead, &v.RespBody, &v.RespBlob); err != nil {
 			break
 		}
-		// Include previews as well as complete bodies in the preview fingerprint.
-		if err = p.absorb(v); err != nil {
-			break
-		}
+		// Include both stored previews and complete bodies atomically in the budget.
+		stored := *v
 		for _, b := range []struct {
 			hash string
 			body *[]byte
@@ -97,7 +98,11 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 			err = errors.New("历史流量正文长度不匹配")
 			break
 		}
-		if err = p.absorb(v); err != nil {
+		if err = p.absorb([]any{c.rowid, stored, v}); err != nil {
+			if errors.Is(err, errBatchFull) {
+				more = true
+				err = nil
+			}
 			break
 		}
 		c.safe, err = traffic.HistoricalExchange(*v, p.secrets)
@@ -108,6 +113,8 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 			p.report.Changes++
 		}
 		all = append(all, c)
+		p.report.Rows++
+		p.position.After = strconv.FormatInt(c.rowid, 10)
 	}
 	if err == nil {
 		err = rows.Err()
@@ -116,10 +123,14 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 	if err != nil {
 		return nil, errors.New("历史流量不完整、无效或超过维护上限，未清理")
 	}
-	if len(all) != count {
-		return nil, errors.New("存在缺失正文的历史流量，未清理")
+	if !more {
+		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM exchanges WHERE rowid>?)`, p.position.After).Scan(&more); err != nil {
+			return nil, errors.New("无法读取下一批流量边界")
+		}
 	}
-	p.report.Rows = count
+	if err = p.finish(more); err != nil {
+		return nil, err
+	}
 	return func() error {
 		if _, err = tx.ExecContext(ctx, `PRAGMA secure_delete=ON`); err != nil {
 			return err
@@ -127,11 +138,6 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 		var fts int
 		if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM sqlite_master WHERE name='ex_fts'`).Scan(&fts); err != nil {
 			return err
-		}
-		if fts > 0 {
-			if _, err = tx.ExecContext(ctx, `INSERT INTO ex_fts(ex_fts) VALUES('delete-all')`); err != nil {
-				return err
-			}
 		}
 		oldBlobs := map[string]bool{}
 		for _, c := range all {
@@ -154,6 +160,9 @@ func planTraffic(ctx context.Context, opts Options, p *plan) (func() error, erro
 				}
 			}
 			if fts > 0 {
+				if _, err = tx.ExecContext(ctx, `DELETE FROM ex_fts WHERE rowid=?`, c.rowid); err != nil {
+					return err
+				}
 				text := traffic.HistoricalIndex(v)
 				if _, err = tx.ExecContext(ctx, `INSERT INTO ex_fts(rowid,content) VALUES(?,?)`, c.rowid, text); err != nil {
 					return err
