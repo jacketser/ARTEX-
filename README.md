@@ -32,6 +32,8 @@ Go 后端 · Next.js 前端 · PostgreSQL · 源码 Docker Compose 部署
 [部署与维护](DEPLOYMENT.md) · [功能范围与后续计划](SECONDARY-DEVELOPMENT-PLAN.md) ·
 [开发及发布验收](LOCAL-ENHANCEMENTS-VERIFICATION.md)
 
+历史数据维护：[历史流量与证据脱敏](HISTORY-REDACTION.md)（停机预览、备份后按指纹执行）。
+
 ## 原版能力与二开范围
 
 ARTEX 原版提供多 Agent 协作、资产图与探索图、任务调度、工具审批、人在环路对话、流量记录、

@@ -285,7 +285,9 @@ func redactBody(b []byte, ct string, secrets []string) []byte {
 	b = redactBytes(b, secrets)
 	if strings.Contains(ct, "json") {
 		var v any
-		if json.Unmarshal(b, &v) == nil {
+		decoder := json.NewDecoder(bytes.NewReader(b))
+		decoder.UseNumber()
+		if decoder.Decode(&v) == nil && decoder.Decode(new(any)) == io.EOF {
 			changed := false
 			var walk func(any) any
 			walk = func(x any) any {

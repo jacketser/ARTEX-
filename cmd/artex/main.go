@@ -18,6 +18,7 @@ import (
 
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/config"
+	"github.com/Autumn-27/artex/historyprivacy"
 	"github.com/Autumn-27/artex/selfupdate"
 	"github.com/Autumn-27/artex/server"
 )
@@ -53,6 +54,9 @@ func main() {
 func run() int {
 	if len(os.Args) > 1 && os.Args[1] == "doctor" {
 		return runDoctor(os.Args[2:], os.Stdout)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "history-redact" {
+		return runHistoryRedact(os.Args[2:], os.Stdout)
 	}
 	var (
 		addr    = flag.String("addr", ":8787", "HTTP listen address")
@@ -97,6 +101,19 @@ func run() int {
 	defer stop()
 	ctx, shutdown := shutdownContext(sigCtx)
 	defer shutdown(agent.AbortShutdown)
+	dsn, _, err := config.PostgresDSN()
+	if err != nil {
+		log.Print("[privacy] 数据库配置不可用")
+		return 1
+	}
+	lockCtx, lockCancel := context.WithTimeout(ctx, 10*time.Second)
+	releaseMaintenance, err := historyprivacy.RuntimeGuard(lockCtx, dsn)
+	lockCancel()
+	if err != nil {
+		log.Printf("[privacy] %v", err)
+		return 1
+	}
+	defer releaseMaintenance()
 
 	mgr, err := server.NewManager(*dataDir, *proxy)
 	if err != nil {

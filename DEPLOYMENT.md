@@ -134,6 +134,8 @@ docker run --rm -it --name artex-frontend-dev --network host \
 
 ## 常用维护
 
+历史流量或证据需要脱敏时，使用[历史脱敏维护流程](HISTORY-REDACTION.md)，先停机、备份并预览。清理会改变证据内容；只回退镜像不能恢复原文。
+
 ```bash
 cd /home/ARTEX
 docker compose -f compose.source.yml ps

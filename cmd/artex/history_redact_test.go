@@ -1,0 +1,21 @@
+package main
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
+
+func TestHistoryRedactRejectsUnsafeArgumentsBeforeDatabase(t *testing.T) {
+	for _, args := range [][]string{{"-scope", "synthetic-secret"}, {"-apply", "synthetic-secret"}, {"extra-positional"}} {
+		var out bytes.Buffer
+		if got := runHistoryRedact(args, &out); got != 2 || strings.Contains(out.String(), "synthetic-secret") {
+			t.Fatal(got, out.String())
+		}
+	}
+	t.Setenv("ARTEX_PG_DSN", "postgres://unused:unused@127.0.0.1:1/unused?sslmode=disable")
+	var out bytes.Buffer
+	if got := runHistoryRedact([]string{"-apply", strings.Repeat("a", 64)}, &out); got != 2 || !strings.Contains(out.String(), "backup") {
+		t.Fatal(got, out.String())
+	}
+}
