@@ -19,6 +19,8 @@ Go 后端 · Next.js 前端 · PostgreSQL · 源码 Docker Compose 部署
 
 ## 导航
 
+先看[项目总结与当前待办](PROJECT-STATUS.md)：已完成功能、最新验证结论、剩余优先级及完整文档索引。
+
 - [原版能力与二开范围](#原版能力与二开范围)
 - [已完成的二开功能](#已完成的二开功能)
 - [尚未加入的功能](#尚未加入的功能)
@@ -122,7 +124,7 @@ Agent 与内置浏览器仍使用安全代理，保留凭据检查和请求限�
 - 伪装入口、限时自动放行审批。
 - 参考二开项目的完整攻击工具链与完整场景提示词包。
 
-详细取舍及后续范围见[二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
+当前改进优先级见[项目总结与当前待办](PROJECT-STATUS.md#当前待办与建议优先级)；具体取舍与适配细节见[二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
 
 HTTP 行为验证与代理设置的可重复浏览器验收见[验收脚本说明](scripts/acceptance/README.md)；
 当前代理覆盖范围和合成样本回归见[代理验证说明](PROXY-SECURITY-VALIDATION.md)；实际 HTTP/HTTPS、捕获开关、上游及大正文负载结果见[完整链路压测](PROXY-LOAD-RESULTS.md)。

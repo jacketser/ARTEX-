@@ -7,7 +7,7 @@
 - 更新操作：[README：更新二开版本](README.md#更新二开版本)。
 - 部署、备份及维护：[DEPLOYMENT.md](DEPLOYMENT.md)。
 - 测试结果、发布备份及回退镜像：[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
-- 完成范围、未实现项及不实施项：[开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
+- 当前完成状态、剩余优先级及不实施项：[项目总览](PROJECT-STATUS.md)；设计与阶段记录：[开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
 
 ## 未发布
 
