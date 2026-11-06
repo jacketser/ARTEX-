@@ -40,3 +40,15 @@ go test ./traffic -run '^$' -bench '^BenchmarkCredentialScan$' -benchmem -bencht
 凭据扫描基准使用八个合成密钥，测试 1 KiB、64 KiB、5 MiB 正文的无命中和尾部命中。
 它只测扫描函数，不含数据库、TLS、转发及落库，不能直接代表代理整体吞吐。
 Go 样本测试已被现有 `regression.yml` 后端全量测试覆盖；浏览器脚本目前手动运行。
+
+
+## 历史脱敏维护命令验收
+
+```sh
+ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:privacy-candidate bash scripts/acceptance/privacy-run.sh
+```
+
+使用独立内部网络、临时 PostgreSQL 和 `/tmp/artex-privacy-acceptance-*` 数据目录，不挂载正式数据或发布端口。
+验证应用运行中维护被拒绝、停机后预览不写数据、备份后执行、凭据脱敏、大整数保留、审计完整、再次预览零变更及重启健康。
+退出清理测试容器与网络，结果、测试备份和应用日志保留在上述临时目录；测试内容均为合成数据。
+证据引用／哈希、旧报告和审阅过期、事务失败回滚、符号链接逃逸及凭据变更拒绝由 `historyprivacy` Go 集成测试覆盖。

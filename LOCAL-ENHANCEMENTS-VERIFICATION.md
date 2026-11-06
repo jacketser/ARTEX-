@@ -6,9 +6,25 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-2490a72`，应用源码对应 `2490a72`，正式服务已更新。
-- 最新发布加入人工行为验证的全局 HTTP/HTTPS/SOCKS5 上游代理支持；保留 HTTPS 解析失败策略、代理防护与保存拆分及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-3d72515`，应用源码对应 `3d72515`，正式服务已更新。
+- 最新发布加入历史活动流量和证据的停机预览／指纹脱敏命令；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：历史活动数据脱敏维护（2026-11-06）
+
+- 功能提交 `3e513c2`，维护锁修正与命令验收提交 `3d72515`；正式版本 `dev-3d72515`。候选镜像 `jacketser/artex:privacy-candidate`，镜像 ID `sha256:be38dd3f8dc5ba24e412cbdc4dfa2b3ec5d2bad67c8764cef71fe65d4fa84225`。复用现有运行环境及前端，未升级基础镜像依赖。
+- 新增 `artex history-redact` 与 `scripts/history-redact.sh`：停机只读预览、内容／凭据指纹校验、备份后执行、数量摘要审计。活动流量同步重建全文索引、更新正文长度及 blob 引用；证据重算哈希与快照 ID、更新绑定、递增证据版本，旧报告和审阅过期，处置状态保留。JSON 脱敏使用精确数字表示，避免大整数失真。详见[维护说明](HISTORY-REDACTION.md)。
+- Go 专项覆盖预览不改业务数据、拒绝过期指纹和变化后的凭据、完整 blob／内联正文与索引脱敏、哈希与绑定一致性、证据事务失败回滚、原报告／审阅过期、重复执行无变更、缺失正文和逃逸符号链接拒绝、审计权限与 CLI 参数保护。
+- 初次候选启动发现维护锁与复测初始化使用相同编号，导致隔离应用启动等待；正式服务未受影响。修正为独立编号并增加其他应用锁可用性回归后，专项 race、候选启动、维护和重启验收通过。初次候选未发布。
+- 最终空 PostgreSQL 完整 Go 回归通过，日志：`/tmp/artex-privacy-full-final.log`；维护与命令专项 race：`/tmp/artex-privacy-race-final.log`；流量脱敏 race：`/tmp/artex-privacy-race.log`。最终编译／镜像日志：`/tmp/artex-privacy-compile-final.log`、`/tmp/artex-privacy-image-final.log`。
+- 可重复命令验收 `scripts/acceptance/privacy-run.sh` 通过：运行中拒绝维护、停机预览 1 条待变更合成流量、备份后清理、再次预览 0 变更、审计开始／完成两条记录、重启健康，大整数及未泄露目标凭据断言通过。日志 `/tmp/artex-privacy-cli-final.log`，产物 `/tmp/artex-privacy-acceptance-mvokQYyS/`。
+- 候选 Chromium 回归通过：四次行为验证继续经过上游，目标无凭据、原 Host 保留，冷却、配置保存、HTTPS 策略及关闭捕获仍防护均通过，页面错误 0。日志 `/tmp/artex-privacy-browser-final.log`，产物 `/tmp/artex-acceptance-iSnYbcOq/`。本轮未修改前端源码，未重新运行前端构建。
+- 发布前正式库任务总数为 0；停止应用写入后备份至 `/home/ARTEX/backups/pre-history-redaction-20261106-183525/`。数据库及文件包可读性校验通过；环境、JWT 和初始登录文件哈希未变。发布日志 `/tmp/artex-privacy-publish.log`。
+- 使用候选镜像对正式存储执行停机预览，`traffic` 和 `evidence` 均为 `rows:0, changes:0, applied:false`；结果保存在上述备份目录的 `traffic-preview.json` 与 `evidence-preview.json`。正式数据未执行脱敏重写。
+- 正式健康接口版本为 `dev-3d72515`，未登录访问行为配置返回 401；运行中执行维护命令返回非零并提示停机。doctor 返回 0，唯一警告仍为未配置模型，日志 `/tmp/artex-privacy-doctor.log`。管理页保持 `127.0.0.1:8787` 与 SSH 隧道访问。
+- 回退镜像 `jacketser/artex:rollback-before-history-redaction` 对应 `dev-2490a72`；无新增数据库表结构。旧程序不持有维护锁；只回退镜像无法恢复已脱敏内容，内容恢复需同批数据库和文件备份。
+- 测试容器和网络均已清理，保留合成数据验收产物与正式备份。
+- 剩余范围：大库分批、旧目录格式迁移、备份／冷归档／导出及日志／会话／资产元数据脱敏未实现；不保证未知凭据识别或物理擦除。真实样本效果评估和完整代理链路压测仍待补充。
 
 ## 正式发布：行为验证兼容全局上游代理（2026-11-06）
 
