@@ -1,0 +1,1746 @@
+{
+  "completion": {
+    "behavior_version": "http-behavior-v1",
+    "finished_at": "2026-11-06T14:52:56.254313596Z",
+    "measurements": 21,
+    "metadata_version": "metadata-v2",
+    "repetitions": 3,
+    "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+    "samples": 7,
+    "started_at": "2026-11-06T14:52:43.836548552Z"
+  },
+  "samples": [
+    {
+      "id": "opencanary-nas",
+      "origin": "http://canary-nas:8088",
+      "label": "honeypot",
+      "family": "OpenCanary",
+      "configuration": "nasLogin; stock Apache banner",
+      "evidence": "Pinned OpenCanary source, packaged skin and HTTP-only configuration",
+      "label_basis": "controlled_deployment",
+      "expected_root_status": 302
+    },
+    {
+      "id": "qeeqbox-http",
+      "origin": "http://qhttp:8080",
+      "label": "honeypot",
+      "family": "QeeqBox",
+      "configuration": "QHTTPServer defaults; randomly selected server banner",
+      "evidence": "Pinned upstream QHTTPServer runs without response-code changes",
+      "label_basis": "controlled_deployment",
+      "expected_root_status": 200
+    },
+    {
+      "id": "qeeqbox-https",
+      "origin": "https://qhttps:8443",
+      "label": "honeypot",
+      "family": "QeeqBox",
+      "configuration": "QHTTPSServer defaults; generated self-signed certificate",
+      "evidence": "Pinned upstream QHTTPSServer; default strict TLS validation remains enabled",
+      "label_basis": "controlled_deployment",
+      "expected_root_status": 0
+    },
+    {
+      "id": "nginx-default",
+      "origin": "http://normal:8080",
+      "label": "benign",
+      "family": "nginx",
+      "configuration": "packaged welcome page; unknown path 404",
+      "evidence": "Debian nginx runtime and packaged content; controlled normal deployment",
+      "label_basis": "controlled_deployment",
+      "expected_root_status": 200
+    },
+    {
+      "id": "nginx-fallback",
+      "origin": "http://normal:8081",
+      "label": "benign",
+      "family": "nginx",
+      "configuration": "packaged welcome page with ordinary fallback routing",
+      "evidence": "Known normal configuration control, not an independent website",
+      "label_basis": "controlled_deployment",
+      "expected_root_status": 200
+    },
+    {
+      "id": "nginx-product-doc",
+      "origin": "http://normal:8082",
+      "label": "benign",
+      "family": "nginx",
+      "configuration": "upstream OpenCanary README rendered as escaped HTML; unknown path 404",
+      "evidence": "Product documentation served by nginx; no honeypot runtime",
+      "label_basis": "controlled_deployment",
+      "expected_root_status": 200
+    },
+    {
+      "id": "nginx-product-doc-fallback",
+      "origin": "http://normal:8083",
+      "label": "benign",
+      "family": "nginx",
+      "configuration": "same product documentation with fallback routing",
+      "evidence": "Known normal overlap control: product names plus uniform page, not an independent website",
+      "label_basis": "controlled_deployment",
+      "expected_root_status": 200
+    }
+  ],
+  "measurements": [
+    {
+      "sample_id": "opencanary-nas",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 302,
+        "bytes": 625,
+        "truncated": false,
+        "title": "Redirect",
+        "server": "Apache/2.2.22 (Ubuntu)",
+        "body_sha256": "b0ff2b3ef615b0838400469131707bdedc5c86b0800e965864e7a32cbb537695",
+        "input_sha256": "cb972c829b97ada5935771c5bb26ac0b59c54b10f9da92446d36d94e818fc47f",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "b66ec65fa7421ab5199cebec1114229f9431a78bb23c79527740e3c3a27ea832",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 302,
+            "body_sha256": "b0ff2b3ef615b0838400469131707bdedc5c86b0800e965864e7a32cbb537695",
+            "bytes": 625,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 1
+    },
+    {
+      "sample_id": "qeeqbox-http",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 1101,
+        "truncated": false,
+        "title": "Login",
+        "server": "Microsoft-IIS/7.0",
+        "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+        "input_sha256": "d7b2811affda2084105761f7daeee160359d45a46c2ff98123646658aa2503aa",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "260e6417d799c47e5233a85cb918204f3bc0b35c1f1f274e67f7e9db37ad2580",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-596cce2c078cb6b79819db35",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "qeeqbox-https",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": false,
+        "status": 0,
+        "bytes": 0,
+        "truncated": false,
+        "title": "",
+        "server": "",
+        "error": "Get \"https://qhttps:8443/\": tls: failed to verify certificate: x509: certificate is not valid for any names, but wanted to match qhttps"
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 0,
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 2,
+            "error": "network_tls_or_timeout"
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 1
+    },
+    {
+      "sample_id": "nginx-default",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 615,
+        "truncated": false,
+        "title": "Welcome to nginx!",
+        "server": "nginx/1.22.1",
+        "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+        "input_sha256": "686f133a58a08b7dbe784e2840c23e68b01c755c763ddcf70d3db5410a8fbe30",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ff5b6e2446feb7e5baf1268288cf2df701be4166c52a5d9c7e46bd0a2fd3b32d",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-39735c4f8af2f9f16173f193",
+            "status": 404,
+            "body_sha256": "533a1ca5d6595793725bca7641d9461a0f00dd1732dded3e4281196f5dd21736",
+            "bytes": 153,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-fallback",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 615,
+        "truncated": false,
+        "title": "Welcome to nginx!",
+        "server": "nginx/1.22.1",
+        "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+        "input_sha256": "686f133a58a08b7dbe784e2840c23e68b01c755c763ddcf70d3db5410a8fbe30",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ff5b6e2446feb7e5baf1268288cf2df701be4166c52a5d9c7e46bd0a2fd3b32d",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-93d6e5cadea281a140dcda14",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-product-doc",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 12430,
+        "truncated": false,
+        "title": "OpenCanary project documentation",
+        "server": "nginx/1.22.1",
+        "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+        "input_sha256": "2151c2345699a8acc5674ebe01c00afc75bfaacf7235a9bbdaf8f0b217cf7701",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [
+            "opencanary: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+            "honeypot: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹"
+          ],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "529cf8194165579f587e682b3e772b415a080b33a31754216c15d3088597448e",
+          "matched": true,
+          "score": 35,
+          "confidence": "low",
+          "provider": "opencanary",
+          "signals": [
+            "title:opencanary",
+            "response_summary:opencanary",
+            "response_summary:honeypot"
+          ],
+          "evidence": [
+            "title 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「honeypot」（仍可能是正常产品介绍或模拟内容）"
+          ],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-0ac4ee4cd641547a3bd2d4a8",
+            "status": 404,
+            "body_sha256": "533a1ca5d6595793725bca7641d9461a0f00dd1732dded3e4281196f5dd21736",
+            "bytes": 153,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "实时响应命中已配置的名称规则；也可能是产品介绍或模拟内容"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-product-doc-fallback",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 12430,
+        "truncated": false,
+        "title": "OpenCanary project documentation",
+        "server": "nginx/1.22.1",
+        "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+        "input_sha256": "2151c2345699a8acc5674ebe01c00afc75bfaacf7235a9bbdaf8f0b217cf7701",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [
+            "opencanary: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+            "honeypot: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹"
+          ],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "529cf8194165579f587e682b3e772b415a080b33a31754216c15d3088597448e",
+          "matched": true,
+          "score": 35,
+          "confidence": "low",
+          "provider": "opencanary",
+          "signals": [
+            "title:opencanary",
+            "response_summary:opencanary",
+            "response_summary:honeypot"
+          ],
+          "evidence": [
+            "title 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「honeypot」（仍可能是正常产品介绍或模拟内容）"
+          ],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "suspected",
+        "confidence": "medium",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-70f8489835a3b1dacfc9c6b5",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理",
+          "实时响应命中已配置的名称规则；也可能是产品介绍或模拟内容"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "opencanary-nas",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 302,
+        "bytes": 625,
+        "truncated": false,
+        "title": "Redirect",
+        "server": "Apache/2.2.22 (Ubuntu)",
+        "body_sha256": "b0ff2b3ef615b0838400469131707bdedc5c86b0800e965864e7a32cbb537695",
+        "input_sha256": "cb972c829b97ada5935771c5bb26ac0b59c54b10f9da92446d36d94e818fc47f",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "b66ec65fa7421ab5199cebec1114229f9431a78bb23c79527740e3c3a27ea832",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 302,
+            "body_sha256": "b0ff2b3ef615b0838400469131707bdedc5c86b0800e965864e7a32cbb537695",
+            "bytes": 625,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 1
+    },
+    {
+      "sample_id": "qeeqbox-http",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 1101,
+        "truncated": false,
+        "title": "Login",
+        "server": "Microsoft-IIS/7.0",
+        "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+        "input_sha256": "d7b2811affda2084105761f7daeee160359d45a46c2ff98123646658aa2503aa",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "260e6417d799c47e5233a85cb918204f3bc0b35c1f1f274e67f7e9db37ad2580",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-9ce5a0cb144354eadd2f975a",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "qeeqbox-https",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": false,
+        "status": 0,
+        "bytes": 0,
+        "truncated": false,
+        "title": "",
+        "server": "",
+        "error": "Get \"https://qhttps:8443/\": tls: failed to verify certificate: x509: certificate is not valid for any names, but wanted to match qhttps"
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 0,
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1,
+            "error": "network_tls_or_timeout"
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 1
+    },
+    {
+      "sample_id": "nginx-default",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 615,
+        "truncated": false,
+        "title": "Welcome to nginx!",
+        "server": "nginx/1.22.1",
+        "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+        "input_sha256": "686f133a58a08b7dbe784e2840c23e68b01c755c763ddcf70d3db5410a8fbe30",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ff5b6e2446feb7e5baf1268288cf2df701be4166c52a5d9c7e46bd0a2fd3b32d",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-0361124352e2f1cd1a663900",
+            "status": 404,
+            "body_sha256": "533a1ca5d6595793725bca7641d9461a0f00dd1732dded3e4281196f5dd21736",
+            "bytes": 153,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-fallback",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 615,
+        "truncated": false,
+        "title": "Welcome to nginx!",
+        "server": "nginx/1.22.1",
+        "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+        "input_sha256": "686f133a58a08b7dbe784e2840c23e68b01c755c763ddcf70d3db5410a8fbe30",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ff5b6e2446feb7e5baf1268288cf2df701be4166c52a5d9c7e46bd0a2fd3b32d",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-6363480ee1c744bb104919e5",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-product-doc",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 12430,
+        "truncated": false,
+        "title": "OpenCanary project documentation",
+        "server": "nginx/1.22.1",
+        "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+        "input_sha256": "2151c2345699a8acc5674ebe01c00afc75bfaacf7235a9bbdaf8f0b217cf7701",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [
+            "opencanary: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+            "honeypot: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹"
+          ],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "529cf8194165579f587e682b3e772b415a080b33a31754216c15d3088597448e",
+          "matched": true,
+          "score": 35,
+          "confidence": "low",
+          "provider": "opencanary",
+          "signals": [
+            "title:opencanary",
+            "response_summary:opencanary",
+            "response_summary:honeypot"
+          ],
+          "evidence": [
+            "title 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「honeypot」（仍可能是正常产品介绍或模拟内容）"
+          ],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-c4d3dba59af52a8f48624f2f",
+            "status": 404,
+            "body_sha256": "533a1ca5d6595793725bca7641d9461a0f00dd1732dded3e4281196f5dd21736",
+            "bytes": 153,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "实时响应命中已配置的名称规则；也可能是产品介绍或模拟内容"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-product-doc-fallback",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 12430,
+        "truncated": false,
+        "title": "OpenCanary project documentation",
+        "server": "nginx/1.22.1",
+        "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+        "input_sha256": "2151c2345699a8acc5674ebe01c00afc75bfaacf7235a9bbdaf8f0b217cf7701",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [
+            "opencanary: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+            "honeypot: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹"
+          ],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "529cf8194165579f587e682b3e772b415a080b33a31754216c15d3088597448e",
+          "matched": true,
+          "score": 35,
+          "confidence": "low",
+          "provider": "opencanary",
+          "signals": [
+            "title:opencanary",
+            "response_summary:opencanary",
+            "response_summary:honeypot"
+          ],
+          "evidence": [
+            "title 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「honeypot」（仍可能是正常产品介绍或模拟内容）"
+          ],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "suspected",
+        "confidence": "medium",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-ae095ff3a74e0f5fe71c8982",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理",
+          "实时响应命中已配置的名称规则；也可能是产品介绍或模拟内容"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "opencanary-nas",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 302,
+        "bytes": 625,
+        "truncated": false,
+        "title": "Redirect",
+        "server": "Apache/2.2.22 (Ubuntu)",
+        "body_sha256": "b0ff2b3ef615b0838400469131707bdedc5c86b0800e965864e7a32cbb537695",
+        "input_sha256": "cb972c829b97ada5935771c5bb26ac0b59c54b10f9da92446d36d94e818fc47f",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "b66ec65fa7421ab5199cebec1114229f9431a78bb23c79527740e3c3a27ea832",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 302,
+            "body_sha256": "b0ff2b3ef615b0838400469131707bdedc5c86b0800e965864e7a32cbb537695",
+            "bytes": 625,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 1
+    },
+    {
+      "sample_id": "qeeqbox-http",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 1101,
+        "truncated": false,
+        "title": "Login",
+        "server": "Microsoft-IIS/7.0",
+        "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+        "input_sha256": "d7b2811affda2084105761f7daeee160359d45a46c2ff98123646658aa2503aa",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "260e6417d799c47e5233a85cb918204f3bc0b35c1f1f274e67f7e9db37ad2580",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-9ad5ce8704c0bdf3cc7f7fb0",
+            "status": 200,
+            "body_sha256": "c5111fc78755583528a7d939e637e39415e9337a1a23c020c6f1dbb7f7f3e9c5",
+            "bytes": 1101,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "qeeqbox-https",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": false,
+        "status": 0,
+        "bytes": 0,
+        "truncated": false,
+        "title": "",
+        "server": "",
+        "error": "Get \"https://qhttps:8443/\": tls: failed to verify certificate: x509: certificate is not valid for any names, but wanted to match qhttps"
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 0,
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1,
+            "error": "network_tls_or_timeout"
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 1
+    },
+    {
+      "sample_id": "nginx-default",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 615,
+        "truncated": false,
+        "title": "Welcome to nginx!",
+        "server": "nginx/1.22.1",
+        "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+        "input_sha256": "686f133a58a08b7dbe784e2840c23e68b01c755c763ddcf70d3db5410a8fbe30",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ff5b6e2446feb7e5baf1268288cf2df701be4166c52a5d9c7e46bd0a2fd3b32d",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-9ee6dfd6c1bf8b656d1d3503",
+            "status": 404,
+            "body_sha256": "533a1ca5d6595793725bca7641d9461a0f00dd1732dded3e4281196f5dd21736",
+            "bytes": 153,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-fallback",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 615,
+        "truncated": false,
+        "title": "Welcome to nginx!",
+        "server": "nginx/1.22.1",
+        "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+        "input_sha256": "686f133a58a08b7dbe784e2840c23e68b01c755c763ddcf70d3db5410a8fbe30",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ff5b6e2446feb7e5baf1268288cf2df701be4166c52a5d9c7e46bd0a2fd3b32d",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-461c906cb1a4e1819d5a4ffe",
+            "status": 200,
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-product-doc",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 12430,
+        "truncated": false,
+        "title": "OpenCanary project documentation",
+        "server": "nginx/1.22.1",
+        "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+        "input_sha256": "2151c2345699a8acc5674ebe01c00afc75bfaacf7235a9bbdaf8f0b217cf7701",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [
+            "opencanary: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+            "honeypot: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹"
+          ],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "529cf8194165579f587e682b3e772b415a080b33a31754216c15d3088597448e",
+          "matched": true,
+          "score": 35,
+          "confidence": "low",
+          "provider": "opencanary",
+          "signals": [
+            "title:opencanary",
+            "response_summary:opencanary",
+            "response_summary:honeypot"
+          ],
+          "evidence": [
+            "title 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「honeypot」（仍可能是正常产品介绍或模拟内容）"
+          ],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-27698a49ffd7e7a7aa1e5e09",
+            "status": 404,
+            "body_sha256": "533a1ca5d6595793725bca7641d9461a0f00dd1732dded3e4281196f5dd21736",
+            "bytes": 153,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "实时响应命中已配置的名称规则；也可能是产品介绍或模拟内容"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "nginx-product-doc-fallback",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 12430,
+        "truncated": false,
+        "title": "OpenCanary project documentation",
+        "server": "nginx/1.22.1",
+        "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+        "input_sha256": "2151c2345699a8acc5674ebe01c00afc75bfaacf7235a9bbdaf8f0b217cf7701",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [
+            "opencanary: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+            "honeypot: 内置显式名称规则；仅匹配元数据自述，非已验证产品指纹"
+          ],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "529cf8194165579f587e682b3e772b415a080b33a31754216c15d3088597448e",
+          "matched": true,
+          "score": 35,
+          "confidence": "low",
+          "provider": "opencanary",
+          "signals": [
+            "title:opencanary",
+            "response_summary:opencanary",
+            "response_summary:honeypot"
+          ],
+          "evidence": [
+            "title 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「opencanary」（仍可能是正常产品介绍或模拟内容）",
+            "response_summary 命中规则「honeypot」（仍可能是正常产品介绍或模拟内容）"
+          ],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v1",
+        "outcome": "suspected",
+        "confidence": "medium",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-51a7aaf03bf8b440835ca90f",
+            "status": 200,
+            "body_sha256": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+            "bytes": 12430,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理",
+          "实时响应命中已配置的名称规则；也可能是产品介绍或模拟内容"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    }
+  ],
+  "unstable_samples": [],
+  "counts": {
+    "honeypot": {
+      "deployments": 3,
+      "behavior_completed_comparison": 1,
+      "metadata_evaluated": 2,
+      "metadata_any_match": 0,
+      "metadata_medium_or_high": 0,
+      "behavior_suspected": 0,
+      "behavior_needs_review": 1,
+      "behavior_no_signal": 0,
+      "behavior_inconclusive": 2
+    },
+    "benign": {
+      "deployments": 4,
+      "behavior_completed_comparison": 4,
+      "metadata_evaluated": 4,
+      "metadata_any_match": 2,
+      "metadata_medium_or_high": 0,
+      "behavior_suspected": 1,
+      "behavior_needs_review": 2,
+      "behavior_no_signal": 1,
+      "behavior_inconclusive": 0
+    }
+  },
+  "provenance": {
+    "artex-commit": "0f7a8374d56f209f6fc127cd31d823defb3e21c5",
+    "harness-sha256": "ec12dae01baba7146723336d3a5dd783b11c1207b2d3e263cd366ead064b22e9  scripts/acceptance/honeypot-real/Dockerfile\nb7bf9812950e7022ab43fa28cc1af26b7e23cd536a8bef9da9e6a146081c9ff9  scripts/acceptance/honeypot-real/README.md\nb02e52819f45119720779187115dd9096143373c8a425b24c7c47e54256e20c5  scripts/acceptance/honeypot-real/build.sh\neaf114cbb6c0df2346c37dd0d7ca788668f0a5987316bb9ec062a679ae1a2468  scripts/acceptance/honeypot-real/compose.yml\ncb55e47c5600c85c5b449361704f9f7ef40474c1e33159639a29c7db64d8d0b4  scripts/acceptance/honeypot-real/main.go\n19df25f0c9d76caecd47ffc765f7fb834da384258d8db407d9470c5e4bf4e268  scripts/acceptance/honeypot-real/prepare.py\n01fcf8f8cd3cf0119e255d23aa77aea362d1e819a4a681db35ab83df1c93a1c7  scripts/acceptance/honeypot-real/run.sh\nf11789bbcaf52152d82acc885c8f0222ed23c0be173c61eb352a387e58218f0c  scripts/acceptance/honeypot-real/summarize.py\n6a8496235f552aa4e95737749d1ad0754f9218e0f7f55a97a6ecbf84cde6bcba  honeydetect/behavior.go\naf0e81b46d3f464823059bded20f822d88589a52c477b1e9ec1c0855001697af  honeydetect/behavior_proxy.go\n522b09fa329b039ae611c5189b6a5332355e8b24b74b07d86b443903cc770b9b  honeydetect/behavior_proxy_test.go\n2912c2630957afc6c71f728680779eb2743d34d2beaa8d749b4f7b3f4b55fcc5  honeydetect/behavior_regression_test.go\n2a3c1d431034feb51cf9cad785c4a52cfdf587a3da83369a7b84c5b05e9f5a9d  honeydetect/behavior_test.go\n6afa7c161694426f2e76147764ad26a8c69c6bc0ad6ad76e48f0b7b046685cb4  honeydetect/honeydetect.go\nbd260102d4edaaf9bc413f0b613ae19deb4b245fae7c8e0a828cfae6316a26d2  honeydetect/honeydetect_test.go\nd189e97fe157ee4c6d06e2d2151b7eaca4e4ebf88e4dde4c6bf4456d4da2e3bc  honeydetect/rules.go\n842153576e3e2d45929423c5344a43e5ebbfaf3df2b59294dc5d6fd3ed5a4324  honeydetect/rules_test.go",
+    "opencanary-commit": "a81e3992751548cbf4ae49eda5df78353d4c81ea",
+    "qeeqbox-commit": "f337a32e3351e2add3a455a3bcaf1f02ded5744b",
+    "nginx-version": "nginx version: nginx/1.22.1",
+    "image-id": "sha256:dbd70b4d075e906774db6129d5577ec012914c4084c6fbb2cd5eb468a1372043"
+  },
+  "excluded_deployments": [
+    {
+      "id": "opencanary-basic",
+      "reason": "Pinned upstream basicLogin skin lacks redirect.html; GET / returns 500. Excluded before final run, not counted as a detector miss."
+    }
+  ],
+  "runtime_compatibility": "QeeqBox Twisted 24.10.0 with pyOpenSSL 26.4.0 failed TLS Context reuse; isolated QeeqBox environment pinned to pyOpenSSL 24.3.0 / cryptography 44.0.3. Server response code unchanged.",
+  "configuration_hashes": {
+    "canary-nas.json": "0dfe256fb697584361cb719bf31dc6443a6c30db5771f3a723af4a0ee84b84ee",
+    "nginx.conf": "d228f471f099f67e6c2c4e36aec5f680a59d601c8e361369e08f3939df49f896",
+    "docs/index.html": "86b1eae51174d3e7ebf05e3aa619fcd247581569bdf17cc378b4bc6a9d756d93",
+    "samples.json": "9dc1d42073f217a119be36bfad751d4ac71e47dab1e25be3cf1fa0992e72d06e"
+  },
+  "dependency_versions": {
+    "opencanary": [
+      "async-timeout==5.0.1",
+      "attrs==26.1.0",
+      "Automat==25.4.16",
+      "bcrypt==3.2.0",
+      "certifi==2026.10.19",
+      "cffi==2.1.1",
+      "charset-normalizer==3.5.2",
+      "constantly==23.10.4",
+      "cryptography==50.0.2",
+      "dnspython==2.9.2",
+      "gitdb==4.0.12",
+      "GitPython==3.2.1",
+      "hpfeeds==3.0.0",
+      "hyperlink==21.0.0",
+      "idna==3.20",
+      "Incremental==24.11.0",
+      "Jinja2==3.1.6",
+      "MarkupSafe==3.0.4",
+      "ntlmlib==0.72",
+      "opencanary @ file:///sources/opencanary",
+      "ordereddict==1.1",
+      "packaging==26.3",
+      "passlib==1.7.1",
+      "pyasn1==0.6.4",
+      "pyasn1_modules==0.4.2",
+      "pycparser==3.12",
+      "pymongo==4.19.0",
+      "pyOpenSSL==26.4.0",
+      "redis==7.4.0",
+      "requests==2.33.0",
+      "service-identity==21.1.0",
+      "simplejson==3.16.0",
+      "six==1.17.0",
+      "smmap==5.0.3",
+      "Twisted==26.4.0",
+      "typing_extensions==4.16.0",
+      "urllib3==2.8.0",
+      "zope.interface==7.2"
+    ],
+    "qeeqbox": [
+      "attrs==26.1.0",
+      "Automat==25.4.16",
+      "bcrypt==5.0.0",
+      "blinker==1.9.0",
+      "certifi==2026.10.23",
+      "cffi==2.1.1",
+      "chardet==7.7.0",
+      "charset-normalizer==3.5.2",
+      "click==8.5.0",
+      "constantly==23.10.4",
+      "cryptography==44.0.3",
+      "dnspython==2.9.2",
+      "Flask==3.1.3",
+      "future==1.0.0",
+      "honeypots @ file:///sources/honeypots",
+      "hyperlink==21.0.0",
+      "idna==3.20",
+      "impacket==0.9.24",
+      "Incremental==24.11.0",
+      "itsdangerous==2.2.0",
+      "Jinja2==3.1.6",
+      "ldap3==2.9.1",
+      "ldapdomaindump==0.10.0",
+      "MarkupSafe==3.0.4",
+      "netifaces==0.11.0",
+      "packaging==26.3",
+      "paramiko==3.5.0",
+      "psutil==5.9.0",
+      "psycopg==3.3.8",
+      "psycopg-binary==3.3.8",
+      "pyasn1==0.6.5",
+      "pyasn1_modules==0.4.2",
+      "pycparser==3.12",
+      "pycryptodome==3.19.1",
+      "pycryptodomex==3.24.2",
+      "PyNaCl==1.6.2",
+      "pyOpenSSL==24.3.0",
+      "PySocks==1.7.1",
+      "requests==2.32.0",
+      "scapy==2.8.0",
+      "service-identity==21.1.0",
+      "six==1.17.0",
+      "Twisted==24.10.0",
+      "typing_extensions==4.16.0",
+      "urllib3==2.8.0",
+      "Werkzeug==3.1.9",
+      "zope.interface==8.7"
+    ]
+  },
+  "rules": {
+    "rules": [
+      {
+        "id": "cowrie",
+        "pattern": "cowrie",
+        "provider": "cowrie",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "dionaea",
+        "pattern": "dionaea",
+        "provider": "dionaea",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "hfish",
+        "pattern": "hfish",
+        "provider": "hfish",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "opencanary",
+        "pattern": "opencanary",
+        "provider": "opencanary",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "kippo",
+        "pattern": "kippo",
+        "provider": "kippo",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "glastopf",
+        "pattern": "glastopf",
+        "provider": "glastopf",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "honeypot",
+        "pattern": "honeypot",
+        "provider": "honeypot",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "蜜罐",
+        "pattern": "蜜罐",
+        "provider": "蜜罐",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      }
+    ]
+  },
+  "limits": [
+    "Controlled local deployments, not independently labeled Internet observations.",
+    "Two honeypot families with related configurations; four nginx controls are not four independent websites.",
+    "Normal product-document fallback deliberately tests overlapping signals; its prevalence is unknown.",
+    "Three repetitions measure stability only; counts use the first result per deployment.",
+    "Inconclusive and no_signal do not establish a benign verdict. No population accuracy or precision estimate.",
+    "Default rules frozen; no tuning against this evaluation set. No login attempts, payloads, redirects or TLS bypass.",
+    "Metadata extraction is the evaluation collector; behavior calls production Probe directly, not the asset UI."
+  ]
+}

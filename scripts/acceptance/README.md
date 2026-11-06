@@ -112,3 +112,15 @@ ARTEX_LOAD_MODE=soak bash scripts/acceptance/proxy-load/run.sh
 
 快速验证脚本本身可运行 `ARTEX_LOAD_MODE=soak ARTEX_SOAK_WINDOWS=2 ARTEX_SOAK_SECONDS=3 bash scripts/acceptance/proxy-load/run.sh`。
 这只验证流程，不能作为持续负载通过的依据。
+
+
+## 真实蜜罐程序隔离评估
+
+```sh
+bash scripts/acceptance/honeypot-real/build.sh
+bash scripts/acceptance/honeypot-real/run.sh
+```
+
+固定 OpenCanary／QeeqBox 源码和 nginx 正常对照，在内部 Docker 网络运行原装响应逻辑。7 个有效部署各测三次，保留部署标签、规则、版本、配置哈希与逐次结论；不跟随跳转或放宽 TLS，测量缺失时拒绝汇总。
+
+[方法与运行要求](honeypot-real/README.md)、[实际评估报告](../../HONEYPOT-EVALUATION.md)、[结构化结果](results/honeypot-real-20261106.json)。本轮发现正常文档回退页面的疑似误报，以及跳转／证书边界造成的无法判断；脚本完成不等于效果达标，更不是公网准确率证明。
