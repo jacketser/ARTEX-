@@ -4,9 +4,21 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-protection-20261106-local`，应用源码对应 `befdce2`；保留已验收候选版本名，正式服务已更新。
-- 最新发布完成代理防护与流量保存拆分，并包含前轮浏览器验收和样本回归。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-50a2b6a`，应用源码对应 `50a2b6a`，正式服务已更新。
+- 最新发布加入 HTTPS 解析失败后的拒绝/兼容透传策略，默认拒绝；保留代理防护与流量保存拆分以及此前验收和样本回归。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：HTTPS 解析失败策略（2026-11-06）
+
+- 功能提交 `5e406f3`，下拉框可访问名称修正提交 `50a2b6a`；部署版本 `dev-50a2b6a`。候选镜像 `jacketser/artex:tunnel-candidate` 复用上一正式版本运行环境，装入本轮编译并嵌入新前端的程序；未更新基础镜像依赖。
+- 默认拒绝已记录 HTTPS 协议解析失败的服务的新 CONNECT；可选择兼容透传。失败标记按主机及端口保留五分钟、最多 4096 项；原请求不重放。兼容模式仍检查任务身份、CONNECT 头及连接配额，并遵循全局上游；隧道正文不可检查，已有隧道需断开重连。
+- 独立空 PostgreSQL 完整 Go 回归通过：`/tmp/artex-tunnel-full.log`。解析失败策略、捕获切换、任务配额和并发专项 race 通过：`/tmp/artex-tunnel-race.log`。覆盖真实畸形 HTTPS 响应、拨号前拒绝、兼容转发及全局上游、任务/公共配额、秘密来源故障、策略切换期间复核、旧配置缺省迁移、失效时间和缓存上限。
+- 前端 TypeScript、13 项前端测试及最终静态生产构建通过：`/tmp/artex-tunnel-web.log`、`/tmp/artex-tunnel-web-final.log`。首次浏览器测试发现原生 select 的可访问名称混入选项文字，补明确标签后重新构建并通过最终验收。
+- Chromium 最终验收通过：默认拒绝、切换兼容模式及提示、保存刷新后保留、非法模式不覆盖有效配置、切回拒绝；原有行为验证和捕获开关/防护回归同时通过，页面脚本错误 0。结果和截图：`/tmp/artex-acceptance-O95e57z2/`；日志：`/tmp/artex-tunnel-browser-final.log`。实际隧道转发由 Go 集成测试验证。
+- 发布前任务总数/排队数均为 0。停止应用写入后备份至 `/home/ARTEX/backups/pre-tunnel-policy-20261106-171154/`；数据库 dump 通过 `pg_restore --list`，文件包通过 `tar -tzf`。环境、JWT 和初始登录记录文件哈希与发布前相同；未重置密码。
+- 回退镜像：`jacketser/artex:rollback-before-tunnel-policy`，旧版为 `dev-protection-20261106-local`。无新增表结构；回退旧程序会恢复原先自动透明透传的兼容行为。
+- 正式健康检查版本匹配；未登录统计接口返回 401；数据库配置检查确认有效策略为 `block`、捕获保持关闭。`doctor` 返回 0，唯一警告仍为尚未配置模型。访问端口保持 `127.0.0.1:8787`，继续 SSH 隧道访问。
+- 发布/自检日志：`/tmp/artex-tunnel-publish.log`、`/tmp/artex-tunnel-doctor.log`。独立测试容器和网络已清理。
 
 ## 正式发布：代理防护与流量保存拆分（2026-11-06）
 

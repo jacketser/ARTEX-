@@ -9,7 +9,7 @@ bash scripts/acceptance/run.sh
 验收本轮已构建的本地候选版本：
 
 ```sh
-ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:protection-candidate bash scripts/acceptance/run.sh
+ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:tunnel-candidate bash scripts/acceptance/run.sh
 ```
 
 需要 Docker Compose 和已构建的源码运行镜像（含 Chromium、Playwright 和前端）。默认使用
