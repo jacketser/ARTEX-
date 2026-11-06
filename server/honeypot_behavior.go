@@ -126,6 +126,10 @@ func (s *Server) honeypotBehavior(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			rec.Stale = source != fingerprint || revision != rules.Revision()
+			if rec.Status != "running" {
+				var result honeydetect.BehaviorResult
+				rec.Stale = rec.Stale || json.Unmarshal(rec.Result, &result) != nil || result.Version != honeydetect.BehaviorVersion
+			}
 			if rec.Status == "running" && time.Since(rec.CreatedAt) > time.Minute {
 				rec.Status = "interrupted"
 			}

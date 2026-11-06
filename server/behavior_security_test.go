@@ -88,6 +88,22 @@ func TestBehaviorAuthorizationAuditAndPolicyAPI(t *testing.T) {
 	if w := req("GET", path, ""); w.Code != 200 || !strings.Contains(w.Body.String(), "http://127.0.0.1:1") {
 		t.Fatal(w.Code, w.Body)
 	}
+	// Changing only the algorithm must invalidate old verdicts, while preserving
+	// the recorded outcome and never issuing another request.
+	for _, version := range []string{honeydetect.BehaviorVersion, "http-behavior-v1", ""} {
+		result, _ := json.Marshal(map[string]string{"version": version, "outcome": "suspected"})
+		if _, err := s.m.pg.Exec("UPDATE asset_honeypot_probes SET result=$1::jsonb WHERE asset_id=$2", string(result), id); err != nil {
+			t.Fatal(err)
+		}
+		w := req("GET", path, "")
+		var records []behaviorRecord
+		if err := json.Unmarshal(w.Body.Bytes(), &records); err != nil || w.Code != 200 || len(records) != 1 {
+			t.Fatal("history", w.Code, w.Body, err)
+		}
+		if records[0].Stale != (version != honeydetect.BehaviorVersion) || !strings.Contains(string(records[0].Result), "suspected") {
+			t.Fatal("algorithm version not respected or history rewritten", w.Body)
+		}
+	}
 	if _, e := s.m.pg.Exec("UPDATE assets SET page_title='changed' WHERE id=$1", id); e != nil {
 		t.Fatal(e)
 	}

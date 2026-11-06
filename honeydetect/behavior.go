@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const BehaviorVersion = "http-behavior-v1"
+const BehaviorVersion = "http-behavior-v2"
 const ProbeMaxBytes = 64 * 1024
 
 // A manually configured allowlist and explicit per-run consent bound active checks.
@@ -293,9 +293,33 @@ func analyzeBehavior(out BehaviorResult) BehaviorResult {
 		out.Outcome = "needs_review"
 		out.Confidence = "low"
 	}
-	if behavioral && len(markers) > 0 {
+	// Body mentions and wildcard routing can both come from the same ordinary
+	// documentation page. Repetition does not make that independent evidence.
+	// Require the same header rule on both root GETs and HEAD before escalation.
+	// Header self-identification is still spoofable, so this is only a suspicion.
+	if behavioral && persistentHeaderMarker(a, b, h) {
+		out.Signals = append(out.Signals, "两次主页 GET 与 HEAD 持续命中同一响应头规则；结合行为差异提示疑似，仍需人工核实")
 		out.Outcome = "suspected"
 		out.Confidence = "medium"
 	}
 	return out
+}
+
+func persistentHeaderMarker(observations ...Observation) bool {
+	counts := map[string]int{}
+	for _, o := range observations {
+		seen := map[string]bool{}
+		for _, marker := range o.markers {
+			if (strings.HasPrefix(marker, "server_header:") || strings.HasPrefix(marker, "powered_by:")) && !seen[marker] {
+				counts[marker]++
+				seen[marker] = true
+			}
+		}
+	}
+	for _, count := range counts {
+		if count == len(observations) {
+			return true
+		}
+	}
+	return false
 }
