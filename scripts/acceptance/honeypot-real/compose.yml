@@ -20,9 +20,10 @@ services:
     init: true
   normal:
     image: jacketser/artex:honeypot-eval
-    command: [nginx, -c, /fixtures/nginx.conf, -g, "daemon off;"]
+    command: [nginx, -c, /etc/nginx/eval.conf, -g, "daemon off;"]
     volumes:
-      - ${ARTEX_HONEY_DIR:?output required}:/fixtures:ro
+      - ${ARTEX_HONEY_DIR:?output required}/nginx.conf:/etc/nginx/eval.conf:ro
+      - ${ARTEX_HONEY_DIR:?output required}/docs:/srv/honey-docs:ro
     mem_limit: 96m
   driver:
     image: jacketser/artex:local

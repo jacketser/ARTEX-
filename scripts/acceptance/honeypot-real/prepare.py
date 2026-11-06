@@ -19,7 +19,7 @@ doc = (source / 'README.md').read_text()
 (out / 'docs').mkdir()
 (out / 'docs/index.html').write_text('<!doctype html><html><head><title>OpenCanary project documentation</title></head><body><pre>' + html.escape(doc) + '</pre></body></html>')
 conf = 'worker_processes 1; pid /tmp/honey-nginx.pid; error_log /dev/stderr; events {worker_connections 128;} http { access_log /dev/stdout; default_type text/html;\n'
-for port, root, fallback in [(8080, '/usr/share/nginx/html', False), (8081, '/usr/share/nginx/html', True), (8082, '/fixtures/docs', False), (8083, '/fixtures/docs', True)]:
+for port, root, fallback in [(8080, '/usr/share/nginx/html', False), (8081, '/usr/share/nginx/html', True), (8082, '/srv/honey-docs', False), (8083, '/srv/honey-docs', True)]:
     conf += f'server {{ listen {port}; root {root}; index index.html; location / {{ try_files $uri $uri/ ' + ('/index.html' if fallback else '=404') + '; } }\n'
 (out / 'nginx.conf').write_text(conf + '}\n')
 samples = [
