@@ -43,3 +43,25 @@ QeeqBox 的 Twisted 24.10.0 与 pyOpenSSL 26.4.0 在 TLS Context 重用上不兼
 
 `/tmp/artex-honeypot-real-*` 保存标签与配置哈希、版本、依赖清单、固定规则、原始测量、采集元数据、摘要和目标容器日志。
 正文只保留在本地采集文件中，提交的结果摘要包含哈希、有限 HTTP 字段和检测结论；不提交第三方源码／完整页面或测试容器日志。
+
+## v2 调试与留出评估（2026-11-06）
+
+判定冻结提交 `b7877ca`：正文名称与普通行为差异只能提示复核；升级疑似须在两次主页 GET 和 HEAD 中持续命中同一个响应头字段／规则，并伴随行为差异。静态名称规则未改。响应头仍是可伪造自述，不是已验证产品指纹，最高中置信。
+
+预先划分的调试集是历史七个部署；留出集为固定 Heralding `ac12724ab38c4e2fe78f07d1bc35e6e586ba69c0` HTTP、Apache 原装页／Heralding 文档回退／Basic 认证和 Python 静态服务，共五个部署。标签与预期健康状态来自源码和部署配置，未按检测结果选择。Apache 的三个配置不算三个独立软件家族。首次留出测量后不再根据结果修改判定代码；未来调参应将这些已查看样本转为回归集，另选新的留出集。
+
+```sh
+bash scripts/acceptance/honeypot-real/build-holdout.sh
+bash scripts/acceptance/honeypot-real/run.sh tuning
+bash scripts/acceptance/honeypot-real/run.sh holdout
+```
+
+两组分别产生摘要，按部署报告四种行为结论及静态命中；不得混合计数来稀释调试误报。运行脚本拒绝尚未提交的检测器修改，记录源码提交、检测器／脚本哈希、镜像 ID、配置和依赖。Heralding 只启用原装 HTTP，不发凭据，关闭上游公共 IP 查询、外部日志和口令破解功能；没有修改响应代码。构建通过依赖镜像源下载，运行仅内部网络。
+
+离线完整性检查（不向目标发请求）：
+
+```sh
+python3 scripts/acceptance/honeypot-real/check-summary.py /tmp/某次完整评估目录
+```
+
+检查正常输入及七类损坏输入；缺失／重复数据、分组错误、未知结论与混入算法版本均拒绝产出新摘要。原结果清单记录测量当时的脚本版本；之后增加的离线检查不改变检测器和测量结果。

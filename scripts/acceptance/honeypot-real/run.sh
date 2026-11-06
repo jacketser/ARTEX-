@@ -2,11 +2,17 @@
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 repo_root=$(cd ../../.. && pwd)
+corpus=${1:-tuning}
+case "$corpus" in
+  tuning) compose=compose.yml; image=jacketser/artex:honeypot-eval ;;
+  holdout) compose=compose.holdout.yml; image=jacketser/artex:honeypot-holdout ;;
+  *) exit 2 ;;
+esac
 export ARTEX_HONEY_DIR
 ARTEX_HONEY_DIR=$(mktemp -d /tmp/artex-honeypot-real-XXXXXXXX)
 project="artex-honey-${ARTEX_HONEY_DIR##*-}"
 project=${project,,}
-dc() { docker compose -p "$project" -f compose.yml "$@"; }
+dc() { docker compose -p "$project" -f "$compose" "$@"; }
 cleanup() {
   status=$?
   trap - EXIT
@@ -17,7 +23,7 @@ cleanup() {
   exit "$status"
 }
 trap cleanup EXIT
-docker run --rm --network none --entrypoint sh -v "$ARTEX_HONEY_DIR:/output" jacketser/artex:honeypot-eval -c '
+docker run --rm --network none --entrypoint sh -v "$ARTEX_HONEY_DIR:/output" "$image" -c '
   cp -a /sources/opencanary /output/opencanary-source
   /opt/opencanary/bin/pip freeze > /output/opencanary-packages.txt
   /opt/qeeqbox/bin/pip freeze > /output/qeeqbox-packages.txt
@@ -27,7 +33,20 @@ docker run --rm --network none --entrypoint sh -v "$ARTEX_HONEY_DIR:/output" jac
 '
 [[ "$(cat "$ARTEX_HONEY_DIR/opencanary-commit.txt")" == a81e3992751548cbf4ae49eda5df78353d4c81ea ]]
 [[ "$(cat "$ARTEX_HONEY_DIR/qeeqbox-commit.txt")" == f337a32e3351e2add3a455a3bcaf1f02ded5744b ]]
-python3 prepare.py "$ARTEX_HONEY_DIR/opencanary-source" "$ARTEX_HONEY_DIR"
+if [[ "$corpus" == holdout ]]; then
+  docker run --rm --network none --entrypoint sh -v "$ARTEX_HONEY_DIR:/output" "$image" -c '
+    /opt/heralding/bin/pip freeze > /output/heralding-packages.txt
+    git -C /sources/heralding rev-parse HEAD > /output/heralding-commit.txt
+    apache2 -v > /output/apache-version.txt
+    python3 --version > /output/python-version.txt
+  '
+  [[ "$(cat "$ARTEX_HONEY_DIR/heralding-commit.txt")" == ac12724ab38c4e2fe78f07d1bc35e6e586ba69c0 ]]
+  docker run --rm --network none --entrypoint /opt/heralding/bin/python -v "$ARTEX_HONEY_DIR:/output" -v "$PWD:/harness:ro" "$image" /harness/prepare-holdout.py /sources/heralding /output
+else
+  python3 prepare.py "$ARTEX_HONEY_DIR/opencanary-source" "$ARTEX_HONEY_DIR"
+fi
+git -C "$repo_root" diff HEAD -- honeydetect server/honeypot_behavior.go > "$ARTEX_HONEY_DIR/detector-diff.txt"
+[[ ! -s "$ARTEX_HONEY_DIR/detector-diff.txt" ]]
 git -C "$repo_root" rev-parse HEAD > "$ARTEX_HONEY_DIR/artex-commit.txt"
 python3 - "$repo_root" "$ARTEX_HONEY_DIR" <<'PYHASH'
 import hashlib
@@ -38,7 +57,7 @@ files = sorted((repo/'scripts/acceptance/honeypot-real').glob('*')) + sorted((re
 manifest = ''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + str(p.relative_to(repo)) + '\n' for p in files if p.is_file())
 (out/'harness-sha256.txt').write_text(manifest)
 PYHASH
-docker image inspect --format '{{.Id}}' jacketser/artex:honeypot-eval > "$ARTEX_HONEY_DIR/image-id.txt"
+docker image inspect --format '{{.Id}}' "$image" > "$ARTEX_HONEY_DIR/image-id.txt"
 docker run --rm -e GOMAXPROCS=2 -v "$repo_root:/src:ro" -w /src -v "$ARTEX_HONEY_DIR:/output" \
   -v artex-dev-gomod:/go/pkg/mod -v artex-dev-gocache:/root/.cache/go-build \
   golang:1.26-bookworm go build -p 1 -o /output/honeypot-eval ./scripts/acceptance/honeypot-real

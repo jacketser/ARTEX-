@@ -7,7 +7,14 @@ root = Path(sys.argv[1])
 complete = json.loads((root / 'evaluation-complete.json').read_text())
 samples = json.loads((root / 'samples.json').read_text())
 rows = json.loads((root / 'measurements.json').read_text())
-if not (len(samples) == complete['samples'] == 7 and complete['repetitions'] == 3
+expected = {
+    'tuning': {'opencanary-nas', 'qeeqbox-http', 'qeeqbox-https', 'nginx-default', 'nginx-fallback', 'nginx-product-doc', 'nginx-product-doc-fallback'},
+    'holdout': {'heralding-http', 'apache-default', 'apache-document-fallback', 'apache-auth', 'python-static'},
+}
+split = complete['split']
+if split not in expected or {s['id'] for s in samples} != expected[split] or any(s['split'] != split or s['label'] not in ('honeypot', 'benign') for s in samples):
+    raise ValueError('Wrong corpus or partition')
+if not (len(samples) == complete['samples'] == len(expected[split]) and complete['repetitions'] == 3
         and len(rows) == len(samples) * 3 == complete['measurements']
         and len({s['id'] for s in samples}) == len(samples)):
     raise ValueError('Incomplete or duplicate deployment corpus')
@@ -15,6 +22,16 @@ by_id = {s['id']: [r for r in rows if r['sample_id'] == s['id']] for s in sample
 for group in by_id.values():
     if sorted(r['repetition'] for r in group) != [1, 2, 3]:
         raise ValueError('Missing or duplicate measurement')
+
+for r in rows:
+    if r['behavior']['outcome'] not in ('suspected', 'needs_review', 'no_signal', 'inconclusive'):
+        raise ValueError('Unknown behavior outcome')
+    if r['behavior']['version'] != complete['behavior_version']:
+        raise ValueError('Mixed behavior algorithm versions')
+    if r['metadata']['evaluated']:
+        result = r['metadata']['result']
+        if result['version'] != complete['metadata_version'] or result['rule_revision'] != complete['rule_revision']:
+            raise ValueError('Mixed metadata rules or algorithm versions')
 
 def verdict(r):
     m = r['metadata']
@@ -36,20 +53,25 @@ for label in ('honeypot', 'benign'):
         behavior_no_signal=sum(r['behavior']['outcome'] == 'no_signal' for r in first),
         behavior_inconclusive=sum(r['behavior']['outcome'] == 'inconclusive' for r in first),
     )
-for name in ('artex-commit', 'harness-sha256', 'opencanary-commit', 'qeeqbox-commit', 'nginx-version', 'image-id'):
+names = ['artex-commit', 'harness-sha256', 'opencanary-commit', 'qeeqbox-commit', 'nginx-version', 'image-id']
+if split == 'holdout':
+    names += ['heralding-commit', 'apache-version', 'python-version']
+for name in names:
     summary['provenance'][name] = (root / (name + '.txt')).read_text().strip()
 summary['excluded_deployments'] = [dict(id='opencanary-basic', reason='Pinned upstream basicLogin skin lacks redirect.html; GET / returns 500. Excluded before final run, not counted as a detector miss.') ]
+if split == 'holdout':
+    summary['excluded_deployments'] = []
 summary['runtime_compatibility'] = 'QeeqBox Twisted 24.10.0 with pyOpenSSL 26.4.0 failed TLS Context reuse; isolated QeeqBox environment pinned to pyOpenSSL 24.3.0 / cryptography 44.0.3. Server response code unchanged.'
 summary['configuration_hashes'] = json.loads((root / 'configuration-hashes.json').read_text())
-summary['dependency_versions'] = {name: (root / (name + '-packages.txt')).read_text().splitlines() for name in ('opencanary', 'qeeqbox')}
+summary['dependency_versions'] = {name: (root / (name + '-packages.txt')).read_text().splitlines() for name in (('heralding',) if split == 'holdout' else ('opencanary', 'qeeqbox'))}
 summary['rules'] = json.loads((root / 'rules.json').read_text())
 summary['limits'] = [
     'Controlled local deployments, not independently labeled Internet observations.',
-    'Two honeypot families with related configurations; four nginx controls are not four independent websites.',
+    'Tuning uses two honeypot families and related nginx controls; holdout uses Heralding, Apache and Python. Configurations are not independent websites.',
     'Normal product-document fallback deliberately tests overlapping signals; its prevalence is unknown.',
     'Three repetitions measure stability only; counts use the first result per deployment.',
     'Inconclusive and no_signal do not establish a benign verdict. No population accuracy or precision estimate.',
-    'Default rules frozen; no tuning against this evaluation set. No login attempts, payloads, redirects or TLS bypass.',
+    'Name rules unchanged; behavior v2 tuned only on the earlier baseline, then frozen before holdout measurement. No login attempts, payloads, redirects or TLS bypass.',
     'Metadata extraction is the evaluation collector; behavior calls production Probe directly, not the asset UI.',
 ]
 (root / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n')

@@ -32,6 +32,7 @@ samples = [
     dict(id='nginx-product-doc-fallback', origin='http://normal:8083', label='benign', family='nginx', configuration='same product documentation with fallback routing', evidence='Known normal overlap control: product names plus uniform page, not an independent website'),
 ]
 for item in samples:
+    item['split'] = 'tuning'
     item['label_basis'] = 'controlled_deployment'
     item['expected_root_status'] = 0 if item['id'] == 'qeeqbox-https' else (302 if item['id'] == 'opencanary-nas' else 200)
 (out / 'samples.json').write_text(json.dumps(samples, indent=2))

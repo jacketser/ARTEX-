@@ -1,0 +1,7 @@
+FROM jacketser/artex:honeypot-eval
+RUN apt-get update -o Acquire::Retries=2 -o Acquire::http::Timeout=30 && apt-get install -y --no-install-recommends apache2 && rm -rf /var/lib/apt/lists/*
+COPY heralding /sources/heralding
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple
+RUN python3 -m venv /opt/heralding && /opt/heralding/bin/pip install --no-cache-dir -r /sources/heralding/requirements.txt
+ENV PYTHONPATH=/sources/heralding
+ENTRYPOINT []

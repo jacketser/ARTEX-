@@ -1,0 +1,37 @@
+services:
+  heralding:
+    image: jacketser/artex:honeypot-holdout
+    entrypoint: [/opt/heralding/bin/python, /sources/heralding/bin/heralding]
+    command: [-c, /etc/heralding-eval.yml, -l, /tmp/heralding.log]
+    working_dir: /tmp
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/heralding.yml:/etc/heralding-eval.yml:ro
+    mem_limit: 192m
+    init: true
+  apache:
+    image: jacketser/artex:honeypot-holdout
+    command: [apache2, -f, /etc/apache2/eval.conf, -DFOREGROUND]
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/apache.conf:/etc/apache2/eval.conf:ro
+      - ${ARTEX_HONEY_DIR:?output required}/docs:/srv/honey-docs:ro
+      - ${ARTEX_HONEY_DIR:?output required}/eval-users:/srv/eval-users:ro
+    mem_limit: 96m
+  python:
+    image: jacketser/artex:honeypot-holdout
+    command: [python3, -m, http.server, '8080', --bind, 0.0.0.0, --directory, /srv/handbook]
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/plain:/srv/handbook:ro
+    mem_limit: 64m
+    init: true
+  driver:
+    image: jacketser/artex:local
+    entrypoint: [/output/honeypot-eval]
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}:/output
+    environment:
+      GOMAXPROCS: '2'
+    mem_limit: 256m
+    profiles: [driver]
+networks:
+  default:
+    internal: true

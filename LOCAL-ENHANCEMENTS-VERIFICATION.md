@@ -8,9 +8,22 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-4a56616`，应用源码对应 `4a56616`，正式服务已更新。
-- 最新发布增加有界流量合并提交、保存阶段统计和正文失败保护；保留 5 MiB 边界修复、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-b7877ca`，应用源码对应 `b7877ca`，正式服务已更新。
+- 最新发布收紧蜜罐行为疑似升级并标记旧算法历史过期；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：蜜罐文档回退误报收紧（2026-11-06）
+
+- 源码 `b7877ca`，版本 `dev-b7877ca`，行为算法 `http-behavior-v2`。正文名称＋统一页面降为低置信复核；升级疑似要求两次主页 GET 与 HEAD 持续命中同一响应头字段／规则并存在行为差异。静态算法、默认名称表和 TLS／跳转／请求安全边界不变；旧算法历史过期但不改写、不自动重测。
+- 全新隔离 PostgreSQL 全仓库回归通过：`/tmp/artex-honey-v2-full.log`；`honeydetect` 全包普通／race 通过：`/tmp/artex-honey-v2-tests.log`、`/tmp/artex-honey-v2-race.log`。Go 统一用 `golang:1.26-bookworm`、`GOMAXPROCS=2`、`-p 1` 与既有缓存。未在正式库跑测试。
+- 判定在首次留出测量前冻结为 `b7877ca`。调试集 7 部署、21 次：蜜罐 0 疑似／1 复核／0 无信号／2 无法判断；正常 0／3／1／0。留出集 5 部署、15 次：Heralding 蜜罐 0／0／0／1；正常 Apache／Python 0／1／2／1。重复结论一致。原 nginx 文档回退疑似降为复核，新增 Apache 文档回退也只复核，真实蜜罐覆盖未提高。详细来源、原始目录及局限见[评估报告](HONEYPOT-EVALUATION.md)和分开的[调试结果](scripts/acceptance/results/honeypot-v2-tuning-20261106.json)／[留出结果](scripts/acceptance/results/honeypot-v2-holdout-20261106.json)。
+- 最终验收驱动编译、Shell／Python 语法通过；两组离线汇总均通过有效输入与七类损坏反例，日志 `/tmp/artex-honey-v2-summary-tuning.log`、`/tmp/artex-honey-v2-summary-holdout.log`。
+- 候选镜像 `jacketser/artex:honeypot-v2-candidate`，ID `sha256:03d7d6e9e18c9a178dbdab4af1cb8fa0be6f367cd0b6fb84b5a1c79bc27fdf40`，与实际运行镜像一致。从 Git 提取冻结源码、复用现有嵌入前端与运行环境编译，无前端、依赖、数据库结构或归档格式变更；未重复前端构建。编译日志 `/tmp/artex-honey-v2-release-build.log`；其中首次封装用本机镜像 ID 作为 FROM 被 Docker 拒绝，换为指向同一镜像的本地标签后成功：`/tmp/artex-honey-v2-image-final.log`。一次路径筛选脚本误把日志当目录的准备失败未计为验收通过。
+- 候选实际 Chromium 隔离验收通过：四次行为请求经认证上游、无目标凭据、原 Host 保留、冷却 429、策略保存、捕获关闭仍防护与历史保持，页面错误为 0。合成持续响应头样本仍为疑似，不能代替真实阳性证据。日志 `/tmp/artex-honey-v2-browser-final.log`，原始目录 `/tmp/artex-acceptance-LbLfFg1O/`。
+- 发布前正式任务／归档均为 0；停机后再次确认无任务，备份 `/home/ARTEX/backups/pre-honeypot-v2-20261106-233557/`。数据库 dump 经 `pg_restore --list`、文件包经 `tar -tzf` 校验；环境、JWT 和初始登录文件哈希保持不变。发布日志 `/tmp/artex-honey-v2-publish.log`。
+- 正式健康接口为 `dev-b7877ca`，应用／数据库健康，仅发布 `127.0.0.1:8787`，仍经 SSH 隧道访问。doctor 返回 0，唯一警告为未配置模型：`/tmp/artex-honey-v2-doctor.log`。隔离测试容器／网络清理完毕，其他应用未修改。
+- 回退镜像 `jacketser/artex:rollback-before-honeypot-v2` 对应 `dev-4a56616`。可读取现有数据，回退会恢复文档＋统一页面升级疑似的旧行为及旧历史过期判断；本次没有重写历史内容。备份与回退流程沿用部署文档。
+- 剩余：更多独立正常应用／蜜罐家族和版本、能够完成对照的真实阳性与新的留出集；认证、跳转、严格 TLS 及非 HTTP 协议覆盖仍有限。P2 的长负载、独立敏感副本、大归档／残留与模型质量评估本轮未实施。
 
 ## 验证补充：蜜罐真实程序隔离评估（2026-11-06）
 

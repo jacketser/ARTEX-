@@ -21,9 +21,9 @@ import (
 )
 
 type sample struct {
-	ID, Origin, Label, Family, Configuration, Evidence string
-	LabelBasis                                         string `json:"label_basis"`
-	ExpectedRootStatus                                 int    `json:"expected_root_status"`
+	ID, Origin, Label, Family, Configuration, Evidence, Split string
+	LabelBasis                                                string `json:"label_basis"`
+	ExpectedRootStatus                                        int    `json:"expected_root_status"`
 }
 type metadata struct {
 	Evaluated   bool                `json:"evaluated"`
@@ -116,8 +116,8 @@ func main() {
 	must(e)
 	var samples []sample
 	must(json.Unmarshal(b, &samples))
-	if len(samples) != 7 {
-		panic("expected labeled seven-deployment corpus")
+	if len(samples) == 0 || (samples[0].Split == "tuning" && len(samples) != 7) || (samples[0].Split == "holdout" && len(samples) != 5) {
+		panic("expected complete predeclared corpus")
 	}
 	rules := honeydetect.DefaultRules()
 	must(rules.Validate())
@@ -191,5 +191,5 @@ func main() {
 			fmt.Printf("%s repeat=%d metadata=%s behavior=%s observations=%d\n", s.ID, repeat, confidence, behavior.Outcome, len(behavior.Observations))
 		}
 	}
-	save("evaluation-complete.json", map[string]any{"started_at": started, "finished_at": time.Now().UTC(), "samples": len(samples), "repetitions": 3, "measurements": len(rows), "rule_revision": rules.Revision(), "metadata_version": honeydetect.Version, "behavior_version": honeydetect.BehaviorVersion})
+	save("evaluation-complete.json", map[string]any{"started_at": started, "finished_at": time.Now().UTC(), "split": samples[0].Split, "samples": len(samples), "repetitions": 3, "measurements": len(rows), "rule_revision": rules.Revision(), "metadata_version": honeydetect.Version, "behavior_version": honeydetect.BehaviorVersion})
 }
