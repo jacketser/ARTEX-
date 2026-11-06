@@ -6,9 +6,24 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-c9f56ec`，应用源码对应 `c9f56ec`，正式服务已更新。
-- 最新发布补齐旧目录格式流量的显式分批迁移与同步脱敏，沿用预览、指纹确认和审计续跑；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-da4fc54`，应用源码对应 `da4fc54`，正式服务已更新。
+- 最新发布补齐冷归档流量副本的单包脱敏与目录校验值同步，保留旧目录迁移、分批维护、预览和审计；保留行为验证上游代理、HTTPS 解析失败策略及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：冷归档流量副本脱敏（2026-11-06）
+
+- 应用源码 `da4fc54`，正式版本 `dev-da4fc54`；候选镜像 `jacketser/artex:archive-candidate`，镜像 ID `sha256:db7cee153c24b4e5e8e89173451cda389c7ede657598e119261a7cc620e72795`。复用运行环境和嵌入前端，无新增业务表或依赖升级。
+- 新增 `archive-traffic --archive-id ID`，只处理单个就绪包中的流量清单与正文。独立证据、报告、会话、任务文件等仍保留原字节。按包核对清单、目录、大小、哈希和正文引用；流量 ID／时间保留，完整脱敏正文内联，旧流量 blob 不再随恢复导入。
+- 使用唯一候选文件，落盘及目录 fsync、完整性复核后事务更新 PostgreSQL 路径／哈希／大小；提交成功再回收无引用旧包。失败或提交回执不明时保留包文件，不覆盖原包。中断残留不会自动清扫，详见[维护说明](HISTORY-REDACTION.md)。
+- 支持任务格式 1–3、流量格式 1；压缩和展开各最多 128 MiB，10000 个 tar 成员／流量记录，单正文 16 MiB。拒绝未知流量字段／文件、重复路径／ID、父子冲突、链接、尾随数据、缺失／损坏／超限正文和旧混合 HTTP 格式。整包不使用活动库游标。
+- 全量 Go 回归通过：`/tmp/artex-archive-full.log`。维护／CLI race 通过：`/tmp/artex-archive-race.log`；该轮服务端通知用例因复用测试库残留上一轮渠道，预期一条投递得到两条，未出现数据竞态报告。全新库服务端 race 重跑通过：`/tmp/artex-archive-race-clean.log`。新增整包指纹变更和空包版本专项通过：`/tmp/artex-archive-extra.log`。
+- 测试覆盖预览无写入、包损坏／目录状态拒绝、有效包变更后旧指纹失效、SQL 提交失败保留原包及重试、其他成员字节保留、重复执行零变更、真实归档写入器／恢复解包器／文件安装／流量导入兼容。首轮新增兼容测试提前提交文件恢复导致提取目录已清理，修正测试使其与正式恢复的“先导入后清理”顺序一致后，全量回归通过；未更改正式恢复流程。
+- 候选编译／镜像日志：`/tmp/artex-archive-compile.log`、`/tmp/artex-archive-image.log`。真实 CLI 验收通过，新增冷归档种子、停机备份、预览执行、目录和包哈希／大小、脱敏正文、工作区保留、审计与重启检查；沿用旧迁移三批和失败重试。日志 `/tmp/artex-archive-cli.log`，产物 `/tmp/artex-privacy-acceptance-RXPZiAO2/`。宿主机验收脚本使用 Python 3 与 libzstd，不修改正式数据。
+- Chromium 回归通过：四次行为请求经上游、目标无凭据泄漏、Host 保留、冷却 429、设置保存和关闭捕获仍防护，页面错误 0。日志 `/tmp/artex-archive-browser.log`，产物 `/tmp/artex-acceptance-OG9aC8l5/`。
+- 发布前正式库任务和归档总数均为 0。停机备份 `/home/ARTEX/backups/pre-archive-traffic-20261106-195520/`，数据库及文件包可读性校验通过；环境、JWT 和初始登录文件哈希未变。普通流量、证据与旧格式迁移预览均为 0 条／0 变更；没有正式冷归档可预览，未对正式业务内容执行重写。日志 `/tmp/artex-archive-publish.log`。
+- 发布后健康版本 `dev-da4fc54`，管理端口仍仅 `127.0.0.1:8787`。doctor 返回 0，唯一警告仍是未配置模型；日志 `/tmp/artex-archive-doctor.log`。运行中归档维护拒绝检查通过。临时验收容器及网络已清理。
+- 回退镜像 `jacketser/artex:rollback-before-archive-traffic` 对应 `dev-c9f56ec`，保留的包格式仍可被原恢复器读取。旧版本没有本次命令范围；回退程序不能恢复原文，内容恢复须使用同一份数据库与文件备份。
+- 主要剩余：归档独立证据／文本、备份／导出副本及日志／会话／资产元数据脱敏；大包／未知格式处理及中断无引用残留核查；真实蜜罐样本效果评估、完整代理链路性能压测。系统级出网隔离不实施。
 
 ## 正式发布：旧目录格式流量迁移（2026-11-06）
 
