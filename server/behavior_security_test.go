@@ -1,13 +1,17 @@
 package server
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/Autumn-27/artex/honeydetect"
 	"github.com/Autumn-27/artex/traffic"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -92,6 +96,106 @@ func TestBehaviorAuthorizationAuditAndPolicyAPI(t *testing.T) {
 	}
 	if w := req("GET", path+"?before=-1", ""); w.Code != 400 {
 		t.Fatal(w.Code)
+	}
+}
+
+func TestBehaviorUpstreamAPIAndPolicyChanges(t *testing.T) {
+	for _, mode := range []string{"normal", "proxy_changed", "authorization_revoked", "budget"} {
+		t.Run(mode, func(t *testing.T) {
+			s, _, req := trafficEvidenceServer(t)
+			// The shared read-only fixture deliberately starts with a cancelled
+			// service context; active probes need a live request lifetime.
+			s.ctx = t.Context()
+			for _, key := range []string{behaviorKey, proxySecurityKey} {
+				old, ok, err := s.m.pg.GetSetting(key)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() {
+					if ok {
+						s.m.pg.SetSetting(key, old)
+					} else {
+						s.m.pg.Exec("DELETE FROM settings WHERE key=$1", key)
+					}
+				})
+			}
+			origin := "http://192.0.2.12:8080"
+			policy, _ := json.Marshal(honeydetect.BehaviorConfig{Enabled: true, AllowedOrigins: []string{origin}})
+			if err := s.m.pg.SetSetting(behaviorKey, string(policy)); err != nil {
+				t.Fatal(err)
+			}
+			cfg := traffic.DefaultSecurityConfig()
+			if mode == "budget" {
+				cfg.UnattributedRequests = 1
+			}
+			b, _ := json.Marshal(cfg)
+			if w := req("PUT", "/api/settings/proxy-security", string(b)); w.Code != 200 {
+				t.Fatal(w.Code, w.Body)
+			}
+			var id int64
+			if err := s.m.pg.QueryRow(`INSERT INTO assets(type,url) VALUES('service',$1) RETURNING id`, origin).Scan(&id); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { s.m.pg.Exec("DELETE FROM assets WHERE id=$1", id) })
+			var hits atomic.Int32
+			p := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != "CONNECT" || r.Host != "192.0.2.12:8080" {
+					t.Errorf("not pinned: %s %s", r.Method, r.Host)
+					w.WriteHeader(400)
+					return
+				}
+				conn, _, err := w.(http.Hijacker).Hijack()
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				defer conn.Close()
+				io.WriteString(conn, "HTTP/1.1 200 Connection established\r\n\r\n")
+				target, err := http.ReadRequest(bufio.NewReader(conn))
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				target.Body.Close()
+				if target.Host != "192.0.2.12:8080" || target.Header.Get("Proxy-Authorization") != "" {
+					t.Error("target headers changed")
+				}
+				hits.Add(1)
+				switch mode {
+				case "proxy_changed":
+					s.m.mu.Lock()
+					s.m.globalProxy = "http://127.0.0.1:1"
+					s.m.mu.Unlock()
+				case "authorization_revoked":
+					if err := s.m.pg.SetSetting(behaviorKey, `{"enabled":false,"allowed_origins":[]}`); err != nil {
+						t.Error(err)
+					}
+				}
+				io.WriteString(conn, "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n")
+				if target.Method != "HEAD" {
+					io.WriteString(conn, "ok")
+				}
+			}))
+			defer p.Close()
+			s.m.mu.Lock()
+			s.m.globalProxy = p.URL
+			s.m.mu.Unlock()
+			path := fmt.Sprintf("/api/assets/%d/honeypot-behavior", id)
+			w := req("POST", path, `{"confirm":true,"origin":"`+origin+`"}`)
+			want := int32(4)
+			if mode != "normal" {
+				want = 1
+			}
+			if w.Code != 200 || hits.Load() != want {
+				t.Fatalf("status=%d hits=%d body=%s", w.Code, hits.Load(), w.Body)
+			}
+			if mode != "normal" && !strings.Contains(w.Body.String(), "security_budget_or_policy") {
+				t.Fatal("policy change ignored", w.Body)
+			}
+			if history := req("GET", path, ""); history.Code != 200 || !strings.Contains(history.Body.String(), origin) {
+				t.Fatal("missing audit", history.Code, history.Body)
+			}
+		})
 	}
 }
 func TestBehaviorReservationsAreAtomic(t *testing.T) {

@@ -53,6 +53,11 @@ async function throughProxy(path, headers = {}) {
 		assert.equal(login.status(), 200);
 		const { token } = await login.json();
 		const headers = { Authorization: "Bearer " + token };
+		const upstreamSaved = await ctx.request.put("/api/settings", {
+			headers,
+			data: { global_proxy: "http://probe:isolated-proxy-only@upstream:8081" },
+		});
+		assert.equal(upstreamSaved.status(), 200);
 		// Install the test session before hydration/auth guards can redirect.
 		await ctx.addInitScript((t) => {
 			if (!localStorage.getItem("artex_token"))
@@ -198,6 +203,13 @@ async function throughProxy(path, headers = {}) {
 		).json();
 		assert.equal(metrics.requests, 4);
 		assert.equal(metrics.credential_seen, false);
+		assert.equal(metrics.unexpected_host, false);
+		const upstreamMetrics = await (await ctx.request.get("http://upstream:8081/metrics")).json();
+		assert.equal(upstreamMetrics.connects, 4, "all behavior requests must use pinned upstream tunnels");
+		const upstreamCleared = await ctx.request.put("/api/settings", {
+			headers, data: { global_proxy: "" },
+		});
+		assert.equal(upstreamCleared.status(), 200);
 		const statistics = await (
 			await ctx.request.get("/api/proxy-security/stats", { headers })
 		).json();
@@ -272,6 +284,8 @@ async function throughProxy(path, headers = {}) {
 				behavior: record.result.outcome,
 				requests: metrics.requests,
 				credentials_sent: metrics.credential_seen,
+				upstream_connects: upstreamMetrics.connects,
+				original_host_preserved: !metrics.unexpected_host,
 				cooldown: duplicate.status(),
 				passthrough_policy_saved: true,
 				capture_off_protected: true,

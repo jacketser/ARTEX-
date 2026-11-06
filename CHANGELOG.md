@@ -1,6 +1,6 @@
 # 更新日志
 
-本项目的重要变更记录在此文件中，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
+本文件保留上游版本的重要变更，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。本 fork 的新增功能和升级注意事项见[本地增强版更新日志](CHANGELOG-LOCAL.md)；以下版本号不代表本地增强版的部署版本。
 
 ## [Unreleased]
 

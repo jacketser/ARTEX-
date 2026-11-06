@@ -119,9 +119,16 @@ func safeProbeIP(ip netip.Addr) bool {
 	return true
 }
 
-// probeClient pins the checked DNS answer. Redirects, proxy-env, cookies,
-// compression and TLS verification bypass are deliberately unsupported.
-func probeClient(ctx context.Context, origin string) (*http.Client, error) {
+// probeClient pins the checked DNS answer, including through the explicit proxy.
+// Redirects, proxy-env, cookies and TLS verification bypass are unsupported.
+func probeClient(ctx context.Context, origin, upstream string) (*http.Client, error) {
+	if normalized, err := Origin(origin); err != nil || normalized != origin {
+		return nil, errors.New("服务来源无效")
+	}
+	proxyURL, err := parseProbeProxy(upstream)
+	if err != nil {
+		return nil, err
+	}
 	u, _ := url.Parse(origin)
 	ips, err := net.DefaultResolver.LookupNetIP(ctx, "ip", u.Hostname())
 	if err != nil || len(ips) == 0 || len(ips) > 32 {
@@ -149,21 +156,30 @@ func probeClient(ctx context.Context, origin string) (*http.Client, error) {
 			port = "443"
 		}
 	}
-	addr := net.JoinHostPort(ips[0].String(), port)
+	addr := net.JoinHostPort(ips[0].Unmap().String(), port)
 	tr := &http.Transport{Proxy: nil, DisableCompression: true, DisableKeepAlives: true, MaxResponseHeaderBytes: 16 * 1024, TLSHandshakeTimeout: 3 * time.Second, ResponseHeaderTimeout: 3 * time.Second,
 		DialContext: func(c context.Context, network, _ string) (net.Conn, error) {
 			d := net.Dialer{Timeout: 3 * time.Second}
-			return d.DialContext(c, "tcp", addr)
+			if proxyURL == nil {
+				return d.DialContext(c, "tcp", addr)
+			}
+			return dialProbeProxy(c, proxyURL, addr)
 		}}
 	return &http.Client{Transport: tr, Timeout: 4 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, nil
 }
 
 // Probe does not expose an arbitrary URL/body/header request facility.
 func Probe(ctx context.Context, origin string, rules RuleSet, before func(context.Context, string, string) error) (BehaviorResult, error) {
+	return ProbeViaProxy(ctx, origin, "", rules, before)
+}
+
+// ProbeViaProxy uses only the explicit upstream snapshot; failure never falls
+// back to direct access. Proxy credentials are used for the handshake only.
+func ProbeViaProxy(ctx context.Context, origin, upstream string, rules RuleSet, before func(context.Context, string, string) error) (BehaviorResult, error) {
 	out := emptyBehavior()
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	client, err := probeClient(ctx, origin)
+	client, err := probeClient(ctx, origin, upstream)
 	if err != nil {
 		return out, err
 	}

@@ -12,7 +12,7 @@ Go 后端 · Next.js 前端 · PostgreSQL · 源码 Docker Compose 部署
 
 本仓库是 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-)，基于
 [trhhubsd/ARTEX](https://github.com/trhhubsd/ARTEX) 继续开发。当前增强代码位于
-**`feature/local-enhancements` 分支**，本文按 2026-10-20 已落地代码整理。
+**`feature/local-enhancements` 分支**，本文按 2026-11-06 已落地代码整理。
 
 部分设计参考 [enwjx/artex-ymh](https://github.com/enwjx/artex-ymh)，在当前上游结构上逐项适配，
 部分功能独立实现；**不是参考二开仓库的完整移植**。
@@ -28,7 +28,8 @@ Go 后端 · Next.js 前端 · PostgreSQL · 源码 Docker Compose 部署
 - [截图预览](#截图预览) · [系统技术架构](#系统技术架构)
 - [来源与致谢](#来源与致谢) · [许可与免责声明](#许可与免责声明)
 
-详细文档：[部署与维护](DEPLOYMENT.md) · [功能范围与后续计划](SECONDARY-DEVELOPMENT-PLAN.md) ·
+详细文档：[二开更新日志](CHANGELOG-LOCAL.md) · [上游更新日志](CHANGELOG.md) ·
+[部署与维护](DEPLOYMENT.md) · [功能范围与后续计划](SECONDARY-DEVELOPMENT-PLAN.md) ·
 [开发及发布验收](LOCAL-ENHANCEMENTS-VERIFICATION.md)
 
 ## 原版能力与二开范围
@@ -81,7 +82,7 @@ ARTEX 原版提供多 Agent 协作、资产图与探索图、任务调度、工�
 **尚无真实模型质量、误报率或 Token 收益的 A/B 数据**。
 
 HTTP 行为验证是独立的人工操作，不属于静态后台重评。先在“系统设置 → HTTP 蜜罐行为验证”启用并填写精确来源，再在服务资产的“HTTP 行为验证与历史”中确认并发起。
-它只保存观测摘要；普通 SPA 的统一页面或 HEAD 差异只提示人工核对，不会单独判成蜜罐。禁止回环、本机与链路本地地址，DNS 地址固定、TLS 正常校验；配置全局上游代理时拒绝执行，不绕过代理直连。来源或规则变化后历史标记过期，不自动重新探测。
+它只保存观测摘要；普通 SPA 的统一页面或 HEAD 差异只提示人工核对，不会单独判成蜜罐。禁止回环、本机与链路本地地址，DNS 地址固定、TLS 正常校验；支持全局 HTTP/HTTPS/SOCKS5 上游代理，HTTP/HTTPS 代理须允许 CONNECT 到目标端口；代理失败不回退直连，配置变化后停止后续请求。来源或规则变化后历史标记过期，不自动重新探测。
 
 ### 认证与代理安全
 
@@ -185,6 +186,9 @@ docker compose -f compose.source.yml exec -T artex /app/artex doctor
 
 ### 更新二开版本
 
+更新前先阅读[二开更新日志](CHANGELOG-LOCAL.md)，确认目标版本的配置变化、数据库迁移和重新登录要求。
+上游版本历史见 [CHANGELOG.md](CHANGELOG.md)；其页面升级和 `update.sh` 不作为本 fork 的更新入口。
+
 先确认没有运行任务，按[部署文档](DEPLOYMENT.md#常用维护)备份数据库和持久化文件，保留可回退镜像，
 再在当前源码目录执行：
 
@@ -243,6 +247,7 @@ server {
 | [Dockerfile.source](Dockerfile.source) / [deploy-source.sh](deploy-source.sh) | 构建及部署当前源码 |
 | [.github/workflows/regression.yml](.github/workflows/regression.yml) | 独立数据库后端回归、前端类型检查、专项测试及静态构建 |
 | [SECONDARY-DEVELOPMENT-PLAN.md](SECONDARY-DEVELOPMENT-PLAN.md) | 功能来源、优先级、实现边界及未完成项 |
+| [CHANGELOG-LOCAL.md](CHANGELOG-LOCAL.md) | 按实际发布版本整理的二开变更、升级影响及回退说明 |
 | [LOCAL-ENHANCEMENTS-VERIFICATION.md](LOCAL-ENHANCEMENTS-VERIFICATION.md) | 开发验证、发布验收与回退记录 |
 
 Go module 保持上游路径，无需为了 fork 修改包名。修改完成并通过验证后，使用 `./deploy-source.sh` 发布。

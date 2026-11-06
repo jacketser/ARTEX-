@@ -431,7 +431,7 @@ export function HoneypotBehaviorSettings() {
   {c.error && <p role="alert">{c.error}</p>}{c.value && <fieldset disabled={c.busy} className="space-y-3">
    <label className="flex items-center justify-between">启用人工行为验证<Switch checked={c.value.enabled} onCheckedChange={v => c.setValue({ ...c.value!, enabled: v })}/></label>
    <label className="block text-xs">已授权服务来源（每行一个，最多 100 个）<Textarea aria-label="行为验证授权来源" value={origins} placeholder={"https://lab.example.test\nhttp://lab.example.test:8080"} onChange={e => setOrigins(e.target.value)}/></label>
-   <p className="text-xs text-muted-foreground">只接受 scheme://host[:port]，不填路径、查询或凭据。内网实验服务也需明确加入；回环、本机及链路本地地址禁止。配置全局上游代理时拒绝执行，不绕过代理直连。</p>
+   <p className="text-xs text-muted-foreground">只接受 scheme://host[:port]，不填路径、查询或凭据。内网实验服务也需明确加入；回环、本机及链路本地地址禁止。沿用全局 HTTP/HTTPS/SOCKS5 代理；HTTP/HTTPS 代理须允许 CONNECT 到目标端口。代理失败不回退直连，配置变化后停止后续请求。</p>
    <p className="text-xs text-muted-foreground">每次最多 4 请求、20 秒、正文 64 KiB；同来源间隔 5 分钟、全局并发 2。不会自动重试、跟随跳转、读取凭据或关闭 TLS 校验。</p>
    <Button size="sm" onClick={() => void c.save({ ...c.value!, allowed_origins: origins.split(/\r?\n/).map(v => v.trim()).filter(Boolean) })}>保存行为验证设置</Button>
   </fieldset>}

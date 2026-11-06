@@ -158,11 +158,8 @@ func (s *Server) honeypotBehavior(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 409, "服务来源已变化，请刷新后确认")
 		return
 	}
-	// DNS pinning cannot be guaranteed through an arbitrary upstream proxy.
-	if s.m.GlobalProxy() != "" {
-		writeErr(w, 409, "行为探测暂不支持全局上游代理；不会绕过已配置代理直连")
-		return
-	}
+	// Keep one upstream for the run; a configuration change stops subsequent requests.
+	upstream := s.m.GlobalProxy()
 	if s.m.traffic == nil {
 		writeErr(w, 503, "代理安全检查器不可用")
 		return
@@ -184,13 +181,13 @@ func (s *Server) honeypotBehavior(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	stop := context.AfterFunc(s.ctx, cancel)
 	defer stop()
-	result, probeErr := honeydetect.Probe(ctx, origin, rules, func(c context.Context, method, raw string) error {
+	result, probeErr := honeydetect.ProbeViaProxy(ctx, origin, upstream, rules, func(c context.Context, method, raw string) error {
 		var value string
 		if err := s.m.pg.QueryRowContext(c, "SELECT value FROM settings WHERE key=$1", behaviorKey).Scan(&value); err != nil {
 			return err
 		}
 		var policy honeydetect.BehaviorConfig
-		if json.Unmarshal([]byte(value), &policy) != nil || policy.Validate() != nil || !policy.Allows(origin) || s.m.GlobalProxy() != "" {
+		if json.Unmarshal([]byte(value), &policy) != nil || policy.Validate() != nil || !policy.Allows(origin) || s.m.GlobalProxy() != upstream {
 			return errors.New("probe authorization changed")
 		}
 		return s.m.traffic.AdmitDiagnosticRequest(c, method, raw)

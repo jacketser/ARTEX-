@@ -22,6 +22,8 @@ services:
         condition: service_healthy
       target:
         condition: service_healthy
+      upstream:
+        condition: service_healthy
     volumes:
       - ./:/acceptance:ro
     shm_size: 256mb
@@ -29,6 +31,16 @@ services:
     healthcheck:
       test: [CMD, curl, --fail, --silent, http://127.0.0.1:8787/api/health]
       interval: 2s
+      timeout: 3s
+      retries: 60
+  upstream:
+    image: ${ARTEX_ACCEPTANCE_IMAGE:-jacketser/artex:local}
+    entrypoint: [python3, /acceptance/behavior-proxy.py]
+    volumes:
+      - ./:/acceptance:ro
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8081/metrics]
+      interval: 1s
       timeout: 3s
       retries: 60
   target:
