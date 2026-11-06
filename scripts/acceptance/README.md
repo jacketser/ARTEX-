@@ -23,14 +23,15 @@ ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:protection-candidate bash scripts/accepta
 
 覆盖设置保存与刷新、非法配置拒绝、未确认禁用按钮、显式确认后的四次请求、
 历史记录、五分钟冷却、模拟目标未收到凭据、公共配额统计及页面脚本错误。还验证关闭流量保存时普通请求仍可转发、凭据拦截和公共配额仍有效，
-开启后可保存记录，再次关闭后历史不增长，以及页面独立显示安全代理状态。
+开启后可保存记录，再次关闭后历史不增长，以及页面独立显示安全代理状态。还验证 HTTPS 解析失败策略默认拒绝、页面切换兼容模式、
+保存刷新后保留、非法模式拒绝及切回拒绝模式。实际隧道路径由 Go 集成测试验证。
 模拟服务故意同时提供 Cowrie 名称标记和统一页面；“疑似”只验证规则分支，不证明真实检测准确率。
 
 后端样本及代理回归（需要 Go 1.26，无需 PostgreSQL）：
 
 ```sh
 go test -p 1 ./honeydetect ./traffic -count=1
-go test -race -p 1 ./honeydetect ./traffic -run 'Test(Behavior|CaptureSwitch|SecurityProxyBlocksBeforeForwarding|TaskBudgetRealHTTPAndHTTPS|PolicyConcurrency)' -count=1
+go test -race -p 1 ./honeydetect ./traffic -run 'Test(Behavior|CaptureSwitch|Passthrough|MaybePassthrough|SecurityProxyBlocksBeforeForwarding|TaskBudgetRealHTTPAndHTTPS|PolicyConcurrency)' -count=1
 go test ./traffic -run '^$' -bench '^BenchmarkCredentialScan$' -benchmem -benchtime=200ms
 ```
 

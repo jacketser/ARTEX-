@@ -165,10 +165,6 @@ type Traffic struct {
 	// stopping() treats as "not closing".
 	closed    chan struct{}
 	closeOnce sync.Once
-	// pass is the set of hosts whose MITM interception failed for a proxy/protocol
-	// reason; connections to them are tunneled transparently (fail-open) so the
-	// request still reaches the target — unrecorded — instead of being killed.
-	pass sync.Map // hostname(string) -> struct{}
 	// upstream is the global egress proxy every captured request is forwarded
 	// through (nil = dial targets directly). Both the intercepted and the
 	// transparent-passthrough paths honor it (go-mitmproxy's getUpstreamConn),
@@ -223,11 +219,10 @@ func Open(dir, addr string) (*Traffic, error) {
 	// every captured request — intercepted AND transparently tunneled — is
 	// forwarded through it instead, so no host leaks the real source IP.
 	p.SetUpstreamProxy(func(*http.Request) (*url.URL, error) { return t.upstream.Load(), nil })
-	// Fail-open: MITM every host by default, EXCEPT ones a prior request proved we
-	// can't intercept without breaking (see maybePassthrough). Those are tunneled
-	// transparently so the request still reaches the target instead of being killed.
+	// Only a CONNECT explicitly admitted by the configured compatibility policy
+	// may bypass inspection. A later error cannot change this connection decision.
 	p.SetShouldInterceptRule(func(req *http.Request) bool {
-		_, tunnel := t.pass.Load(hostOnly(req.Host))
+		tunnel, _ := req.Context().Value(passthroughContextKey{}).(bool)
 		return !tunnel
 	})
 	p.SetAuthProxy(t.authenticateProxy)
@@ -401,26 +396,18 @@ func (s *sink) Response(f *mproxy.Flow) {
 	s.t.record(f)
 }
 
-// RequestError fires when a request through an established MITM tunnel fails. If
-// the failure looks proxy/protocol-caused (h2 quirks, HEAD-with-body, protocol
-// errors) — not a plain target-unreachable error — we flag the host for
-// transparent passthrough so future requests to it succeed instead of dying.
+// A protocol failure marks only this HTTPS authority. Subsequent CONNECTs use
+// the configured refusal/compatibility policy; the original request is not replayed.
 func (s *sink) RequestError(f *mproxy.Flow, err error) { s.t.maybePassthrough(f, err) }
 
-// maybePassthrough marks a host to be tunneled transparently on the next
-// connection, but only for errors the proxy itself caused — a target that is
-// simply down/filtered would fail without us too, and must stay MITM'd+recorded.
 func (t *Traffic) maybePassthrough(f *mproxy.Flow, err error) {
-	if err == nil || f == nil || f.Request == nil || f.Request.URL == nil || !proxyCausedErr(err) {
+	if err == nil || f == nil || f.Request == nil || f.Request.URL == nil || f.Request.URL.Scheme != "https" || !proxyCausedErr(err) {
 		return
 	}
-	host := f.Request.URL.Hostname()
-	if host == "" {
+	if f.Request.URL.Hostname() == "" {
 		return
 	}
-	if _, loaded := t.pass.LoadOrStore(host, struct{}{}); !loaded {
-		log.Printf("[traffic] 与 %s 的 MITM 出错，改为透传（该 host 后续直连目标、不再记录，但请求照常）：%v", host, err)
-	}
+	t.markUninspectable(canonicalAuthority(f.Request.URL), time.Now())
 }
 
 // proxyCausedErr reports whether err indicates the interception layer (not the

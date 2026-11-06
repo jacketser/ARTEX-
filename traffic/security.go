@@ -32,16 +32,18 @@ type hostWindow struct {
 	urls                map[[32]byte]int
 }
 type securityGuard struct {
-	mu          sync.Mutex
-	hosts       map[string]*hostWindow
-	tasks       map[string]*hostWindow
-	config      *SecurityConfig
-	allowed     atomic.Uint64
-	unavailable atomic.Bool
-	blocked     map[string]uint64
-	owners      sync.Map
-	taskKey     []byte
-	source      func(context.Context) ([]string, error)
+	mu                 sync.Mutex
+	hosts              map[string]*hostWindow
+	tasks              map[string]*hostWindow
+	config             *SecurityConfig
+	allowed            atomic.Uint64
+	unavailable        atomic.Bool
+	blocked            map[string]uint64
+	owners             sync.Map
+	taskKey            []byte
+	failedAuthorities  map[string]time.Time
+	passthroughAllowed uint64
+	source             func(context.Context) ([]string, error)
 }
 
 // SetSecretSource must be installed before serving traffic. Reads are bounded by

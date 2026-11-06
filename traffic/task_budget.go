@@ -67,6 +67,9 @@ func (t *Traffic) authenticateProxy(w http.ResponseWriter, r *http.Request) (boo
 		return false, err
 	}
 	*r = *r.WithContext(context.WithValue(r.Context(), taskProxyContextKey{}, id))
+	if r.Method == http.MethodConnect {
+		return t.admitConnect(w, r, id)
+	}
 	return true, nil
 }
 func (s *sink) flowTask(f *mproxy.Flow) (string, error) {

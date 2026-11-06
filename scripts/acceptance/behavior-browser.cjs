@@ -86,12 +86,54 @@ async function throughProxy(path, headers = {}) {
 				r.url().endsWith("/api/settings/proxy-security") &&
 				r.request().method() === "PUT",
 		);
-		await proxy.getByRole("button", { name: "保存代理限额" }).click();
+		await proxy.getByRole("button", { name: "保存代理安全设置" }).click();
 		assert.equal((await psaved).status(), 200);
 		const policy = await (
 			await ctx.request.get("/api/settings/proxy-security", { headers })
 		).json();
 		assert.equal(policy.task_requests_per_minute, 13);
+		assert.equal(policy.passthrough_mode, "block");
+		await proxy
+			.getByLabel("HTTPS 无法解析时", { exact: true })
+			.selectOption("allow");
+		await proxy.getByRole("note").waitFor();
+		const modeSaved = page.waitForResponse(
+			(r) =>
+				r.url().endsWith("/api/settings/proxy-security") &&
+				r.request().method() === "PUT",
+		);
+		await proxy.getByRole("button", { name: "保存代理安全设置" }).click();
+		assert.equal((await modeSaved).status(), 200);
+		await page.reload();
+		await page.waitForFunction(
+			() =>
+				document.querySelector("select")?.value === "allow" ||
+				[...document.querySelectorAll("select")].some(
+					(s) => s.value === "allow",
+				),
+		);
+		assert.equal(
+			await proxy.getByLabel("HTTPS 无法解析时", { exact: true }).inputValue(),
+			"allow",
+		);
+		const invalidMode = await ctx.request.put("/api/settings/proxy-security", {
+			headers,
+			data: { ...policy, passthrough_mode: "invalid" },
+		});
+		assert.equal(invalidMode.status(), 400);
+		assert.equal(
+			(
+				await (
+					await ctx.request.get("/api/settings/proxy-security", { headers })
+				).json()
+			).passthrough_mode,
+			"allow",
+		);
+		const restored = await ctx.request.put("/api/settings/proxy-security", {
+			headers,
+			data: policy,
+		});
+		assert.equal(restored.status(), 200);
 		// Invalid values cannot replace a valid saved policy.
 		const invalid = await ctx.request.put("/api/settings/proxy-security", {
 			headers,
@@ -231,6 +273,7 @@ async function throughProxy(path, headers = {}) {
 				requests: metrics.requests,
 				credentials_sent: metrics.credential_seen,
 				cooldown: duplicate.status(),
+				passthrough_policy_saved: true,
 				capture_off_protected: true,
 				capture_toggle_preserved_history: true,
 				page_errors: errors,
