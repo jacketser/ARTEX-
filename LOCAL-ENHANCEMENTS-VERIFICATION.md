@@ -6,9 +6,22 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-cff6317`，应用源码对应 `cff6317`，正式服务已更新。
-- 最新发布补齐格式 4 的复测、人工复核及审阅历史归档／恢复和脱敏；保留独立证据、报告和流量脱敏、旧目录迁移、分批维护、行为验证上游代理及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-074305e`，应用源码对应 `074305e`，正式服务已更新。
+- 最新发布修复恰好 5 MiB 正文的流量漏记，并建立完整代理链路负载基线；保留格式 4 历史归档恢复、脱敏维护、行为验证上游代理及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：完整代理负载基线与大正文漏记修复（2026-11-06）
+
+- 应用源码 `074305e`，正式版本 `dev-074305e`；测试等待期限适配及报告 `534bfab`。候选 `jacketser/artex:proxy-load-candidate`，镜像 ID `sha256:47f28fc1a1a9dc72bcc32e6f0b5e2db2aedf30d3bae9967872aeb800372ad5ad`。仅调整代理缓冲切换边界，无数据库、前端或依赖变更。
+- 隔离实际应用的 31 场景／36340 次正常合成请求零错误；目标计数、双向哈希、目标认证、上游路由及捕获记录数量均一致。另测混合 16 次正常请求和 64 次预期拒绝，以及一次主动配额拒绝。90 秒 HTTPS+上游+捕获负载完成 7194 次、约 79.9 请求/秒、p95 34.0 ms。
+- 进程 RSS 峰值 244.7 MiB、结束约 58.8 MiB；cgroup 总内存约 1 GiB，触发上限事件但无 OOM。保存开启的小正文吞吐明显降低，后续需做保存链路计时及缓存／磁盘观测。完整方法、各场景数据和适用限制见[负载报告](PROXY-LOAD-RESULTS.md)与[结构化结果](scripts/acceptance/results/proxy-load-20261106.json)，不据此承诺真实站点容量或长期无泄漏。
+- 旧镜像的 24 次恰好 5 MiB HTTP 请求成功转发却新增记录为 0，压测明确失败；定位到库在 >=5 MiB 时转为流式且跳过记录。将切换阈值移到请求硬上限加 1 字节后，候选 HTTP/HTTPS 各 24 次都完整保存，原请求上限保留。
+- `traffic` 全量回归通过：`/tmp/artex-proxy-load-regression.log` 前半段。该日志的初轮竞态测试因大正文 SQLite／脱敏被插桩后超过测试 20 秒期限而失败，无数据竞态报告；仅将该测试期限改为 90 秒后，捕获／防护／任务配额专项 race 通过：`/tmp/artex-proxy-load-race-final.log`。边界测试验证 Content-Length/chunked、HTTP/HTTPS、请求与响应恰好 5 MiB 的完整存储哈希及超限拒绝。
+- 编译／镜像日志：`/tmp/artex-proxy-load-compile.log`、`/tmp/artex-proxy-load-image.log`。最终实际负载日志 `/tmp/artex-proxy-load-final.log`，原始产物 `/tmp/artex-proxy-load-x5A4I7Dq/`。初轮隔离脚本监听配置修正和第二轮漏记失败见负载报告。测试容器、卷和内部网络均已清理；没有访问外部目标或正式业务数据。
+- 正式任务／归档为 0；停机备份 `/home/ARTEX/backups/pre-proxy-load-20261106-210711/`，dump 与文件包可读性校验通过，配置／JWT／初始登录文件哈希不变。活动流量、证据和旧目录迁移预览零记录／零变更。发布日志 `/tmp/artex-proxy-load-publish.log`。
+- 健康接口 `dev-074305e`，端口仍仅 `127.0.0.1:8787`。doctor 返回 0，唯一警告为未配置模型：`/tmp/artex-proxy-load-doctor.log`。本次没有修改正式捕获开关、请求配额或工具授权。
+- 回退镜像 `jacketser/artex:rollback-before-proxy-load` 对应 `dev-cff6317`，兼容现有数据库和格式 4 归档；回退将重新出现本次修复的边界漏记。
+- 主要待办：保存链路性能分析／优化、更长时间与真实文本索引／多任务负载；蜜罐真实样本评估；备份／导出／日志／会话等独立副本脱敏；大归档及无引用残留维护。
 
 ## 正式发布：复测与审阅历史归档恢复（2026-11-06）
 
