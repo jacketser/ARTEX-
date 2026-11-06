@@ -6,9 +6,24 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-074305e`，应用源码对应 `074305e`，正式服务已更新。
-- 最新发布修复恰好 5 MiB 正文的流量漏记，并建立完整代理链路负载基线；保留格式 4 历史归档恢复、脱敏维护、行为验证上游代理及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-4a56616`，应用源码对应 `4a56616`，正式服务已更新。
+- 最新发布增加有界流量合并提交、保存阶段统计和正文失败保护；保留 5 MiB 边界修复、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：保存阶段分析与有界合并提交（2026-11-06）
+
+- 应用源码 `4a56616`，正式版本 `dev-4a56616`。候选 `jacketser/artex:capture-batch-candidate`，镜像 ID `sha256:2da302f5c596c25085501ce8133d8e0b67f4b79268172de56756e5b12fa69b48`，与实际运行镜像一致。无数据库结构、归档格式、前端或依赖变更。
+- 先对旧保存实现增加累计阶段计时，确认小请求逐条提交和写锁等待是主要开销；再实现无定时等待的合并提交，同时接纳最多 16 条、按输入大小记账 32 MiB。保留同批事务和同步等待语义；预算不等于整个代理内存上限。
+- 两轮短对照各 4248 次请求零错误；16 并发小请求约提升 2.8～3.7 倍，合成文本约提升 31%～39%；单请求和大正文没有稳定收益，内存占用未降低。方法、计时口径和限制见[保存性能报告](CAPTURE-PERFORMANCE.md)。
+- 新增回归验证 SQL 失败整批回滚（包含共享 blob 引用与全文索引）、故障解除后恢复、正文文件错误不保存截断记录、捕获关闭再开启不补录旧代次、16 条／32 MiB 准入边界及关闭排空后重开计数。记录 ID 使用纳秒时间与不取模序号，避免高吞吐回绕覆盖。
+- `traffic` 全量回归通过：`/tmp/artex-capture-batch-tests.log`。`traffic` 全量 race 通过：`/tmp/artex-capture-batch-race.log`，包含恰好 5 MiB、HTTP/HTTPS、已知长度／chunked 及完整正文哈希回归。
+- 全新隔离 PostgreSQL 的完整 Go 回归通过：`/tmp/artex-capture-batch-full.log`；该日志末尾另包含补强共享正文引用断言后的批量回滚专项 race。未修改前端，未重复浏览器检查。测试数据库与网络已清理。
+- 正式源码实际镜像完整负载：31 场景、36337 次普通请求零错误；目标计数、双向哈希、目标认证、上游路由、捕获数量及保存计数一致，失败计数无增长。另有混合 16 次普通请求和 64 次预期拒绝，及一次主动配额拒绝。90 秒持续负载 7191 次、约 79.8 RPS、p95 27.3 ms。结果：[结构化数据](scripts/acceptance/results/capture-batch-full-20261106.json)，日志 `/tmp/artex-capture-batch-load.log`，原始目录 `/tmp/artex-proxy-load-b6J9WTRT/`。
+- 进程 RSS 峰值 312.5 MiB、空闲后 60.6 MiB；cgroup 峰值约 1024.1 MiB、结束约 1019.3 MiB，其中结束时文件缓存约 948.9 MiB、匿名内存约 40.4 MiB。触及上限 1200 次，无 OOM；不能据 90 秒结果断言长期容量充足。
+- 构建日志 `/tmp/artex-capture-batch-release-build.log`。正式任务／归档为 0；停机备份 `/home/ARTEX/backups/pre-capture-batch-20261106-213723/`，数据库 dump 与文件包可读性通过，环境、JWT 和初始登录文件哈希不变。活动流量／证据／旧目录预览均零记录、零变更，未重写正式内容。发布日志 `/tmp/artex-capture-batch-publish.log`。
+- 健康接口 `dev-4a56616`，管理端口仍仅 `127.0.0.1:8787`。doctor 返回 0，唯一警告为未配置模型：`/tmp/artex-capture-batch-doctor.log`。隔离压测容器、卷和网络已清理，其他服务器应用未变更。
+- 回退镜像 `jacketser/artex:rollback-before-capture-batch` 对应 `dev-074305e`，兼容新记录与既有归档格式；回退将失去合并提交、阶段指标和正文写入失败保护。文件先写后提交仍可能留下无引用文件，本轮没有新增断电保证或持久化失败重试队列。
+- 下一步优先数小时持续负载与真实文本语料，观察文件缓存／内存和尾延迟；多任务／更多协议、真实蜜罐评估、独立副本脱敏、大归档／无引用残留维护仍待完成。
 
 ## 正式发布：完整代理负载基线与大正文漏记修复（2026-11-06）
 
