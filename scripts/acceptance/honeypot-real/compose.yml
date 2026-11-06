@@ -1,0 +1,38 @@
+services:
+  canary-nas:
+    image: jacketser/artex:honeypot-eval
+    command: [/opt/opencanary/bin/opencanaryd, --dev]
+    environment:
+      PATH: /opt/opencanary/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/canary-nas.json:/etc/opencanaryd/opencanary.conf:ro
+    mem_limit: 192m
+    init: true
+  qhttp:
+    image: jacketser/artex:honeypot-eval
+    command: [/opt/qeeqbox/bin/python, -c, "from honeypots import QHTTPServer; QHTTPServer(ip='0.0.0.0', port=8080).run_server()"]
+    mem_limit: 192m
+    init: true
+  qhttps:
+    image: jacketser/artex:honeypot-eval
+    command: [/opt/qeeqbox/bin/python, -c, "from honeypots import QHTTPSServer; QHTTPSServer(ip='0.0.0.0', port=8443).run_server()"]
+    mem_limit: 192m
+    init: true
+  normal:
+    image: jacketser/artex:honeypot-eval
+    command: [nginx, -c, /fixtures/nginx.conf, -g, "daemon off;"]
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}:/fixtures:ro
+    mem_limit: 96m
+  driver:
+    image: jacketser/artex:local
+    entrypoint: [/output/honeypot-eval]
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}:/output
+    environment:
+      GOMAXPROCS: '2'
+    mem_limit: 256m
+    profiles: [driver]
+networks:
+  default:
+    internal: true
