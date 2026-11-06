@@ -24,6 +24,9 @@ func (d *DB) CompleteTaskArchive(
 	if snapshot == nil || snapshot.FormatVersion != TaskArchiveFormatVersion {
 		return ErrTaskArchiveFormatMismatch
 	}
+	if err := ValidateArchiveFindingHistory(snapshot); err != nil {
+		return err
+	}
 	countsRaw, err := json.Marshal(snapshot.DataCounts)
 	if err != nil {
 		return err
@@ -49,6 +52,9 @@ WHERE archive.id=$1 FOR UPDATE OF archive,task`, archiveID).Scan(&taskID, &expID
 	}
 	if state != Archiving || taskID != snapshot.TaskID || expID != snapshot.ExplorationID {
 		return fmt.Errorf("%w: archive snapshot identity/state mismatch", ErrTaskArchiveState)
+	}
+	if err := checkArchiveRetests(tx, taskID); err != nil {
+		return err
 	}
 	var dependent int64
 	err = tx.QueryRow(`SELECT child.id FROM task_relations relation
@@ -167,6 +173,9 @@ func (d *DB) restoreTaskArchive(
 	if snapshot == nil || !IsTaskArchiveFormatSupported(snapshot.FormatVersion) {
 		return nil, ErrTaskArchiveFormatMismatch
 	}
+	if err := ValidateArchiveFindingHistory(snapshot); err != nil {
+		return nil, err
+	}
 	streamedLLMRecords := snapshot.StreamedTables["llm_records"]
 	if (len(snapshot.StreamedTables) > 0 && snapshot.FormatVersion < 2) ||
 		len(snapshot.StreamedTables) > 1 ||
@@ -275,6 +284,11 @@ WHERE archive.id=$1 FOR UPDATE OF archive,task`, archiveID).Scan(&taskID, &expID
 	if err := restoreFindingTrafficTx(tx, snapshot); err != nil {
 		return nil, fmt.Errorf("restore finding traffic: %w", err)
 	}
+	historyWarnings, err := restoreArchiveFindingHistory(tx, snapshot)
+	if err != nil {
+		return nil, err
+	}
+	warnings = append(warnings, historyWarnings...)
 	if streamedLLMRecords != "" {
 		count, err := insertArchiveJSONSequenceRows(tx, "llm_records", llmRecords)
 		if err != nil {
@@ -389,6 +403,7 @@ func insertArchiveRows(tx *sql.Tx, table string, raw json.RawMessage) error {
 		"task_constraints": true, "activity": true, "task_asset_links": true, "findings": true,
 		"llm_records": true, "llm_usage": true, "skill_usage": true, "tool_usage": true,
 		"side_question_sessions": true, "side_question_requests": true,
+		"finding_retests": true, "finding_reviews": true, "finding_review_history": true,
 	}
 	if !allowed[table] {
 		return fmt.Errorf("archive restore table %q is not allowed", table)

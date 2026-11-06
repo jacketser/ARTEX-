@@ -28,7 +28,7 @@ func (s *Server) findingReview(w http.ResponseWriter, r *http.Request) {
 			switch {
 			case errors.Is(err, db.ErrFindingNotFound):
 				writeErr(w, 404, "漏洞不存在")
-			case errors.Is(err, db.ErrReviewStale):
+			case errors.Is(err, db.ErrReviewStale) || errors.Is(err, db.ErrTaskArchiveState):
 				writeErr(w, 409, err.Error())
 			default:
 				writeErr(w, 500, "保存复核失败")

@@ -139,7 +139,7 @@ func redactArchiveMembers(members []archiveMember, c archiveCatalog, p *plan) ([
 		TaskID  int64            `json:"task_id"`
 		Counts  map[string]int64 `json:"data_counts"`
 	}
-	if json.Unmarshal(files["manifest.json"], &manifest) != nil || manifest.TaskID != c.TaskID || manifest.Version != c.Version || c.Version < 1 || c.Version > 3 {
+	if json.Unmarshal(files["manifest.json"], &manifest) != nil || manifest.TaskID != c.TaskID || manifest.Version != c.Version || c.Version < 1 || c.Version > 4 {
 		return nil, errors.New("归档清单与目录不匹配或版本不受支持")
 	}
 	var snapshot traffic.ArchiveSnapshot

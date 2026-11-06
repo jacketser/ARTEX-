@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	TaskArchiveFormatVersion       = 3
+	TaskArchiveFormatVersion       = 4
 	TaskArchiveLegacyFormatVersion = 1
 	TaskArchiveLLMRecordsPath      = "database/llm_records.ndjson"
 )
@@ -41,6 +41,7 @@ const (
 var (
 	ErrTaskArchiveNotFound       = errors.New("task archive not found")
 	ErrTaskArchiveIneligible     = errors.New("task must be paused or terminal before archiving")
+	ErrTaskArchiveActiveRetest   = errors.New("任务存在进行中的复测，请先结束或停止复测再归档")
 	ErrTaskArchiveQueued         = errors.New("queued task must be paused before archiving")
 	ErrTaskArchiveDependent      = errors.New("task is inherited by a live task")
 	ErrTaskArchiveState          = errors.New("task archive state does not allow this operation")
@@ -244,6 +245,9 @@ WHERE t.id=$1 AND t.deleted_at IS NULL FOR UPDATE OF t`, taskID).Scan(
 	}
 	if !paused && !IsTerminal(status) {
 		return nil, ErrTaskArchiveIneligible
+	}
+	if err := checkArchiveRetests(tx, taskID); err != nil {
+		return nil, err
 	}
 	var dependent int64
 	err = tx.QueryRow(`SELECT child.id FROM task_relations relation
@@ -587,6 +591,9 @@ func (d *DB) snapshotTaskArchive(taskID int64, llmRecords io.Writer) (*TaskArchi
 		{"task_llm_profiles", `SELECT * FROM task_llm_profiles WHERE task_id=$1 ORDER BY position`, []any{taskID}},
 		{"task_scope", `SELECT * FROM task_scope WHERE task_id=$1 ORDER BY id`, []any{taskID}},
 		{"findings", `SELECT * FROM findings WHERE task_id=$1 ORDER BY id`, []any{taskID}},
+		{"finding_retests", `SELECT r.* FROM finding_retests r JOIN findings f ON f.id=r.finding_id WHERE f.task_id=$1 ORDER BY r.id`, []any{taskID}},
+		{"finding_reviews", `SELECT r.* FROM finding_reviews r JOIN findings f ON f.id=r.finding_id WHERE f.task_id=$1 ORDER BY r.finding_id`, []any{taskID}},
+		{"finding_review_history", `SELECT r.* FROM finding_review_history r JOIN findings f ON f.id=r.finding_id WHERE f.task_id=$1 ORDER BY r.id`, []any{taskID}},
 		{"finding_traffic_bindings", `SELECT b.* FROM finding_traffic_bindings b JOIN findings f ON f.id=b.finding_id WHERE f.task_id=$1 ORDER BY b.finding_id,b.position,b.id`, []any{taskID}},
 		{"traffic_evidence_snapshots", `SELECT s.* FROM traffic_evidence_snapshots s WHERE EXISTS(SELECT 1 FROM finding_traffic_bindings b JOIN findings f ON f.id=b.finding_id WHERE b.snapshot_id=s.id AND f.task_id=$1) ORDER BY s.id`, []any{taskID}},
 		{"llm_records", `SELECT * FROM llm_records WHERE COALESCE(task_id,'')=$1 ORDER BY id`, []any{strconv.FormatInt(taskID, 10)}},
@@ -649,6 +656,9 @@ func (d *DB) snapshotTaskArchive(taskID int64, llmRecords io.Writer) (*TaskArchi
 		ExplorationID: expID, SourceTaskIDs: sources, Hosts: hosts, ExclusiveHosts: exclusiveHosts,
 		ExclusiveAssetIDs: exclusiveAssetIDs, Tables: tables, StreamedTables: streamedTables,
 		DataCounts: counts, AggregateStats: stats,
+	}
+	if err := ValidateArchiveFindingHistory(snapshot); err != nil {
+		return nil, err
 	}
 	return snapshot, tx.Commit()
 }

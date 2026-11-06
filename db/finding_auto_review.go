@@ -73,6 +73,9 @@ func (d *DB) SaveAutomaticReview(ctx context.Context, id int64, fingerprint stri
 		return err
 	}
 	defer tx.Rollback()
+	if err := LockFindingEvidenceTx(tx, id, nil); err != nil {
+		return err
+	}
 	f := &DBFinding{}
 	err = tx.QueryRowContext(ctx, `SELECT evidence_version,vulnclass,severity,summary,evidence FROM findings WHERE id=$1 FOR UPDATE`, id).Scan(&f.EvidenceVersion, &f.VulnClass, &f.Severity, &f.Summary, &f.Evidence)
 	if err != nil {

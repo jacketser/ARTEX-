@@ -65,6 +65,9 @@ func (d *DB) SaveFindingReview(ctx context.Context, id int64, r FindingReview) e
 		return err
 	}
 	defer tx.Rollback()
+	if err := LockFindingEvidenceTx(tx, id, nil); err != nil {
+		return err
+	}
 	f := &DBFinding{}
 	err = tx.QueryRowContext(ctx, `SELECT evidence_version,vulnclass,severity,summary,evidence FROM findings WHERE id=$1 FOR UPDATE`, id).Scan(&f.EvidenceVersion, &f.VulnClass, &f.Severity, &f.Summary, &f.Evidence)
 	if errors.Is(err, sql.ErrNoRows) {

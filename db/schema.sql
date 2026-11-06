@@ -580,7 +580,7 @@ CREATE TABLE IF NOT EXISTS task_archives (
     progress                   INTEGER NOT NULL DEFAULT 0 CHECK (progress BETWEEN 0 AND 100),
     error                      TEXT NOT NULL DEFAULT '',
     warnings                   JSONB NOT NULL DEFAULT '[]',
-    format_version             INTEGER NOT NULL DEFAULT 2,
+    format_version             INTEGER NOT NULL DEFAULT 4,
     archive_path               TEXT NOT NULL DEFAULT '',
     sha256                     TEXT NOT NULL DEFAULT '',
     original_size              BIGINT NOT NULL DEFAULT 0,
@@ -600,7 +600,7 @@ CREATE TABLE IF NOT EXISTS task_archives (
     created_at                 TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                 TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-ALTER TABLE task_archives ALTER COLUMN format_version SET DEFAULT 2;
+ALTER TABLE task_archives ALTER COLUMN format_version SET DEFAULT 4;
 CREATE INDEX IF NOT EXISTS idx_task_archives_state ON task_archives(state, requested_at, id);
 CREATE INDEX IF NOT EXISTS idx_task_archives_archived ON task_archives(archived_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_task_archives_sources ON task_archives USING GIN(source_task_ids);
@@ -1462,6 +1462,8 @@ CREATE TABLE IF NOT EXISTS finding_review_history (
 CREATE INDEX IF NOT EXISTS idx_finding_review_history ON finding_review_history(finding_id,id DESC);
 CREATE OR REPLACE FUNCTION archive_manual_review() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+ -- Restore replays the saved ledger itself, in this transaction only.
+ IF current_setting('artex.restoring_finding_history', true)='on' THEN RETURN NEW; END IF;
  INSERT INTO finding_review_history(finding_id,kind,fingerprint,result) VALUES(NEW.finding_id,'manual',NEW.fingerprint,to_jsonb(NEW));
  RETURN NEW;
 END; $$;

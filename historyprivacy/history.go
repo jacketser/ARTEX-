@@ -209,8 +209,8 @@ func Run(ctx context.Context, opts Options) (Report, error) {
 	if isArchiveScope(opts.Scope) {
 		r.Limitations[0] = "仅处理指定冷归档的流量副本；归档证据、报告、会话、任务文件及活动库和备份不处理"
 		if opts.Scope == "archive-evidence" {
-			r.Limitations[0] = "仅处理指定冷归档的漏洞名称、摘要、证据、报告、流量快照和绑定备注；活动库、归档普通流量、会话、任务文件及备份不处理"
-			r.Limitations = append(r.Limitations, "当前归档格式不保存复测和审阅历史；不会补造缺失内容，含这些扩展表的未知归档须另行核查")
+			r.Limitations[0] = "仅处理指定冷归档的漏洞名称、摘要、证据、报告、流量快照、绑定备注以及 v4 复测和审阅历史；活动库、归档普通流量、会话、任务文件及备份不处理"
+			r.Limitations = append(r.Limitations, "格式 1–3 未保存复测和审阅历史，不会补造缺失内容；格式 4 支持这些历史，其他扩展仍须核查")
 		}
 		r.Limitations = append(r.Limitations, "单包维护不支持游标；提交中断可能遗留未引用的旧包或候选包，须核对目录与备份")
 	}

@@ -69,7 +69,17 @@ if sys.argv[1].startswith('seed'):
         binding = dict(id=9007199254740995, finding_id=finding['id'], snapshot_id=snapshot['id'],
                        role='proof', note=body.decode(), position=0, created_at='2026-01-01T00:00:00Z')
         tables = dict(findings=[finding], traffic_evidence_snapshots=[snapshot], finding_traffic_bindings=[binding])
-        members['manifest.json'] = json.dumps(dict(format_version=3, task_id=archive_id, tables=tables,
+        historical_time = '2026-01-01T00:00:00Z'
+        tables['finding_retests'] = [dict(id=9007199254740996, finding_id=finding['id'],
+            conversation_id=None, status='completed', verdict='inconclusive', notes=body.decode(),
+            snapshot=json.loads(body), summary=body.decode(), evidence=body.decode(), error='',
+            created_at=historical_time, started_at=historical_time, finished_at=historical_time)]
+        tables['finding_reviews'] = [dict(finding_id=finding['id'], fingerprint='original-fingerprint',
+            verdict='inconclusive', sources=body.decode(), reproduction=body.decode(),
+            counter_evidence=body.decode(), limitations=body.decode(), updated_at=historical_time)]
+        tables['finding_review_history'] = [dict(id=9007199254740997, finding_id=finding['id'],
+            kind='automatic', fingerprint='original-fingerprint', result=json.loads(body), created_at=historical_time)]
+        members['manifest.json'] = json.dumps(dict(format_version=4, task_id=archive_id, tables=tables,
                                                    data_counts={**{k: len(v) for k, v in tables.items()}, 'traffic': 1})).encode()
         members[evidence_path(empty_hash)] = b''
         members[evidence_path(digest)] = body
@@ -92,7 +102,7 @@ INSERT INTO explorations(id,goal) VALUES({archive_id},'synthetic archive');
 INSERT INTO tasks(id,description,goal,exploration_id,status,archived_at,deleted_at)
  VALUES({archive_id},'synthetic archive','fixture',{archive_id},'done',now(),now());
 INSERT INTO task_archives(id,task_id,state,format_version,archive_path,sha256,original_size,compressed_size)
- VALUES({archive_id},{archive_id},'ready',3,'/app/data/archives/tasks/{original_name}',
+ VALUES({archive_id},{archive_id},'ready',{4 if evidence else 3},'/app/data/archives/tasks/{original_name}',
  '{hashlib.sha256(packed).hexdigest()}',{sum(map(len,members.values()))},{len(packed)});
 """)
 else:
@@ -108,7 +118,21 @@ else:
         if evidence:
             manifest_raw = archive.extractfile('manifest.json').read()
             assert b'synthetic-archive-only' not in manifest_raw
-            tables = json.loads(manifest_raw)['tables']
+            manifest = json.loads(manifest_raw)
+            assert manifest['format_version'] == 4
+            tables = manifest['tables']
+            for name in ('finding_retests', 'finding_reviews', 'finding_review_history'):
+                assert manifest['data_counts'][name] == 1 and len(tables[name]) == 1
+                assert tables[name][0]['finding_id'] == 9007199254740993
+            retest = tables['finding_retests'][0]
+            assert retest['id'] == 9007199254740996 and retest['status'] == 'completed'
+            assert retest['conversation_id'] is None and retest['snapshot']['number'] == 9007199254740993
+            assert retest['finished_at'] == '2026-01-01T00:00:00Z'
+            assert tables['finding_reviews'][0]['fingerprint'] == 'original-fingerprint'
+            history = tables['finding_review_history'][0]
+            assert history['id'] == 9007199254740997 and history['fingerprint'] == 'original-fingerprint'
+            assert history['result']['number'] == 9007199254740993
+            assert history['kind'] == 'automatic' and history['created_at'] == retest['finished_at']
             finding = tables['findings'][0]
             assert finding['id'] == 9007199254740993 and finding['status'] == 'confirmed'
             assert finding['evidence_version'] == 8 and finding['report_evidence_version'] == 7

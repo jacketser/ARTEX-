@@ -181,7 +181,7 @@ docker exec -i "$privacy_pg" psql -U verify -d verify -v ON_ERROR_STOP=1 < "$pri
 docker exec "$privacy_pg" pg_dump -U verify -d verify -Fc > "$privacy_work/backup/postgres.dump"
 tar -czf "$privacy_work/backup/files.tar.gz" -C "$privacy_work" data
 cli -scope archive-evidence -archive-id 900000002 > "$privacy_work/archive-evidence-preview.json"
-evidence_fp=$(python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["rows"]==3 and r["changes"]==3 and not r["applied"]; print(r["fingerprint"])' "$privacy_work/archive-evidence-preview.json")
+evidence_fp=$(python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["rows"]==6 and r["changes"]==6 and not r["applied"]; print(r["fingerprint"])' "$privacy_work/archive-evidence-preview.json")
 cli -scope archive-evidence -archive-id 900000002 -apply "$evidence_fp" -backup /backup > "$privacy_work/archive-evidence-applied.json"
 cli -scope archive-evidence -archive-id 900000002 > "$privacy_work/archive-evidence-after.json"
 docker exec "$privacy_pg" psql -U verify -d verify -Atc "SELECT json_build_object('path',archive_path,'sha256',sha256,'original_size',original_size,'compressed_size',compressed_size) FROM task_archives WHERE id=900000002" > "$privacy_work/archive-evidence-catalog.json"

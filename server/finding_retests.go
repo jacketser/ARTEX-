@@ -117,8 +117,12 @@ func (s *Server) startFindingRetest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	retest, conv, created, err := pg.CreateFindingRetest(r.Context(), id, req.Notes)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, db.ErrFindingNotFound) {
 		writeErr(w, 404, "finding not found")
+		return
+	}
+	if errors.Is(err, db.ErrTaskArchiveState) {
+		writeErr(w, 409, "任务正在归档，不能发起复测")
 		return
 	}
 	if err != nil {

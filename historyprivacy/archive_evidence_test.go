@@ -306,3 +306,54 @@ func TestArchiveEvidenceSharedBodyAndSingleVersionIncrement(t *testing.T) {
 		t.Fatal("shared bodies not deduplicated", blobs)
 	}
 }
+
+func TestArchiveEvidenceV4HistoryRedaction(t *testing.T) {
+	m, _ := evidenceMembers(t, 42)
+	manifest, tables := evidenceManifest(t, m)
+	fid := int64(9007199254740993)
+	row := func(values map[string]any) archiveRow {
+		r := archiveRow{}
+		for k, v := range values {
+			setArchiveField(r, k, v)
+		}
+		return r
+	}
+	tables["finding_retests"] = []archiveRow{row(map[string]any{"id": fid + 10, "finding_id": fid, "conversation_id": nil, "status": "completed", "verdict": "inconclusive", "notes": testSecret, "summary": testSecret, "evidence": testSecret, "error": testSecret, "snapshot": map[string]any{"token": "nested-secret", "n": fid, "summary": testSecret}, "created_at": "2026-01-01T00:00:00Z", "finished_at": "2026-01-02T00:00:00Z"})}
+	tables["finding_reviews"] = []archiveRow{row(map[string]any{"finding_id": fid, "fingerprint": "original-historical-fingerprint", "verdict": "inconclusive", "sources": testSecret, "reproduction": testSecret, "counter_evidence": testSecret, "limitations": testSecret, "updated_at": "2026-01-01T00:00:00Z"})}
+	tables["finding_review_history"] = []archiveRow{row(map[string]any{"id": fid + 20, "finding_id": fid, "kind": "automatic", "fingerprint": "original-historical-fingerprint", "result": map[string]any{"token": "nested-secret", "n": fid, "note": testSecret}, "created_at": "2026-01-01T00:00:00Z"})}
+	counts := map[string]int64{}
+	for name, rows := range tables {
+		counts[name] = int64(len(rows))
+	}
+	setArchiveField(manifest, "format_version", 4)
+	setArchiveField(manifest, "data_counts", counts)
+	saveEvidenceManifest(t, m, manifest, tables)
+	p := &plan{secrets: []string{testSecret}}
+	safe, e := redactArchiveEvidence(m, archiveCatalog{TaskID: 42, Version: 4}, p)
+	if e != nil || p.report.Rows != 6 || p.report.Changes != 6 {
+		t.Fatal(p.report, e)
+	}
+	_, out := evidenceManifest(t, safe)
+	for _, name := range []string{"finding_retests", "finding_reviews", "finding_review_history"} {
+		raw, _ := json.Marshal(out[name])
+		if bytes.Contains(raw, []byte(testSecret)) || bytes.Contains(raw, []byte("nested-secret")) {
+			t.Fatal("history secret retained", name)
+		}
+		for _, key := range []string{"id", "finding_id", "conversation_id", "status", "verdict", "fingerprint", "kind", "created_at", "finished_at", "updated_at"} {
+			if !bytes.Equal(tables[name][0][key], out[name][0][key]) {
+				t.Fatal("historical metadata changed", name, key)
+			}
+		}
+	}
+	if !bytes.Contains(out["finding_retests"][0]["snapshot"], []byte("9007199254740993")) || !bytes.Contains(out["finding_review_history"][0]["result"], []byte("9007199254740993")) {
+		t.Fatal("nested integer precision lost")
+	}
+	ev, _ := rowInt(out["findings"][0], "evidence_version", false)
+	if ev != 8 {
+		t.Fatal("version incremented repeatedly", ev)
+	}
+	again := &plan{secrets: []string{testSecret}}
+	if _, e = redactArchiveEvidence(safe, archiveCatalog{TaskID: 42, Version: 4}, again); e != nil || again.report.Changes != 0 {
+		t.Fatal("history redaction not idempotent", again.report, e)
+	}
+}

@@ -27,7 +27,7 @@ func (s *Server) findingAutoReview(w http.ResponseWriter, r *http.Request) {
 	fingerprint := db.FindingFingerprint(f)
 	if r.Method == http.MethodPost {
 		if err := s.m.pg.SaveAutomaticReview(r.Context(), id, fingerprint, review); err != nil {
-			if errors.Is(err, db.ErrReviewStale) {
+			if errors.Is(err, db.ErrReviewStale) || errors.Is(err, db.ErrTaskArchiveState) {
 				writeErr(w, 409, err.Error())
 			} else {
 				writeErr(w, 500, "保存审阅历史失败")

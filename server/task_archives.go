@@ -719,6 +719,7 @@ func writeArchiveError(w http.ResponseWriter, err error) {
 		status = http.StatusNotFound
 	} else if !errors.Is(err, pgdb.ErrTaskArchiveIneligible) &&
 		!errors.Is(err, pgdb.ErrTaskArchiveQueued) &&
+		!errors.Is(err, pgdb.ErrTaskArchiveActiveRetest) &&
 		!errors.Is(err, pgdb.ErrTaskArchiveDependent) &&
 		!errors.Is(err, pgdb.ErrTaskArchiveState) &&
 		!errors.Is(err, pgdb.ErrTaskArchiveDeleteBlocked) {

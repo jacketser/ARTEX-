@@ -2,6 +2,7 @@ package historyprivacy
 
 import (
 	"archive/tar"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -63,7 +64,7 @@ func redactArchiveEvidence(members []archiveMember, c archiveCatalog, p *plan) (
 		return nil, errors.New("归档清单无效")
 	}
 	version, e := rowInt(manifest, "format_version", false)
-	if e != nil || version != int64(c.Version) || version < 1 || version > 3 {
+	if e != nil || version != int64(c.Version) || version < 1 || version > 4 {
 		return nil, errors.New("归档版本不匹配")
 	}
 	taskID, e := rowInt(manifest, "task_id", false)
@@ -79,19 +80,19 @@ func redactArchiveEvidence(members []archiveMember, c archiveCatalog, p *plan) (
 	if raw, ok := manifest["streamed_tables"]; ok && json.Unmarshal(raw, &streamed) != nil {
 		return nil, errors.New("归档流式表清单无效")
 	}
-	// Current writers do not archive these tables and current restorers cannot
-	// restore them. Refuse fork-specific extensions instead of claiming coverage.
-	for _, name := range []string{"finding_retests", "finding_reviews", "finding_review_history"} {
-		var rows []json.RawMessage
-		if raw, ok := tables[name]; ok && (json.Unmarshal(raw, &rows) != nil || len(rows) > 0) {
-			return nil, errors.New("归档含不受支持的复测或审阅扩展表")
-		}
-		if _, ok := streamed[name]; ok || counts[name] != 0 {
-			return nil, errors.New("归档含不受支持的复测或审阅扩展表")
-		}
+	var snapshot db.TaskArchiveSnapshot
+	if e = json.Unmarshal(files["manifest.json"], &snapshot); e != nil {
+		return nil, errors.New("归档证据清单无效")
+	}
+	if e = db.ValidateArchiveFindingHistory(&snapshot); e != nil {
+		return nil, errors.New("归档复测或审阅格式、计数或归属无效")
+	}
+	tableNames := []string{"findings", "traffic_evidence_snapshots", "finding_traffic_bindings"}
+	if c.Version >= 4 {
+		tableNames = append(tableNames, "finding_retests", "finding_reviews", "finding_review_history")
 	}
 	rows := map[string][]archiveRow{}
-	for _, name := range []string{"findings", "traffic_evidence_snapshots", "finding_traffic_bindings"} {
+	for _, name := range tableNames {
 		if _, ok := streamed[name]; ok {
 			return nil, errors.New("归档证据不支持流式扩展格式")
 		}
@@ -269,6 +270,57 @@ func redactArchiveEvidence(members []archiveMember, c archiveCatalog, p *plan) (
 	if len(refs) != len(oldToNew) {
 		return nil, errors.New("归档含未绑定的证据快照")
 	}
+	for _, spec := range evidenceTextTables[1:4] {
+		allowed := map[string]string{
+			"finding_retests":        "id finding_id conversation_id status verdict notes snapshot summary evidence error created_at started_at finished_at",
+			"finding_reviews":        "finding_id fingerprint verdict sources reproduction counter_evidence limitations updated_at",
+			"finding_review_history": "id finding_id kind fingerprint result created_at",
+		}
+		for _, row := range rows[spec.table] {
+			if e = checkArchiveFields(row, allowed[spec.table]); e != nil {
+				return nil, e
+			}
+			fid, e := rowInt(row, "finding_id", false)
+			if e != nil || findings[fid] == nil {
+				return nil, errors.New("归档历史关联漏洞无效")
+			}
+			changed := false
+			for _, field := range spec.fields {
+				if spec.jsonFields[field] {
+					raw, ok := row[field]
+					if !ok || !json.Valid(raw) {
+						return nil, errors.New("归档历史 JSON 无效")
+					}
+					safe := traffic.HistoricalText(string(raw), p.secrets)
+					if !json.Valid([]byte(safe)) {
+						return nil, errors.New("脱敏后历史 JSON 无效")
+					}
+					// Formatting alone must not make a repeat operation stale.
+					var before, after bytes.Buffer
+					json.Compact(&before, raw)
+					json.Compact(&after, []byte(safe))
+					if !bytes.Equal(before.Bytes(), after.Bytes()) {
+						row[field] = json.RawMessage(safe)
+						changed = true
+					}
+				} else {
+					text, e := rowString(row, field, false)
+					if e != nil {
+						return nil, e
+					}
+					safe := traffic.HistoricalText(text, p.secrets)
+					if safe != text {
+						setArchiveField(row, field, safe)
+						changed = true
+					}
+				}
+			}
+			if changed {
+				changedFindings[fid] = true
+				p.report.Changes++
+			}
+		}
+	}
 	for fid := range changedFindings {
 		row := findings[fid]
 		ev, _ := rowInt(row, "evidence_version", true)
@@ -283,7 +335,7 @@ func redactArchiveEvidence(members []archiveMember, c archiveCatalog, p *plan) (
 	if p.report.Changes == 0 {
 		return members, nil
 	}
-	for _, name := range []string{"findings", "traffic_evidence_snapshots", "finding_traffic_bindings"} {
+	for _, name := range tableNames {
 		if len(rows[name]) > 0 {
 			for _, row := range rows[name] {
 				encoded, err := json.Marshal(row)
