@@ -342,7 +342,7 @@ export default function TrafficPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">流量</h1>
-          <p className="text-muted-foreground text-sm">全局录制代理 · 所有 HTTP 往来</p>
+          <p className="text-muted-foreground text-sm">经安全代理保存的 HTTP 流量</p>
         </div>
         <div className="flex items-center gap-4 text-sm">
           <span
@@ -354,7 +354,7 @@ export default function TrafficPage() {
             )}
           >
             <RadioTowerIcon className="size-3.5" />
-            {traffic?.enabled ? "录制中" : "已停用"}
+            {traffic?.enabled ? "录制中" : "保存已关闭"}
           </span>
           {traffic?.proxy && <span className="font-mono text-xs text-muted-foreground">{traffic.proxy}</span>}
           <span className="text-xs text-muted-foreground">

@@ -3,6 +3,7 @@ package traffic
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -91,12 +92,15 @@ func TestSecurityRedactionDoesNotAlterWire(t *testing.T) {
 // chunked requests larger than go-mitmproxy's normal streaming cutoff.
 func TestSecurityProxyBlocksBeforeForwarding(t *testing.T) {
 	var reached atomic.Int32
-	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reached.Add(1)
 		io.Copy(io.Discard, r.Body)
 		w.Write([]byte("ok"))
-	}))
+	})
+	target := httptest.NewServer(handler)
 	defer target.Close()
+	secure := httptest.NewTLSServer(handler)
+	defer secure.Close()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -123,25 +127,59 @@ func TestSecurityProxyBlocksBeforeForwarding(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	u, _ := url.Parse("http://" + addr)
-	transport := &http.Transport{Proxy: http.ProxyURL(u)}
+	transport := &http.Transport{Proxy: http.ProxyURL(u), TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} // isolated synthetic TLS target
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
-	for _, tc := range []struct {
-		body string
-		code int
-	}{{"platform-secret-123456", 403}, {strings.Repeat("x", maxGuardBody+1), 413}, {`{"message":"normal"}`, 200}} {
-		req, _ := http.NewRequest("POST", target.URL, io.NopCloser(strings.NewReader(tc.body)))
-		resp, e := client.Do(req)
+	for _, origin := range []string{target.URL, secure.URL} {
+		for _, tc := range []struct {
+			name, body, suffix, header string
+			code                       int
+		}{
+			{"body", "platform-secret-123456", "", "", 403},
+			{"json-escaped", `{"key":"\u0070latform-secret-123456"}`, "", "", 403},
+			{"url", "", "?key=platform-secret-123456", "", 403},
+			{"header", "", "", "platform-secret-123456", 403},
+			{"chunked-oversize", strings.Repeat("x", maxGuardBody+1), "", "", 413},
+			{"ordinary-target-auth", `{"message":"normal"}`, "", "target-authorized", 200},
+		} {
+			t.Run(origin[:strings.Index(origin, ":")]+"/"+tc.name, func(t *testing.T) {
+				before := reached.Load()
+				req, _ := http.NewRequest("POST", origin+tc.suffix, io.NopCloser(strings.NewReader(tc.body)))
+				if tc.header != "" {
+					req.Header.Set("Authorization", "Bearer "+tc.header)
+				}
+				resp, e := client.Do(req)
+				if e != nil {
+					t.Fatal(e)
+				}
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+				if resp.StatusCode != tc.code {
+					t.Fatalf("code=%d want %d", resp.StatusCode, tc.code)
+				}
+				want := before
+				if tc.code == 200 {
+					want++
+				}
+				if reached.Load() != want {
+					t.Fatal("unexpected target request", reached.Load(), want)
+				}
+			})
+		}
+	}
+	tr.SetSecretSource(func(context.Context) ([]string, error) { return nil, errors.New("isolated credential-store failure") })
+	for _, origin := range []string{target.URL, secure.URL} {
+		resp, e := client.Get(origin)
 		if e != nil {
 			t.Fatal(e)
 		}
 		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
-		if resp.StatusCode != tc.code {
-			t.Fatalf("code=%d want %d", resp.StatusCode, tc.code)
+		if resp.StatusCode != 503 {
+			t.Fatalf("credential-store failure must block, got %d", resp.StatusCode)
 		}
 	}
-	if reached.Load() != 1 {
+	if reached.Load() != 2 {
 		t.Fatalf("target received %d requests", reached.Load())
 	}
 }

@@ -287,17 +287,17 @@ export default function SystemSettingsPage() {
               流量捕获
             </CardTitle>
             <CardDescription>
-              开启后，经记录代理的 HTTP 流量会在凭据脱敏后保存，并向 Agent 注入 traffic_search / traffic_get
-              工具与代理配置。代理会拦截平台密钥外发、限制重复抓取，缺少 UA 时补齐固定值；仅覆盖实际经过代理且可解析的 HTTP 请求。
-              超过 5 MiB 的请求被拒绝；脱敏或省略的内容无法用于原文比对。
+              此开关只控制流量保存及 Agent 的流量查询工具。开启后，经安全代理的 HTTP 流量在凭据脱敏后保存；
+              脱敏或省略的内容无法用于原文比对。
               <br />
-              关闭（默认）时不记录任何流量：Agent
-              <b>不会</b>拿到代理配置与流量工具，提示词也<b>不含</b>代理相关内容。切换后会即时重建 Agent 生效。
+              关闭（默认）时不新增流量记录，已有记录保留。Agent 和内置浏览器仍经安全代理出网，
+              保留平台凭据外发检查、请求限额和正文大小限制。仅覆盖实际经过代理且可解析的 HTTP 请求。
+              切换时正在处理的请求不会跨开关状态补录；流量查询工具随 Agent 重建生效。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4">
             <Label htmlFor="traffic-capture" className="text-sm font-normal text-muted-foreground">
-              {trafficCapture ? "已开启 · 正在记录流量并注入代理" : "已关闭 · 不记录、不注入代理"}
+              {trafficCapture ? "已开启 · 脱敏后保存流量" : "已关闭 · 不保存流量，代理防护保留"}
             </Label>
             <Switch
               id="traffic-capture"
@@ -371,12 +371,9 @@ export default function SystemSettingsPage() {
               所有 Agent 的<b>目标流量</b>经此代理出网（隐藏源 IP / 走跳板）。支持 <b>http / https / socks5</b>，可带{" "}
               <code>user:pass</code> 认证。留空=直连。
               <br />
-              开启<b>流量捕获</b>时，它作为记录代理的<b>上游</b>（可记录流量脱敏保存，再经此代理出网）；关闭捕获时，直接注入
-              Agent 的 bash / WebFetch 出网。与网络搜索代理、LLM 代理相互独立。
-              <br />
-              <b>提示</b>：socks5 在<b>关闭捕获</b>时依赖各命令行工具对 <code>ALL_PROXY</code> 的支持（curl
-              可用，部分工具可能忽略）； 若主要用 socks5，建议开启流量捕获——此路径由 MITM
-              亲自拨号，工具无感知、稳定生效。
+              它作为安全代理的<b>上游</b>，流量捕获开启或关闭时均先经过安全检查，再经此代理出网。
+              http / https / socks5 上游由安全代理统一连接。与网络搜索代理、LLM 代理相互独立。
+              自行直连或不遵循代理配置的工具仍不受此路径保护。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">

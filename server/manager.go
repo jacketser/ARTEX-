@@ -379,10 +379,12 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 		log.Printf("[llmusage] create table: %v", err)
 	}
 	m := &Manager{dir: dir, pg: pg, assets: pg.Assets(), tasks: map[string]*Task{}, interceptor: intercept.New(pg)}
+	m.trafficOn = pg.GetBool(settingTrafficCapture, false)
 	if proxyAddr != "" {
 		tr, err := traffic.Open(filepath.Join(dir, "traffic"), proxyAddr)
 		if err != nil {
-			log.Printf("[traffic] disabled: %v", err)
+			_ = pg.Close()
+			return nil, fmt.Errorf("open security proxy: %w", err)
 		} else {
 			err = tr.RecoverHostDeleteStages(func(_ int64, taskID int64) (bool, error) {
 				if taskID <= 0 {
@@ -404,6 +406,7 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 		}
 		if tr != nil {
 			m.traffic = tr
+			tr.SetCaptureEnabled(m.trafficOn)
 			m.applyProxySecurity()
 			tr.SetSecretSource(m.trafficSecrets)
 			go func() {
@@ -414,9 +417,7 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 			}()
 		}
 	}
-	// Asset auto-completion engine (§5): HTTP probes routed through the recording
-	// proxy (via m.ProxyAddr, which honors the traffic-capture toggle).
-	m.trafficOn = pg.GetBool(settingTrafficCapture, false)
+	// Target requests use the security proxy even when persistence is disabled.
 	// LLM 录制开关（默认关）。录制器每次调用时读取此标志。
 	m.llmRecOn = pg.GetBool(settingLLMRecord, false)
 	// Load persisted web-search config (default: off, ddgs).
@@ -435,9 +436,7 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 	if v, ok, _ := pg.GetSetting(settingWebSearchProxy); ok {
 		m.webSearchProxy = v
 	}
-	// Global egress proxy (default: direct). When capture is on, feed it to the
-	// MITM as its upstream so recorded traffic exits through it; when capture is
-	// off, ProxyAddr hands it to agents directly (bash env / WebFetch).
+	// Global egress proxy remains the security proxy upstream in both capture modes.
 	if v, ok, _ := pg.GetSetting(settingGlobalProxy); ok {
 		m.globalProxy = strings.TrimSpace(v)
 	}
@@ -447,14 +446,12 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 		}
 	}
 	m.enrich = enrich.New(m.assets, m.ProxyAddr, 4)
-	// Reconcile the seeded browser MCP with the persisted capture state, so a
-	// restart with capture already on keeps Playwright routed through the proxy.
+	// Keep the seeded browser MCP routed through the security proxy on restart.
 	m.syncBrowserMCPProxy()
 	return m, nil
 }
 
-// TrafficEnabled reports whether traffic capture is on (default off). When off,
-// no proxy/traffic tools/prompt are injected into agents (nothing is recorded).
+// TrafficEnabled reports persistence/tool availability (default off), not proxy routing.
 func (m *Manager) TrafficEnabled() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -468,12 +465,12 @@ func (m *Manager) SetTrafficEnabled(on bool) error {
 		return err
 	}
 	m.mu.Lock()
+	if m.traffic != nil {
+		m.traffic.SetCaptureEnabled(on)
+	}
 	m.trafficOn = on
 	m.mu.Unlock()
-	// Inject (on) or strip (off) the recording proxy + CA on the browser MCP so
-	// Playwright routes through the MITM. Must run after the flag flip above, since
-	// ProxyAddr/ProxyCACert honor it. putSettings rebuilds agents next (applyLLM),
-	// which re-spawns the MCP with the new args/env.
+	// Reconcile browser routing; capture changes never remove its proxy or CA.
 	m.syncBrowserMCPProxy()
 	return nil
 }
@@ -639,11 +636,8 @@ func (m *Manager) SetWebSearch(on bool, backend string, braveKey, tavilyKey, pro
 // in sync with the traffic-capture toggle.
 const browserMCPName = "browser"
 
-// syncBrowserMCPProxy reconciles the seeded browser MCP's proxy args + CA env with
-// the current traffic-capture state: capture on → route Playwright through the
-// recording proxy (--proxy-server) and trust its MITM CA (NODE_EXTRA_CA_CERTS);
-// capture off → strip both. Idempotent, and a no-op if the user deleted/renamed the
-// MCP. Must be called WITHOUT m.mu held (ProxyAddr/ProxyCACert take the lock).
+// syncBrowserMCPProxy keeps the seeded browser on the security proxy regardless
+// of persistence. A deleted/renamed MCP is left untouched. Call without m.mu held.
 func (m *Manager) syncBrowserMCPProxy() {
 	servers, err := m.pg.ListMCP()
 	if err != nil {
@@ -661,8 +655,8 @@ func (m *Manager) syncBrowserMCPProxy() {
 		return // user removed/renamed it — leave it alone
 	}
 
-	proxy := m.ProxyAddr()  // "" when capture off
-	cert := m.ProxyCACert() // "" when capture off
+	proxy := m.ProxyAddr()
+	cert := m.ProxyCACert()
 
 	args := stripProxyArgs(decodeStrSlice(srv.Args))
 	env := decodeStrMap(srv.Env)
@@ -680,9 +674,9 @@ func (m *Manager) syncBrowserMCPProxy() {
 		return
 	}
 	if proxy != "" {
-		log.Printf("[mcp] browser MCP 已挂捕获代理 %s (CA %s)", proxy, cert)
+		log.Printf("[mcp] browser MCP 已挂安全代理 %s (CA %s)", proxy, cert)
 	} else {
-		log.Printf("[mcp] browser MCP 已移除捕获代理配置")
+		log.Printf("[mcp] browser MCP 未配置安全代理")
 	}
 }
 
@@ -744,22 +738,16 @@ func (m *Manager) Assets() *pgdb.AssetStore  { return m.assets }
 func (m *Manager) PG() *pgdb.DB              { return m.pg }
 func (m *Manager) Traffic() *traffic.Traffic { return m.traffic }
 
-// ProxyAddr returns the egress proxy address agents route target traffic through:
-//   - capture ON  → the recording MITM proxy (which itself exits via the global
-//     proxy when one is set); agents also get its CA (see ProxyCACert).
-//   - capture OFF → the global egress proxy directly (empty CA — real target
-//     certs), or "" when no global proxy is set (direct, no recording).
-//
-// So the global proxy takes effect in both modes: at the MITM's upstream when
-// capturing, in the agent's own bash env / WebFetch when not.
+// Target proxy routing and CA trust are independent of capture persistence.
+// Without a configured local proxy, retain the explicit global-proxy fallback.
 func (m *Manager) TaskProxyAddr(id string) string {
-	if m.traffic != nil && m.TrafficEnabled() {
+	if m.traffic != nil {
 		return m.traffic.TaskProxyAddr(id)
 	}
 	return m.ProxyAddr()
 }
 func (m *Manager) ProxyAddr() string {
-	if m.traffic != nil && m.TrafficEnabled() {
+	if m.traffic != nil {
 		return m.traffic.ProxyAddr()
 	}
 	m.mu.RLock()
@@ -767,13 +755,9 @@ func (m *Manager) ProxyAddr() string {
 	return m.globalProxy
 }
 
-// ProxyCACert returns the CA cert path agents must trust to verify HTTPS through
-// the egress proxy. Non-empty ONLY when traffic capture is on (the MITM re-signs
-// certs): the global proxy used directly (capture off) is a plain forwarder that
-// preserves real target certs, so no custom CA is needed there. Its emptiness is
-// also the worker's "recording off" signal (see workerSystem).
+// ProxyCACert remains available when capture is off: HTTPS is still inspected.
 func (m *Manager) ProxyCACert() string {
-	if m.traffic == nil || !m.TrafficEnabled() {
+	if m.traffic == nil {
 		return ""
 	}
 	return m.traffic.CACertPath()
@@ -787,9 +771,8 @@ func (m *Manager) GlobalProxy() string {
 }
 
 // SetGlobalProxy validates, persists and applies the global egress proxy
-// (http/https/socks5, optional user:pass; empty = direct). It updates the MITM's
-// upstream immediately; callers must rebuild agents (applyLLM) afterwards so the
-// capture-off path (bash env / WebFetch) picks up the change too.
+// (http/https/socks5, optional user:pass; empty = direct). It updates the security
+// proxy upstream immediately; explicit no-local-proxy setups need agent rebuilds.
 func (m *Manager) SetGlobalProxy(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw != "" {

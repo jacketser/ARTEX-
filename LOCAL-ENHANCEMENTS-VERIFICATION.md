@@ -1,12 +1,31 @@
 # 本地增强验收记录
 
-验收日期：2026-10-20（Asia/Shanghai）；保留此前发布记录。
+最近验收日期：2026-11-06（Asia/Shanghai）；保留此前发布记录。
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-ec9fe3d`，程序构建自提交 `ec9fe3d`；上一版本 `dev-e0556f7` 保留为回退镜像。
+- 当前部署版本：`dev-3635912`；本轮通过健康接口只读确认，未更新正式部署。
 - 本轮完成代理安全增强与登录自动续期；此前已完善蜜罐规则与恢复失败处理，并加入服务器冻结补偿、场景化提示词；已完成的 P1 包括恢复结果闭环、流量差异与审阅历史、蜜罐过期重评/人工结论/筛选，以及企业范围回归修复与持续回归配置；完整未移植项、使用方法和限制见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 本地候选：代理防护与流量保存拆分（2026-11-06）
+
+- 已在本地代码完成拆分：关闭流量捕获仍向 Agent 和内置浏览器提供安全代理、任务归属和 CA，保留凭据检查与限额；开关只影响流量保存和 Agent 流量查询工具。原历史保留，切换期间的请求不会在重新开启后补录。
+- 后端完整回归在独立空 PostgreSQL 通过：`/tmp/artex-protection-full.log`。捕获切换、真实 HTTP/HTTPS 拦截、任务配额和并发专项 race 通过：`/tmp/artex-protection-race.log`。包含保存状态重启恢复、内置浏览器代理/CA 配置、配额不被切换清零及请求进行中切换不落库。
+- 前端 TypeScript、13 项测试及静态生产构建通过：`/tmp/artex-protection-web.log`、`/tmp/artex-protection-web-build.log`。
+- 候选镜像 `jacketser/artex:protection-candidate`，版本 `dev-protection-20261106-local`。标准 `Dockerfile.source` 构建触发基础镜像/依赖重新下载后主动停止；改用现有运行镜像 `sha256:e948df1514eb207f3b3ce5d9262605308751e9b9d4e0c72696c8af1de0130f89`，装入本轮 Go 编译并嵌入新前端的程序。编译/镜像日志：`/tmp/artex-protection-compile.log`、`/tmp/artex-protection-candidate.log`。本次不声称验证了更新后的基础镜像依赖。
+- 隔离 Chromium 最终验收通过：保存关闭时普通请求仍转发、私钥标记请求返回 403、收紧公共配额后返回 429；保存开启时生成记录，再次关闭后记录数量不变。行为验证原有四请求、冷却、历史、参数保存/刷新也通过，页面脚本错误 0。
+- 最终结果及截图：`/tmp/artex-acceptance-2bHh21xC/`；日志：`/tmp/artex-protection-browser-final.log`。首次浏览器运行在设置页等待超时，诊断重跑通过；脚本已将测试登录状态改为在页面初始化前写入，并保留失败时的地址、脚本错误及截图，最终重跑通过。内部测试网络不能访问 GitHub，更新检查提示离线属于预期。
+- 临时数据库、应用和网络已清理。本轮未改正式数据库、未部署或推送；正式服务只读健康检查仍为 `dev-3635912`。
+
+## 浏览器验收与样本回归（2026-11-06）
+
+- 新增可重复运行的 `scripts/acceptance/run.sh`：每次使用独立 Docker 内部网络、空 PostgreSQL 和模拟 HTTP 服务，不挂载正式数据或发布端口，退出自动清理测试容器和卷。
+- 实际执行 Chromium 验收通过：行为验证开关与精确来源保存、代理限额保存和刷新、非法参数拒绝、未确认按钮禁用、确认后四次请求、历史记录、冷却返回 429、模拟目标未收到认证凭据、公共预算统计为 4；页面脚本错误 0。
+- 最终浏览器输出：`/tmp/artex-acceptance-aiu7yPeJ/result.json`；同目录保留设置/资产截图和隔离容器日志。浏览器验收的应用镜像版本为 `dev-3635912`。
+- `go test -p 1 ./honeydetect ./traffic -count=1` 通过：新增十个正常服务兼容样本及请求间撤回授权检查；真实代理集成回归扩展到 HTTP 与 HTTPS，验证被拒请求不抵达目标、普通目标认证可以转发、凭据源读取失败拒绝转发。日志：`/tmp/artex-acceptance-go.log`。
+- 行为验证、HTTP/HTTPS 凭据拦截、任务配额和并发限额专项 `-race` 检查通过；八个合成密钥的扫描基准完成，64 KiB 无命中约 156.4 μs/次、5 MiB 约 12.7 ms/次，不代表完整代理吞吐。日志：`/tmp/artex-acceptance-race-bench.log`。
+- 代理覆盖核查及剩余事项见 [代理验证说明](PROXY-SECURITY-VALIDATION.md)。本轮仅修改测试、验收工具及文档，未执行新部署；合成样本不能替代真实误报/漏报评估。
 
 ## 上一轮验收：蜜罐、恢复、冻结补偿、场景提示词（2026-10-20）
 
@@ -74,7 +93,7 @@
 
 ## 未移植功能
 
-本次验收不包含完整二开项目中的内网作战、会话/隧道/凭据库、分布式节点、伪装门控、限时自动放行、行为型蜜罐探针，以及自动发起按类别的证伪请求。详情见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
+尚未落地的是完整内网作战、会话/隧道/凭据库、分布式节点、伪装门控、限时自动放行、非 HTTP 协议行为探针，以及自动发起按类别的证伪请求。HTTP/HTTPS 人工行为验证已实现，并在 2026-11-06 补齐上述浏览器验收。详情见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
 
 ## 发布与备份
 

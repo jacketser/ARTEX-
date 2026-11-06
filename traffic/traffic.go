@@ -136,12 +136,15 @@ const TrafficSearchDescription = "查询记录代理已抓取的目标流量（�
 // Traffic runs the recording proxy and owns the file tree + index.
 type Traffic struct {
 	security securityGuard
-	dir      string
-	addr     string
-	db       *sql.DB
-	wmu      sync.Mutex // serializes record() vs DeleteHost (incl. blob GC)
-	seq      atomic.Int64
-	proxy    *mproxy.Proxy
+	// Low bit disables persistence; higher bits invalidate in-flight captures
+	// across a toggle. Zero preserves standalone Open's recording default.
+	captureState atomic.Uint64
+	dir          string
+	addr         string
+	db           *sql.DB
+	wmu          sync.Mutex // serializes record() vs DeleteHost (incl. blob GC)
+	seq          atomic.Int64
+	proxy        *mproxy.Proxy
 	// fts reports whether the full-text index is available. False on a driver
 	// build without FTS5: recording and metadata search still work, body search
 	// degrades to unsupported rather than erroring.
@@ -436,6 +439,9 @@ func proxyCausedErr(err error) bool {
 // full-text index. Nothing is written to a per-request directory — only bodies
 // above maxInlineBody spill to the content-addressed blob store.
 func (t *Traffic) record(f *mproxy.Flow) {
+	if !t.captureAllowed(f) {
+		return
+	}
 	safe, err := t.sanitizedFlow(f)
 	if err != nil {
 		log.Printf("[security] recording skipped: credential redaction unavailable")
@@ -446,6 +452,9 @@ func (t *Traffic) record(f *mproxy.Flow) {
 	// can run under the same lock without racing a concurrent record.
 	t.wmu.Lock()
 	defer t.wmu.Unlock()
+	if !t.captureAllowed(f) {
+		return
+	}
 	host := f.Request.URL.Hostname()
 	method := f.Request.Method
 	tmpl := db.TemplatePath(f.Request.URL.EscapedPath())

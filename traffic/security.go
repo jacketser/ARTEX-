@@ -156,6 +156,7 @@ func (s *sink) Requestheaders(f *mproxy.Flow) {
 	if f.Request == nil || f.Request.URL == nil {
 		return
 	}
+	s.t.markCapture(f)
 	task, err := s.flowTask(f)
 	if err != nil {
 		s.reject(f, 407, "task_credential")

@@ -385,6 +385,7 @@ type ProxySecurityConfig = {
     max_body_kib: number;
 };
 type ProxyStats = {
+    proxy_configured: boolean;
     capture_enabled: boolean;
     stats: null | {
         allowed: number;
@@ -406,12 +407,12 @@ export function ProxySecuritySettings() {
     } }, []);
     React.useEffect(() => { void load(); }, [load]);
     const labels: Record<keyof ProxySecurityConfig, string> = { host_requests_per_minute: "每主机每分钟请求数", host_distinct_urls_per_minute: "每主机每分钟不同 GET/HEAD URL 数", url_requests_per_minute: "同一 GET/HEAD URL 每分钟请求数", task_requests_per_minute: "每任务每分钟请求数", unattributed_requests_per_minute: "未归属流量共享每分钟请求数", cooldown_seconds: "超限冷却秒数", max_body_kib: "请求正文上限 KiB（最多 5120）" };
-    return <Card className="mb-4 break-inside-avoid"><CardHeader><CardTitle>代理安全</CardTitle><CardDescription>仅作用于经过记录代理的可解析 HTTP。任务 Agent 的 Bash/WebFetch 使用任务归属凭据，共享 MCP 等无归属流量使用独立公共预算。平台凭据拦截与落库脱敏始终保留。</CardDescription></CardHeader><CardContent className="space-y-3">
+    return <Card className="mb-4 break-inside-avoid"><CardHeader><CardTitle>代理安全</CardTitle><CardDescription>代理防护独立于流量保存，仅作用于经过安全代理的可解析 HTTP。任务 Agent 的 Bash/WebFetch 使用任务归属凭据，共享 MCP 等无归属流量使用独立公共预算。平台凭据拦截与落库脱敏始终保留。</CardDescription></CardHeader><CardContent className="space-y-3">
     {c.error && <p role="alert">{c.error}</p>}
     {c.value && <fieldset disabled={c.busy} className="space-y-2">{(Object.keys(labels) as (keyof ProxySecurityConfig)[]).map(k => <label key={k} className="block text-xs">{labels[k]}<Input type="number" min={1} value={c.value![k]} onChange={e => c.setValue({ ...c.value!, [k]: Number(e.target.value) })}/></label>)}<Button size="sm" onClick={() => void c.save()}>保存代理限额</Button></fieldset>}
     <p className="text-xs text-muted-foreground">保存后对新请求生效，已有计数与冷却不清零。主机与任务限额同时执行；直连和透明透传不在正文检查范围。历史流量和旧证据不会追溯脱敏。</p>
     <Button size="sm" variant="outline" onClick={() => void load()}>刷新拦截统计</Button>{error && <p role="alert">{error}</p>}
-    {stats && <div className="text-xs space-y-1"><p>流量捕获：{stats.capture_enabled ? "已开启" : "已关闭，实际流量可能不经过此代理"}</p><p>本进程启动以来的统计，重启清零。</p>{stats.stats && <><p>放行 {stats.stats.allowed} 次 · 当前冷却 {stats.stats.active_cooldowns} 项</p>{Object.entries(stats.stats.blocked).map(([reason, count]) => <p key={reason}>{reason}：{count}</p>)}</>}</div>}
+    {stats && <div className="text-xs space-y-1"><p>安全代理：{stats.proxy_configured ? "已配置，独立于流量捕获" : "未配置，当前不受此代理保护"}</p><p>流量保存：{stats.capture_enabled ? "已开启" : "已关闭，已有记录保留"}</p><p>本进程启动以来的统计，重启清零。</p>{stats.stats && <><p>放行 {stats.stats.allowed} 次 · 当前冷却 {stats.stats.active_cooldowns} 项</p>{Object.entries(stats.stats.blocked).map(([reason, count]) => <p key={reason}>{reason}：{count}</p>)}</>}</div>}
   </CardContent></Card>;
 }
 type BehaviorConfig = {

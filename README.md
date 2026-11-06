@@ -94,8 +94,9 @@ HTTP 行为验证是独立的人工操作，不属于静态后台重评。先在
 | 代理外发检查与抓取预算 | 检测已知平台密钥及私钥标记外发；限制主机请求总量、重复抓取及请求正文，缺少 UA 时补固定值 | 仅覆盖实际经过记录代理且可解析的 HTTP；普通目标 Authorization 和显式 UA 保留 |
 | 新流量落库脱敏 | 常见头部/query/JSON/form 凭据字段及已知平台密钥在流量库、索引和 blob 写入前处理；压缩正文副本省略 | 带 `X-Artex-Capture` 提示；不改实际收发内容，不追溯清理旧流量/旧证据，脱敏快照不等于字节级原文 |
 
-**代理保护的前提是开启流量捕获，并且请求实际经过记录代理。** 流量捕获默认关闭，入口为
-“系统设置 → 流量捕获”。直连、MITM 失败后的透明透传、WebSocket 消息及任意 TCP/UDP 不在此正文检查范围；
+**代理防护独立于流量保存。** 默认部署中，关闭“系统设置 → 流量捕获”只停止保存新流量、关闭 Agent 流量查询工具；
+Agent 与内置浏览器仍使用安全代理，保留凭据检查和请求限额。已有历史保留，切换期间的请求不跨状态补录。
+保护仍要求请求实际经过安全代理。显式禁用本地代理的特殊启动方式不提供这层防护。直连、MITM 失败后的透明透传、WebSocket 消息及任意 TCP/UDP 不在此正文检查范围；
 它不是系统级出网沙箱，也不能识别任意编码或未知凭据。
 
 同一主机及端口共享一分钟预算：3000 次请求、1500 个不同 GET/HEAD URL、同一 GET/HEAD URL 120 次；
@@ -115,6 +116,9 @@ HTTP 行为验证是独立的人工操作，不属于静态后台重评。先在
 - 参考二开项目的完整攻击工具链与完整场景提示词包。
 
 详细取舍及后续范围见[二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
+
+HTTP 行为验证与代理设置的可重复浏览器验收见[验收脚本说明](scripts/acceptance/README.md)；
+当前代理覆盖范围、合成样本回归和扫描性能基准见[代理验证说明](PROXY-SECURITY-VALIDATION.md)。
 
 ## 源码部署与访问
 
@@ -341,7 +345,7 @@ flowchart TB
     EGRAPH["探索图　exploration_nodes / anchors / activity"]
   end
   subgraph SUB["支撑子系统"]
-    PROXY["流量记录代理　MITM + CA 留痕"]
+    PROXY["安全代理　MITM 检查 + 可选保存"]
     GUARD["guard / intercept　工具审批门"]
     ENR["enrich　DNS / HTTP 异步补全"]
     EXT["MCP · skills · memory · report"]
@@ -357,7 +361,7 @@ flowchart TB
   WK --> DB
   MA --> DB
   GO --> DB
-  WK -->|"启用捕获且经过代理的 HTTP"| PROXY
+  WK -->|"经安全代理的 HTTP"| PROXY
   WK --> GUARD
   WK --> ENR
   PL -.-> EXT
@@ -433,7 +437,7 @@ sequenceDiagram
   W->>FR: claimNext 领一条意图
   W->>DB: 取意图 asset_ids 的原始资产作为初始信息
   W->>PX: 真实工具执行(Kali / Bash / HTTP)
-  PX-->>W: 响应(可解析的捕获流量脱敏留存)
+  PX-->>W: 响应(开启捕获时脱敏留存)
   W->>DB: 写回 fact / asset / finding + 每步 activity
   DB-->>EV: 图变更
   EV-->>P: 再次唤醒(闭环)
