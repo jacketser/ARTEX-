@@ -124,7 +124,7 @@ Agent 与内置浏览器仍使用安全代理，保留凭据检查和请求限�
 详细取舍及后续范围见[二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
 
 HTTP 行为验证与代理设置的可重复浏览器验收见[验收脚本说明](scripts/acceptance/README.md)；
-当前代理覆盖范围、合成样本回归和扫描性能基准见[代理验证说明](PROXY-SECURITY-VALIDATION.md)。
+当前代理覆盖范围和合成样本回归见[代理验证说明](PROXY-SECURITY-VALIDATION.md)；实际 HTTP/HTTPS、捕获开关、上游及大正文负载结果见[完整链路压测](PROXY-LOAD-RESULTS.md)。
 
 ## 源码部署与访问
 

@@ -201,7 +201,8 @@ func TestCaptureAtGuardBodyLimit(t *testing.T) {
 	defer secure.Close()
 	for _, origin := range []string{plain.URL, secure.URL} {
 		client := captureClient(t, tr.ProxyAddr())
-		client.Timeout = 20 * time.Second
+		// SQLite and full-body sanitization are instrumented under -race.
+		client.Timeout = 90 * time.Second
 		for _, chunked := range []bool{false, true} {
 			before, e := tr.Count()
 			if e != nil {

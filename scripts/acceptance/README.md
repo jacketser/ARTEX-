@@ -66,7 +66,7 @@ ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:local bash scripts/acceptance/proxy-load/
 只在内部 Docker 网络连接合成目标，无宿主机端口，不挂载正式数据，也不读取正式配置或密钥。
 测试实例单独将代理监听设为容器网卡以供施压器连接，正式实例的回环监听不受影响。
 
-测试经过真实 PostgreSQL 凭据查询、HTTP/HTTPS 解密代理和 SQLite/正文存储。包含匹配负载的直连基线、
+测试经过真实 PostgreSQL 凭据查询、HTTP/HTTPS 解密代理和 SQLite/正文存储。使用固定字节的 `application/octet-stream` 合成正文（不代表真实页面全文索引负载），包含匹配负载的直连基线、
 捕获开关、1/8/16 并发、1 KiB/64 KiB 请求及响应、4 并发 5 MiB 请求、认证 HTTP 上游及 HTTPS CONNECT，
 并进行 90 秒、最高 80 请求/秒的 HTTPS+上游+捕获持续负载。突发场景按固定请求数执行，
 包含建连和 TLS 初始开销，无预热；持续场景按时间限速。保留全程延迟，包含失败请求，不对性能数字设通过阈值。
