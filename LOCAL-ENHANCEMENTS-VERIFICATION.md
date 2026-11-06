@@ -6,9 +6,22 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-50a2b6a`，应用源码对应 `50a2b6a`，正式服务已更新。
-- 最新发布加入 HTTPS 解析失败后的拒绝/兼容透传策略，默认拒绝；保留代理防护与流量保存拆分以及此前验收和样本回归。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-2490a72`，应用源码对应 `2490a72`，正式服务已更新。
+- 最新发布加入人工行为验证的全局 HTTP/HTTPS/SOCKS5 上游代理支持；保留 HTTPS 解析失败策略、代理防护与保存拆分及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：行为验证兼容全局上游代理（2026-11-06）
+
+- 应用源码 `2490a72`，正式版本 `dev-2490a72`；候选镜像 `jacketser/artex:upstream-candidate`，镜像 ID `sha256:98e347cad397bd6c0cb6776fcce3b75043832e739ff0413db709c9307a5c189d`。复用现有运行环境，更新编译程序和嵌入前端，未升级基础镜像依赖。
+- HTTP/HTTPS 目标通过 HTTP/HTTPS CONNECT 或 SOCKS5 连接本机已检查的固定 IP，保留目标 Host、SNI 和证书校验；HTTPS 代理证书也严格校验。代理凭据只用于握手，失败不回退直连。代理配置变化、撤回来源授权或公共预算耗尽时停止后续请求。
+- 空 PostgreSQL 完整 Go 回归通过：`/tmp/artex-upstream-full-final.log`。首轮新增接口测试复用了已取消服务上下文的只读夹具而失败；修正该测试的上下文后，专项及新空库完整回归通过，未放宽断言。
+- 行为验证专项 race 通过：`/tmp/artex-upstream-race.log`。覆盖认证 HTTP CONNECT、可信／不可信 HTTPS 上游、HTTPS 目标证书与 SNI、认证 SOCKS5 数值 IP、超长握手响应、拒绝与取消，以及接口级授权撤回、代理变化、预算和审计记录。
+- 前端类型检查、13 项测试与静态生产构建通过：`/tmp/artex-upstream-web.log`；编译和候选镜像日志：`/tmp/artex-upstream-compile.log`、`/tmp/artex-upstream-image.log`。
+- 隔离 Chromium 验收通过：四次行为验证请求全部走带认证 CONNECT 上游，原 Host 保留，目标未收到代理或目标凭据；冷却 429、设置保存刷新、原有解析失败策略、关闭捕获仍防护及切换保留历史均通过，页面错误 0。日志 `/tmp/artex-upstream-browser.log`，结果和截图 `/tmp/artex-acceptance-wPQVspxm/`。样例仅位于内部测试网络，无真实目标扫描或模型调用。
+- 发布前正式库任务总数为 0；停止写入后备份至 `/home/ARTEX/backups/pre-behavior-upstream-20261106-175549/`。数据库 dump 经 `pg_restore --list` 验证，文件包经 `tar -tzf` 验证；环境、JWT 及初始登录记录哈希未变。
+- 回退镜像 `jacketser/artex:rollback-before-behavior-upstream` 对应 `dev-50a2b6a`；无新增表结构，回退会恢复配置上游时拒绝行为验证的旧限制。发布日志 `/tmp/artex-upstream-publish.log`。
+- 正式健康接口返回 `dev-2490a72`，未登录访问行为配置返回 401；`doctor` 完成，唯一警告为未配置模型，日志 `/tmp/artex-upstream-doctor.log`。管理页继续仅发布 `127.0.0.1:8787`。临时测试容器和网络已清理。
+- 当前兼容边界：HTTP/HTTPS 上游须允许 CONNECT 到目标端口；目标须能在本机解析，尚不支持仅代理端可解析的域名。已发出请求不因配置变化撤回；真实误报／漏报数据、模型效果及完整代理链路压测仍待补充。
 
 ## 正式发布：HTTPS 解析失败策略（2026-11-06）
 
