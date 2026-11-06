@@ -26,7 +26,10 @@ zstd.ZSTD_decompress.restype = ctypes.c_size_t
 
 def snapshot_id(snapshot):
     # Field order follows db.TrafficEvidenceSnapshot; identity excludes ID/time.
-    identity = snapshot.copy()
+    fields = ('id', 'source_traffic_id', 'captured_at', 'url', 'method', 'status',
+              'content_type', 'req_head', 'resp_head', 'req_hash', 'resp_hash',
+              'req_len', 'resp_len', 'created_at')
+    identity = {key: snapshot[key] for key in fields}
     identity['id'] = ''
     identity['created_at'] = '0001-01-01T00:00:00Z'
     return hashlib.sha256(json.dumps(identity, separators=(',', ':')).encode()).hexdigest()
