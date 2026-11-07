@@ -8,9 +8,17 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-b7877ca`，应用源码对应 `b7877ca`，正式服务已更新。
-- 最新发布收紧蜜罐行为疑似升级并标记旧算法历史过期；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-6d4aa09`，应用源码对应 `6d4aa09`，正式服务已更新。
+- 最新发布将隐藏接入内容风险独立于蜜罐结论，并标记旧算法历史过期；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：v4 内容风险提示（2026-11-07）
+
+- 复用已验收的 `jacketser/artex:honeypot-v4-candidate`，应用源码 `6d4aa09`、正式版本 `dev-6d4aa09`，镜像 ID `sha256:1357072ed9e5329d5879253da779a6e56b3101cf8b0b956fa34c09f1f845ddbd`。验收记录提交 `57b4938`；无数据库结构、依赖或归档格式变化，前后端同时发布。
+- 正式发布前任务、归档、活动复测／探测均为 0。停机备份 `/home/ARTEX/backups/pre-honeypot-v4-20261107-110527/`；dump 目录和文件包列表读取校验通过，目录 700、文件 600。环境、JWT、初始登录文件哈希保持一致；未显示密钥、未在正式库跑测试。
+- 健康接口、运行镜像及程序哈希均与候选一致；资产页 HTML 和两个含内容提示的 JS 包逐字节匹配新前端。管理端口仅 `127.0.0.1:8787`，应用／数据库健康，其他应用未重启。doctor 无失败，唯一警告为未配置模型。
+- 回退 `jacketser/artex:rollback-before-honeypot-v4` 对应 `dev-b7877ca`；会失去内容提示，v4 历史在旧界面标记过期，原始 JSON 保留。无需本次新增的数据迁移回滚，操作见[部署文档](DEPLOYMENT.md)。
+- 日志 `/tmp/artex-honey-v4-publish.log`、`/tmp/artex-honey-v4-doctor.log`；[结构化发布结果](scripts/acceptance/results/honeypot-v4-release-20261107.json)及[详细报告](HONEYPOT-CONTENT-SEPARATION.md)。沿用前轮专项和隔离浏览器证据，本轮未重复长评估，未增加真实命中率或模型安全证据。
 
 ## 候选构建与浏览器验收：v4（2026-11-07）
 

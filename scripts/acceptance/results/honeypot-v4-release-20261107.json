@@ -1,0 +1,87 @@
+{
+  "date": "2026-11-07",
+  "timezone": "Asia/Shanghai",
+  "application_version": "dev-6d4aa09",
+  "application_commit": "6d4aa09a06f62405ee543ae3a3830e798fa7d44f",
+  "acceptance_commit": "57b49386e100f925103262b4a9bb75cea8f3f7dd",
+  "algorithm": "http-behavior-v4",
+  "production_deployed": true,
+  "image_id": "sha256:1357072ed9e5329d5879253da779a6e56b3101cf8b0b956fa34c09f1f845ddbd",
+  "previous_image_id": "sha256:03d7d6e9e18c9a178dbdab4af1cb8fa0be6f367cd0b6fb84b5a1c79bc27fdf40",
+  "rollback_image": "jacketser/artex:rollback-before-honeypot-v4",
+  "previous_version": "dev-b7877ca",
+  "backup_dir": "/home/ARTEX/backups/pre-honeypot-v4-20261107-110527",
+  "backup_checks": {
+    "stopped_before_backup": true,
+    "pg_restore_list": true,
+    "tar_list": true,
+    "directory_mode": "0700",
+    "files_mode": "0600"
+  },
+  "checks": {
+    "image_matches": true,
+    "binary_matches": true,
+    "persistent_configuration_unchanged": true,
+    "ports": {
+      "8787/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "8787"
+        }
+      ]
+    }
+  },
+  "frontend_checks": [
+    {
+      "path": "function/assets/index.html",
+      "sha256": "21973e79948a10757a8c07eecfcf492fa999906b7415b4aa35118422b66fc506",
+      "matches": true
+    },
+    {
+      "path": "_next/static/chunks/10w_7mdpw9_6p.js",
+      "sha256": "5b17291a9a9ad82a8c211613e992ca62146a1197809fa3376d1aaa30e81dccb0",
+      "matches": true
+    },
+    {
+      "path": "_next/static/chunks/35r-i2s13zl7m.js",
+      "sha256": "50100f61b1d34515bdd970a2ec24cbef69ce75e4fcc8e94b887d92048d40cbf5",
+      "matches": true
+    }
+  ],
+  "health": {
+    "ok": true,
+    "service": "artex",
+    "version": "dev-6d4aa09"
+  },
+  "preflight_counts": {
+    "tasks": 0,
+    "archives": 0,
+    "active_or_queued_tasks": 0,
+    "active_retests": 0,
+    "active_probes": 0
+  },
+  "postflight_counts": {
+    "tasks": 0,
+    "active_retests": 0,
+    "active_probes": 0
+  },
+  "doctor": {
+    "failures": 0,
+    "warnings": [
+      "LLM not configured"
+    ]
+  },
+  "logs": {
+    "publish": "/tmp/artex-honey-v4-publish.log",
+    "doctor": "/tmp/artex-honey-v4-doctor.log"
+  },
+  "schema_changed": false,
+  "dependencies_updated": false,
+  "production_database_tests": false,
+  "other_apps_restarted": false,
+  "limitations": [
+    "No new real honeypot detection-rate evidence",
+    "No model calls or long load evaluation",
+    "Production checks limited to health, read-only status, configuration digests, runtime doctor and public static asset consistency; browser functional tests used isolated fixtures"
+  ]
+}

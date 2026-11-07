@@ -6,7 +6,7 @@
 
 ## 当前运行方式
 
-截至 2026-11-06 最近一次正式发布版本为 `dev-b7877ca`，源码提交 `b7877ca`。版本变化与升级影响见[二开更新日志](CHANGELOG-LOCAL.md)；发布验证与备份见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
+截至 2026-11-07 最近一次正式发布版本为 `dev-6d4aa09`，源码提交 `6d4aa09`。版本变化与升级影响见[二开更新日志](CHANGELOG-LOCAL.md)；发布验证与备份见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
 
 - 标准部署使用 `Dockerfile.source` 从当前工作目录编译 Next.js 静态前端及 Go 后端。近期发布复用既有运行环境、更新程序及嵌入前端，未升级基础镜像依赖，具体见验收记录。
 - Compose 文件是 **`compose.source.yml`**，不是上游的 `docker-compose.yml`。
@@ -99,6 +99,14 @@ ARTEX_LLM_CALL_TIMEOUT=900
 - **任务列表 → 连续恢复失败提醒**：填写处理备注后“确认已检查”。隐藏该条提醒并将备注保留在任务恢复历史；不改变任务状态、不重置恢复预算，也不撤销已经入队的通知。
 
 冻结补偿不取消单次模型调用及 Worker 自身超时，不重放已结束的请求。变更开关只影响新运行轮次采用的预算策略；已有固定计时器不反向修改。疑似进程停顿不等于已证明宿主机冻结。时钟事件历史按每页 50 条读取，当前不自动清理；处理备注和通知去重记录随所属恢复历史删除。
+
+## 当前 v4 发布与回退
+
+2026-11-07 将已通过前后端构建和隔离浏览器验收的 `jacketser/artex:honeypot-v4-candidate` 发布为本机 `jacketser/artex:local`，运行版本 `dev-6d4aa09`。内容风险提示独立于蜜罐结论，旧算法历史过期且不改写、不自动重测；需前后端同时更新。无新增数据库结构、依赖或认证格式变更，不要求更换凭据。
+
+停机备份：`/home/ARTEX/backups/pre-honeypot-v4-20261107-110527/`，目录权限 700；包含数据库自定义格式 dump、文件包及校验元数据。回退镜像 `jacketser/artex:rollback-before-honeypot-v4` 对应 `dev-b7877ca`。需要回退程序时，在确认空闲并按下方流程备份后，将该镜像标记为 `jacketser/artex:local`，执行 `docker compose -f compose.source.yml up -d --no-build --no-deps --wait artex`。本次无数据重写或结构升级，通常无需恢复数据库；若需恢复升级前状态，则数据库与文件必须使用同一备份，恢复会覆盖后续数据，须另行规划。
+
+回退会失去隐藏接入内容提示；旧前端不会显示 v4 的独立提示字段，v4 历史会按旧算法版本标为过期，但原始 JSON 保留。详细证据见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)和[分离报告](HONEYPOT-CONTENT-SEPARATION.md)。
 
 ## 修改代码并发布
 
