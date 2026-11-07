@@ -12,6 +12,14 @@
 - 最新发布将隐藏接入内容风险独立于蜜罐结论，并标记旧算法历史过期；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
 
+## 候选构建与浏览器下载验收：分享导出（2026-11-07）
+
+- 应用固定 `806bc74`，候选 `dev-806bc74` 完成静态前端和 Go 嵌入构建；本轮只新增验收工具及文档，未改应用代码。候选镜像 `jacketser/artex:share-export-candidate`，ID `sha256:6bbb74bef7fc8e21298c74477f60b9caa1a9c02e91cd7e61b9d48f220bd47dc6`。
+- 全新内部网络和临时 PG 中，Chromium 实际下载 Markdown／CSV × 全部／筛选／勾选六个脱敏副本，另下载原始 JSON。独立字节／CSV 解析通过，覆盖六种已知秘密呈现、完整 JSON 敏感值、PEM、大整数、BOM、原 12 列顺序及第 13 列说明、原人工复核不过期、文件名及响应头。
+- 两格式凭据源故障均返回 503、页面显示失败且无下载；源发现／审阅／任务／探索／合成凭据摘要保持，页面脚本错误 0。JSON／ZIP 的未覆盖提示通过；ZIP 本轮不下载，兼容性沿用前轮 Go 证据。
+- 首轮测试行定位器与现有 `button` 角色不匹配而超时，修正脚本后在全新实例复跑通过。最终制品 `/tmp/artex-export-XXbP0Tqc/`、日志 `/tmp/artex-share-export-browser-second.log`；工具／下载哈希及失败记录见[结构化结果](scripts/acceptance/results/text-export-browser-20261107.json)、[详细报告](TEXT-EXPORT-REDACTION.md)。
+- 测试容器、卷及网络已清理。正式健康仍为 `dev-6d4aa09`，未部署、未在正式库测试；未做长负载、大导出或模型验证。下一步备份发布已验收候选，当前凭据范围之外、JSON／ZIP 等副本仍待处理。
+
 ## 候选验证：Markdown／CSV 分享脱敏（2026-11-07）
 
 - 基线 `7d95ef5`。新增两个纯文本格式的输出脱敏及标记；CSV 追加说明列，当前凭据读取失败时返回通用 503，不输出下载文件。源记录与人工复核状态保持；JSON／ZIP 不属于本次新增覆盖。详见[报告](TEXT-EXPORT-REDACTION.md)。

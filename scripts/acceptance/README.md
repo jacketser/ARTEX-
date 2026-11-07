@@ -1,4 +1,20 @@
-# HTTP 行为验证与代理设置浏览器验收
+# 隔离浏览器验收
+
+## Markdown／CSV 分享导出
+
+```sh
+bash scripts/acceptance/export-run.sh
+```
+
+默认验证已构建的 `jacketser/artex:share-export-candidate`／`dev-806bc74`，不自动构建。后续候选可同时设置 `ARTEX_EXPORT_IMAGE` 和 `EXPORT_EXPECTED_VERSION`；依赖宿主 Python 3、Docker Compose，以及镜像中的 Chromium／Playwright。Compose 使用 `--pull never`，须预先具备本地应用和 PostgreSQL 镜像。
+
+仅启动新建内部网络中的应用和 PostgreSQL，不发布端口、不挂载正式数据。使用两个合成发现、一个已完成任务及人工复核：通过实际页面点击下载两格式×全部／筛选／勾选六个文件，独立解析最终 CSV，核对脱敏、BOM、13 列及原 12 列顺序、普通文字／大整数、文件名、响应头及复核状态。另下载 JSON 确认保留原文且未标为脱敏，切换 ZIP 检查未覆盖提示；本工具不下载 ZIP。
+
+第二阶段临时重命名测试库的凭据源表，验证两格式均返回 503、页面提示失败且没有下载事件；恢复表后比对源发现／人工复核／任务／探索／合成凭据的前后摘要。退出清理临时容器、卷和网络，清理失败会返回非零。
+
+结果保留在 `/tmp/artex-export-*`：浏览器 JSON、独立字节验证结果、下载文件、页面截图、源记录摘要及清理日志。下载文件全部来自合成数据，JSON 故意保留合成秘密；容器日志可能包含临时初始化信息，不应直接发布。永久结果只记录结论、版本和哈希，见[导出报告](../../TEXT-EXPORT-REDACTION.md)。这不是大导出、全部副本或任意秘密识别验证。
+
+## HTTP 行为验证与代理设置
 
 在仓库根目录执行：
 

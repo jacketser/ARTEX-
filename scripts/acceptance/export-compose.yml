@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: verify
+      POSTGRES_PASSWORD: isolated-acceptance-only
+      POSTGRES_DB: verify
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U verify -d verify]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+  app:
+    image: ${ARTEX_EXPORT_IMAGE:-jacketser/artex:share-export-candidate}
+    environment:
+      ARTEX_PG_DSN: postgres://verify:isolated-acceptance-only@postgres:5432/verify?sslmode=disable
+      GOMAXPROCS: "2"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./:/acceptance:ro
+    shm_size: 256mb
+    init: true
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8787/api/health]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+networks:
+  default:
+    internal: true

@@ -1,0 +1,186 @@
+{
+  "date": "2026-11-07",
+  "application_commit": "806bc74955355baaee0724b479286643c1309291",
+  "version": "dev-806bc74",
+  "deployed": false,
+  "production_version_checked": "dev-6d4aa09",
+  "image": "jacketser/artex:share-export-candidate",
+  "image_id": "sha256:6bbb74bef7fc8e21298c74477f60b9caa1a9c02e91cd7e61b9d48f220bd47dc6",
+  "binary_sha256": "52c3235b20ea36ae8e6747f5df4a71f50cde2013b45f462a7ccee5df40bf50c2",
+  "build": {
+    "log": "/tmp/artex-share-export-build.log",
+    "directory": "/tmp/artex-share-export-build-wOF5WjV7",
+    "script_sha256": "b5e582a32e0cee808b1f52b7fbe83ce8506a976c6a836db3ad36eabe51d35526",
+    "network": "none",
+    "node_image": "node:22-bookworm-slim",
+    "go_image": "golang:1.26-bookworm",
+    "gomaxprocs": 2,
+    "go_parallelism": 1
+  },
+  "isolation": {
+    "internal_network": true,
+    "fresh_database": true,
+    "production_data_used": false,
+    "host_ports": false,
+    "cleanup_verified": true
+  },
+  "tool_sha256": {
+    "scripts/acceptance/export-compose.yml": "c462ec20a6c7711fd3406cf4f8a7e4a639c20a5998ed3d61f44450ba7bae9cfe",
+    "scripts/acceptance/export-fixture.py": "e359c03d161993646552955242b6e87f70502a25bd3d428061aacaa7fc79dbd2",
+    "scripts/acceptance/export-browser.cjs": "e9af7459138ce3d8d5fdcdefb8b985041c82c6d8d9e12e87f3de69b0159137ef",
+    "scripts/acceptance/export-run.sh": "a8381d0e78d80bbb0444cf964734396cb018b463e014ba67ee97ef385661c410"
+  },
+  "artifacts_directory": "/tmp/artex-export-XXbP0Tqc",
+  "log": "/tmp/artex-share-export-browser-second.log",
+  "normal": {
+    "passed": true,
+    "phase": "normal",
+    "version": "dev-806bc74",
+    "checks": [
+      {
+        "format": "md-single",
+        "scope": "all",
+        "filename": "findings-sanitized-20261107-032710.md",
+        "status": 200
+      },
+      {
+        "format": "csv",
+        "scope": "all",
+        "filename": "findings-sanitized-20261107-032711.csv",
+        "status": 200
+      },
+      {
+        "format": "json",
+        "scope": "all",
+        "filename": "findings-20261107-032712.json",
+        "status": 200
+      },
+      {
+        "format": "md-single",
+        "scope": "selected",
+        "filename": "findings-sanitized-20261107-032713.md",
+        "status": 200
+      },
+      {
+        "format": "csv",
+        "scope": "selected",
+        "filename": "findings-sanitized-20261107-032714.csv",
+        "status": 200
+      },
+      {
+        "format": "md-single",
+        "scope": "filtered",
+        "filename": "findings-sanitized-20261107-032716.md",
+        "status": 200
+      },
+      {
+        "format": "csv",
+        "scope": "filtered",
+        "filename": "findings-sanitized-20261107-032716.csv",
+        "status": 200
+      }
+    ],
+    "page_errors": [],
+    "download_count": 7
+  },
+  "bytes": {
+    "passed": true,
+    "downloads": [
+      {
+        "file": "all.md",
+        "bytes": 1396,
+        "sha256": "93cb61a01286af5823da6ff4cd238c921cc321e93a6e652bb5f8fdd1acd7cd60"
+      },
+      {
+        "file": "all.csv",
+        "bytes": 1085,
+        "sha256": "7301ed0e00787815c60b5113cc448a38240955b564ea0570a8b40315cd8ed5df"
+      },
+      {
+        "file": "selected.md",
+        "bytes": 1192,
+        "sha256": "f08020d982c663d7cd2224d20badb3b082df278a6dba6a75a06a6f076e69ad99"
+      },
+      {
+        "file": "selected.csv",
+        "bytes": 687,
+        "sha256": "ff032e635b09c58c9065de6da8c9be5bc3b4ac13b266a34fd6530b4be2d37493"
+      },
+      {
+        "file": "filtered.md",
+        "bytes": 1192,
+        "sha256": "05c7f3512792d295f0f0c2aed11f0c711883bfbd5266f63cf5a614ba06c9ab2d"
+      },
+      {
+        "file": "filtered.csv",
+        "bytes": 687,
+        "sha256": "ff032e635b09c58c9065de6da8c9be5bc3b4ac13b266a34fd6530b4be2d37493"
+      }
+    ],
+    "csv_columns": 13,
+    "known_secret_representations": 6,
+    "json_remains_original": true
+  },
+  "failure": {
+    "passed": true,
+    "phase": "failure",
+    "version": "dev-806bc74",
+    "checks": [
+      {
+        "format": "md-single",
+        "status": 503,
+        "download_count": 0
+      },
+      {
+        "format": "csv",
+        "status": 503,
+        "download_count": 0
+      }
+    ],
+    "page_errors": [],
+    "download_count": 0
+  },
+  "source_snapshot": {
+    "before": "2b7585c9d1447a05f22700ea993657f4bc47fc9d3e25f29fa2ab131c18a0113b",
+    "after": "2b7585c9d1447a05f22700ea993657f4bc47fc9d3e25f29fa2ab131c18a0113b",
+    "scope": [
+      "findings",
+      "finding_reviews",
+      "tasks",
+      "explorations",
+      "synthetic brave_search_api_key"
+    ],
+    "unchanged": true
+  },
+  "artifact_sha256": {
+    "downloads/all.csv": "7301ed0e00787815c60b5113cc448a38240955b564ea0570a8b40315cd8ed5df",
+    "downloads/all.md": "93cb61a01286af5823da6ff4cd238c921cc321e93a6e652bb5f8fdd1acd7cd60",
+    "downloads/failure-csv.png": "54b69b42f2d127c0d349fe22b4053cbb0854c4c07467455d5b93d53fef388ae3",
+    "downloads/failure-md-single.png": "31b6285ca0891c9df0a33450e8a25f6b57a2b792346e431521221ca1912a8bda",
+    "downloads/failure.json": "a1e4eb53cb5b6d5937f28d720a5e3f7be70c3919fe81f4c4cd80cccfebef4b14",
+    "downloads/filtered.csv": "ff032e635b09c58c9065de6da8c9be5bc3b4ac13b266a34fd6530b4be2d37493",
+    "downloads/filtered.md": "05c7f3512792d295f0f0c2aed11f0c711883bfbd5266f63cf5a614ba06c9ab2d",
+    "downloads/normal.json": "c85abf29b2972d09c7b938abe61c8e72b717f0357c4438fe9eef262242685b0f",
+    "downloads/notice-csv.png": "9c6addfb41f6edeacc759e1bbdc1112f014a14c681311e111608f4d03f2c6599",
+    "downloads/notice-json.png": "ce7ef6b8c1e22bc0ce833d7f32c2c0751baca5f5d59c124a77e87c5383da3f66",
+    "downloads/notice-md-single.png": "3347179a172918e83b731e7e82ebf7a132c42637e0d79bf33136088d9a4afb93",
+    "downloads/notice-md-zip.png": "23da74acc3b8861c73dfaf3a9a1ac1501f3aa6cd6680f33e3147ebe39d739ad9",
+    "downloads/original.json": "3b3ed07e89857dbf756e413756b99e3bd49f7df55d556ce72996adf094264804",
+    "downloads/selected.csv": "ff032e635b09c58c9065de6da8c9be5bc3b4ac13b266a34fd6530b4be2d37493",
+    "downloads/selected.md": "f08020d982c663d7cd2224d20badb3b082df278a6dba6a75a06a6f076e69ad99"
+  },
+  "prior_attempts": [
+    {
+      "passed": false,
+      "log": "/tmp/artex-share-export-browser-first.log",
+      "directory": "/tmp/artex-export-QtsBriFQ",
+      "reason": "Selection locator expected row role, but findings rows explicitly have button role. Changed test locator to tr; reran with fresh database. Application unchanged."
+    }
+  ],
+  "limits": [
+    "Synthetic small dataset, no large export or performance assessment.",
+    "JSON download remains original; ZIP checked for UI notice only; previous Go compatibility evidence retained.",
+    "Only current known credentials and supported structured fields/encodings are covered; not general anonymization.",
+    "Candidate only; production has not received export redaction."
+  ]
+}
