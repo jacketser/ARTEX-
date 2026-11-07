@@ -1,0 +1,37 @@
+services:
+  log4pot-json:
+    image: jacketser/artex:honeypot-holdout-20261107
+    command: [python3, log4pot-server.py, --port, '8080', --log, /tmp/log4pot.json]
+    working_dir: /sources/log4pot
+    mem_limit: 96m
+    init: true
+  log4pot-tomcat:
+    image: jacketser/artex:honeypot-holdout-20261107
+    command: [python3, log4pot-server.py, --port, '8080', --log, /tmp/log4pot.json, --response, responses/tomcat-default.html, --content-type, text/html]
+    working_dir: /sources/log4pot
+    mem_limit: 96m
+    init: true
+  httpbin:
+    image: jacketser/artex:honeypot-holdout-20261107
+    command: [/opt/httpbin/bin/gunicorn, --workers, '1', --bind, '0.0.0.0:8080', 'httpbin:app']
+    mem_limit: 192m
+    init: true
+  datasette:
+    image: jacketser/artex:honeypot-holdout-20261107
+    command: [/opt/datasette/bin/datasette, --host, 0.0.0.0, --port, '8080', --immutable, /fixtures/catalog.db]
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/catalog.db:/fixtures/catalog.db:ro
+    mem_limit: 192m
+    init: true
+  driver:
+    image: jacketser/artex:local
+    entrypoint: [/output/honeypot-eval]
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}:/output
+    environment:
+      GOMAXPROCS: '2'
+    mem_limit: 256m
+    profiles: [driver]
+networks:
+  default:
+    internal: true

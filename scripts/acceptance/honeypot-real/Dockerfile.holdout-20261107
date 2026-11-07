@@ -1,0 +1,10 @@
+FROM jacketser/artex:honeypot-eval
+COPY log4pot /sources/log4pot
+COPY httpbin /sources/httpbin
+COPY datasette /sources/datasette
+COPY sources-20261107.json /sources/sources-20261107.json
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple
+ENV PIP_DEFAULT_TIMEOUT=30
+RUN python3 -m venv /opt/httpbin && /opt/httpbin/bin/pip install --no-cache-dir '/sources/httpbin[server]'
+RUN python3 -m venv /opt/datasette && /opt/datasette/bin/pip install --no-cache-dir /sources/datasette
+ENTRYPOINT []

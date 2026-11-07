@@ -1,0 +1,20 @@
+[
+  {
+    "name": "log4pot",
+    "repository": "thomaspatzke/Log4Pot",
+    "commit": "5002b1fe0f82359ef32dbc3a899e8a701dc3256e",
+    "archive_sha256": "34c1957ae2f6e41a9caa4438d38020569ff105b300f2c328e3f8ef4d9ec2a96f"
+  },
+  {
+    "name": "httpbin",
+    "repository": "postmanlabs/httpbin",
+    "commit": "9c38edc39e695d7757cad0e081b85238976ef53d",
+    "archive_sha256": "6c91f5c8381891dc64cd8320f6184e70cd533d398c6dca623272dc58175385e9"
+  },
+  {
+    "name": "datasette",
+    "repository": "simonw/datasette",
+    "commit": "b9bcd6b6aefe77539abf10c073c1f6666f464e01",
+    "archive_sha256": "b36c3a4662c05c1e638e6db0159049be0ed6db6a0bb374b38accfd81ae2681a1"
+  }
+]

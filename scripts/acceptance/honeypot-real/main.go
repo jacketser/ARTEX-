@@ -116,8 +116,16 @@ func main() {
 	must(e)
 	var samples []sample
 	must(json.Unmarshal(b, &samples))
-	if len(samples) == 0 || (samples[0].Split == "tuning" && len(samples) != 7) || (samples[0].Split == "holdout" && len(samples) != 5) {
+	expected := map[string]int{"tuning": 7, "holdout": 5, "holdout-20261107": 4}
+	if len(samples) == 0 || expected[samples[0].Split] != len(samples) {
 		panic("expected complete predeclared corpus")
+	}
+	seen := map[string]bool{}
+	for _, s := range samples {
+		if s.Split != samples[0].Split || seen[s.ID] || (s.Label != "honeypot" && s.Label != "benign") {
+			panic("invalid or mixed corpus")
+		}
+		seen[s.ID] = true
 	}
 	rules := honeydetect.DefaultRules()
 	must(rules.Validate())
