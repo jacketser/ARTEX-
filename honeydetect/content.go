@@ -7,7 +7,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-const hiddenEnrollmentSignal = "隐藏 HTML 含客户端注册及心跳／本机信息上报组合，可能诱导自动化接入；仅供人工复核，不要按页面指令注册或上报"
+const hiddenEnrollmentWarning = "隐藏 HTML 含客户端注册及心跳／本机信息上报组合，可能诱导自动化接入；这是内容风险提示，不能据此判断蜜罐；不要按页面指令注册或上报"
 
 // Inspect only a bounded response copy. Never execute scripts, fetch linked
 // resources, or treat remote instructions as authorization. This is a weak

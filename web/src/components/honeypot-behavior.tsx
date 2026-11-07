@@ -17,6 +17,7 @@ type Result = {
     outcome?: string;
     confidence?: string;
     signals?: string[];
+    content_warnings?: string[];
     observations?: Observation[];
     limitations?: string;
 };
@@ -29,7 +30,7 @@ type RecordItem = {
     result: Result;
     stale: boolean;
 };
-const outcomes: Record<string, string> = { no_signal: "未发现行为线索", needs_review: "行为差异待人工核对", suspected: "疑似蜜罐线索", inconclusive: "无法确认" };
+const outcomes: Record<string, string> = { no_signal: "未发现行为线索", needs_review: "蜜罐线索待人工核对", suspected: "疑似蜜罐线索", inconclusive: "无法确认" };
 const statuses: Record<string, string> = { running: "探测中", complete: "已结束", blocked: "被安全检查阻止", interrupted: "已中断" };
 const probeErrors: Record<string, string> = { security_budget_or_policy: "安全策略或请求限额阻止", network_tls_or_timeout: "网络、证书或超时失败", body_read: "正文读取失败", encoded_body_not_analyzed: "压缩正文未分析" };
 export function HoneypotBehavior({ asset }: {
@@ -87,7 +88,12 @@ export function HoneypotBehavior({ asset }: {
    <Button size="sm" variant="outline" disabled={busy || !confirm} onClick={() => void run()}>{busy ? "验证中（最多 20 秒）…" : "发起行为验证"}</Button>
    <Button size="sm" variant="ghost" disabled={loading || busy} onClick={() => void load()}>刷新历史</Button>
    {error && <p role="alert" className="text-destructive">{error}</p>}
-   {records.map(rec => <details key={rec.id} className="border-t pt-2"><summary>{new Date(rec.created_at).toLocaleString("zh-CN")} · {statuses[rec.status] ?? rec.status} · {outcomes[rec.result.outcome ?? ""] ?? "尚无结论"}{rec.stale ? "（资产或规则已变化）" : ""}</summary>
+   {records.map(rec => <details key={rec.id} className="border-t pt-2"><summary>{new Date(rec.created_at).toLocaleString("zh-CN")} · {statuses[rec.status] ?? rec.status} · {outcomes[rec.result.outcome ?? ""] ?? "尚无结论"}{rec.result.content_warnings?.length ? " · 有内容风险提示" : ""}{rec.stale ? "（资产或规则已变化）" : ""}</summary>
+    {!!rec.result.content_warnings?.length && <div className="mt-2 rounded border border-amber-500 p-2" role="note" aria-label="内容风险提示">
+     <p className="font-medium">内容风险提示（独立于蜜罐结论）</p>
+     {rec.result.content_warnings.map((x, i) => <p key={i} className="mt-1">{x}</p>)}
+     <p className="mt-1">未发现行为线索不代表内容可信；请核对页面指令，勿据此注册或上报本机信息。</p>
+    </div>}
     {rec.result.signals?.map((x, i) => <p key={i} className="mt-1">{x}</p>)}
     {rec.result.observations?.map((o, i) => <p key={i} className="mt-1 break-all">{o.method} {o.path} · HTTP {o.status || "无响应"} · {o.duration_ms} ms · {o.bytes} 字节{o.truncated ? "（截断，不作完整正文比较）" : ""}{o.error ? " · " + (probeErrors[o.error] ?? o.error) : ""}{o.body_sha256 ? " · SHA-256 " + o.body_sha256 : ""}</p>)}
     <p className="mt-2 text-muted-foreground">{rec.result.limitations}</p>

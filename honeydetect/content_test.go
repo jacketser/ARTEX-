@@ -1,6 +1,7 @@
 package honeydetect
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -44,15 +45,17 @@ func TestHiddenEnrollmentBoundaries(t *testing.T) {
 
 func TestBehaviorHiddenEnrollment(t *testing.T) {
 	for _, tc := range []struct {
-		name, server, want            string
-		unstable, truncated, redirect bool
-		requests                      int
+		name, server, want                      string
+		unstable, truncated, redirect, wildcard bool
+		requests                                int
 	}{
-		{"hidden-content", "ordinary", "needs_review", false, false, false, 4},
-		{"name-not-independent", "Cowrie", "needs_review", false, false, false, 4},
-		{"unstable", "ordinary", "inconclusive", true, false, false, 4},
-		{"truncated", "ordinary", "inconclusive", false, true, false, 4},
-		{"redirect-stop", "ordinary", "inconclusive", false, false, true, 1},
+		{"hidden-content", "ordinary", "no_signal", false, false, false, false, 4},
+		{"name-not-independent", "Cowrie", "needs_review", false, false, false, false, 4},
+		{"wildcard-only", "ordinary", "needs_review", false, false, false, true, 4},
+		{"independent-header-and-behavior", "Cowrie", "suspected", false, false, false, true, 4},
+		{"unstable", "ordinary", "inconclusive", true, false, false, false, 4},
+		{"truncated", "ordinary", "inconclusive", false, true, false, false, 4},
+		{"redirect-stop", "ordinary", "inconclusive", false, false, true, false, 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			requests := 0
@@ -70,7 +73,7 @@ func TestBehaviorHiddenEnrollment(t *testing.T) {
 					w.Header().Set("Location", "/register")
 					w.WriteHeader(302)
 				}
-				if r.URL.Path != "/" {
+				if r.URL.Path != "/" && !tc.wildcard {
 					w.WriteHeader(404)
 					return
 				}
@@ -94,8 +97,8 @@ func TestBehaviorHiddenEnrollment(t *testing.T) {
 				t.Fatalf("outcome %s requests %d", out.Outcome, requests)
 			}
 			count := 0
-			for _, s := range out.Signals {
-				if s == hiddenEnrollmentSignal {
+			for _, s := range out.ContentWarnings {
+				if s == hiddenEnrollmentWarning {
 					count++
 				}
 			}
@@ -106,8 +109,21 @@ func TestBehaviorHiddenEnrollment(t *testing.T) {
 			if count != wantCount {
 				t.Fatalf("warning count %d want %d", count, wantCount)
 			}
-			if out.Confidence == "medium" || out.Confidence == "high" {
-				t.Fatalf("content escalated: %+v", out)
+			if containsSignal(out.Signals, hiddenEnrollmentWarning) {
+				t.Fatal("content warning leaked into honeypot evidence")
+			}
+			wantConfidence := map[string]string{"no_signal": "none", "inconclusive": "none", "needs_review": "low", "suspected": "medium"}[tc.want]
+			if out.Confidence != wantConfidence {
+				t.Fatalf("confidence %s want %s", out.Confidence, wantConfidence)
+			}
+			// The API stores this JSON unchanged; no HTML or lure URL should escape.
+			encoded, err := json.Marshal(out)
+			if err != nil || strings.Contains(string(encoded), "/register") || strings.Contains(string(encoded), "/heartbeat") {
+				t.Fatalf("unsafe result JSON: %s %v", encoded, err)
+			}
+			var decoded BehaviorResult
+			if err := json.Unmarshal(encoded, &decoded); err != nil || len(decoded.ContentWarnings) != wantCount {
+				t.Fatalf("content warnings lost in JSON: %s %v", encoded, err)
 			}
 		})
 	}

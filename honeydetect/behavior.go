@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const BehaviorVersion = "http-behavior-v3"
+const BehaviorVersion = "http-behavior-v4"
 const ProbeMaxBytes = 64 * 1024
 
 // A manually configured allowlist and explicit per-run consent bound active checks.
@@ -97,11 +97,13 @@ type BehaviorResult struct {
 	Confidence   string        `json:"confidence"`
 	Observations []Observation `json:"observations"`
 	Signals      []string      `json:"signals"`
-	Limitations  string        `json:"limitations"`
+	// Content warnings do not contribute to the honeypot outcome or confidence.
+	ContentWarnings []string `json:"content_warnings"`
+	Limitations     string   `json:"limitations"`
 }
 
 func emptyBehavior() BehaviorResult {
-	return BehaviorResult{Version: BehaviorVersion, Outcome: "inconclusive", Confidence: "none", Observations: []Observation{}, Signals: []string{}, Limitations: "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"}
+	return BehaviorResult{Version: BehaviorVersion, Outcome: "inconclusive", Confidence: "none", Observations: []Observation{}, Signals: []string{}, ContentWarnings: []string{}, Limitations: "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"}
 }
 
 // safeProbeIP blocks metadata, local control planes and non-unicast addresses.
@@ -246,8 +248,8 @@ func probeWithClient(ctx context.Context, client *http.Client, origin string, ru
 		if o.Error == "" && !o.Truncated {
 			r := DetectWithRules(Input{ServerHeader: o.server, PoweredBy: resp.Header.Get("X-Powered-By"), ResponseSummary: string(b)}, rules)
 			o.markers = r.Signals
-			if hiddenEnrollment(b, o.contentType) && !containsSignal(out.Signals, hiddenEnrollmentSignal) {
-				out.Signals = append(out.Signals, hiddenEnrollmentSignal)
+			if hiddenEnrollment(b, o.contentType) && !containsSignal(out.ContentWarnings, hiddenEnrollmentWarning) {
+				out.ContentWarnings = append(out.ContentWarnings, hiddenEnrollmentWarning)
 			}
 		}
 		out.Observations = append(out.Observations, o)
