@@ -1,0 +1,87 @@
+{
+  "date": "2026-11-07",
+  "timezone": "Asia/Shanghai",
+  "application_version": "dev-806bc74",
+  "application_commit": "806bc74955355baaee0724b479286643c1309291",
+  "acceptance_commit": "8e99580c297010b4796797a078b510870f4c6c93",
+  "algorithm": "http-behavior-v4",
+  "production_deployed": true,
+  "image_id": "sha256:6bbb74bef7fc8e21298c74477f60b9caa1a9c02e91cd7e61b9d48f220bd47dc6",
+  "binary_sha256": "52c3235b20ea36ae8e6747f5df4a71f50cde2013b45f462a7ccee5df40bf50c2",
+  "previous_image_id": "sha256:1357072ed9e5329d5879253da779a6e56b3101cf8b0b956fa34c09f1f845ddbd",
+  "rollback_image": "jacketser/artex:rollback-before-share-export",
+  "previous_version": "dev-6d4aa09",
+  "backup_dir": "/home/ARTEX/backups/pre-share-export-20261107-113141",
+  "backup_checks": {
+    "stopped_before_backup": true,
+    "pg_restore_list": true,
+    "tar_list": true,
+    "directory_mode": "0700",
+    "files_mode": "0600"
+  },
+  "checks": {
+    "image_matches": true,
+    "binary_matches": true,
+    "persistent_configuration_unchanged": true,
+    "ports": {
+      "8787/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "8787"
+        }
+      ]
+    }
+  },
+  "frontend_checks": [
+    {
+      "path": "function/findings/index.html",
+      "sha256": "b957a86d2db3554717b8e7bac3da98b04677892f7f68494b4ef88bae6c9e85b2",
+      "matches": true
+    },
+    {
+      "path": "_next/static/chunks/2bhpb83pz4l1e.js",
+      "sha256": "91d4b5a51f6b4791c3bfd8eb753453f2246b804e1823138b69cd237693ed3f0e",
+      "matches": true
+    }
+  ],
+  "health": {
+    "ok": true,
+    "service": "artex",
+    "version": "dev-806bc74"
+  },
+  "preflight_counts": {
+    "tasks": 0,
+    "archives": 0,
+    "active_or_queued_tasks": 0,
+    "active_retests": 0,
+    "active_probes": 0
+  },
+  "postflight_counts": {
+    "tasks": 0,
+    "active_retests": 0,
+    "active_probes": 0
+  },
+  "doctor": {
+    "exit_code": 0,
+    "failures": 0,
+    "warnings": [
+      "LLM not configured"
+    ]
+  },
+  "logs": {
+    "publish": "/tmp/artex-share-export-publish.log",
+    "doctor": "/tmp/artex-share-export-doctor.log"
+  },
+  "publish_script_sha256": "e26d27d9845194031652eb72b0d0ba5b47f2d904eb032f243d3604540cecbeeb",
+  "schema_changed": false,
+  "dependencies_updated": false,
+  "authentication_format_changed": false,
+  "production_database_tests": false,
+  "other_apps_restarted": false,
+  "limitations": [
+    "Only Markdown single-file and CSV exports gained limited redaction; JSON/ZIP and historical downloads remain outside this change.",
+    "Unknown, rotated, short or otherwise encoded credentials are not guaranteed to be detected.",
+    "No large exports, long load or model evaluation; browser functional checks used isolated synthetic data.",
+    "Production checks limited to health, read-only counts, configuration digests, runtime doctor and static frontend consistency."
+  ]
+}

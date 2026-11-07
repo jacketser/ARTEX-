@@ -8,9 +8,17 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-6d4aa09`，应用源码对应 `6d4aa09`，正式服务已更新。
-- 最新发布将隐藏接入内容风险独立于蜜罐结论，并标记旧算法历史过期；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-806bc74`，应用源码对应 `806bc74`，正式服务已更新。
+- 最新发布增加 Markdown／CSV 分享副本有限脱敏及失败拒绝下载，保留蜜罐 v4 的独立内容提示及旧历史过期语义；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：分享导出脱敏（2026-11-07）
+
+- 发布已验收 `jacketser/artex:share-export-candidate`，应用源码 `806bc74`／正式 `dev-806bc74`，验收记录 `8e99580`。镜像 ID `sha256:6bbb74bef7fc8e21298c74477f60b9caa1a9c02e91cd7e61b9d48f220bd47dc6`；无数据库结构、依赖、归档或认证格式变化。
+- 发布前任务、归档、活动复测／探测均为 0；停止应用写入后备份 `/home/ARTEX/backups/pre-share-export-20261107-113141/`。dump 目录、文件包列表可读，目录 700、文件 600；环境、JWT、初始登录文件哈希保持一致。
+- 正式健康版本、镜像／程序哈希、发现页 HTML 及导出提示 JS 包与候选一致，端口仅 `127.0.0.1:8787`；应用和数据库健康，其他容器 ID／启动时间不变。doctor 返回 0，无失败，仅未配置模型警告。
+- 回退 `jacketser/artex:rollback-before-share-export` 为 `dev-6d4aa09`，会失去分享脱敏及 CSV 第 13 列，保留蜜罐 v4；通常无需数据恢复。发布日志 `/tmp/artex-share-export-publish.log`，doctor 日志 `/tmp/artex-share-export-doctor.log`；详见[结构化发布结果](scripts/acceptance/results/text-export-release-20261107.json)、[导出报告](TEXT-EXPORT-REDACTION.md)及[部署说明](DEPLOYMENT.md)。
+- 本轮不重跑已通过的隔离专项，不在正式数据库做业务测试或导出正式发现；未运行长负载、大导出或模型评估。未知／旧凭据、JSON／ZIP、日志、会话和历史副本仍未新增覆盖。
 
 ## 候选构建与浏览器下载验收：分享导出（2026-11-07）
 

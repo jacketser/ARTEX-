@@ -1,6 +1,6 @@
 # AgentCapture 源码审阅与隐藏接入诱导提示
 
-> 当前已正式发布 `dev-6d4aa09`／`http-behavior-v4`：内容风险提示独立展示，不再单独触发蜜罐复核，构建、浏览器验收及发布证据见[分离验证报告](HONEYPOT-CONTENT-SEPARATION.md)。下文 v3／v2 结果保留原版本含义，未重算为 v4 评估。
+> 行为 `http-behavior-v4` 已自 `dev-6d4aa09` 正式发布，当前 `dev-806bc74` 保留该算法：内容风险提示独立展示，不再单独触发蜜罐复核，构建、浏览器验收及发布证据见[分离验证报告](HONEYPOT-CONTENT-SEPARATION.md)。下文 v3／v2 结果保留原版本含义，未重算为 v4 评估。
 
 日期：2026-11-07。ARTEX 起点 `9a8a0b9`，本轮候选行为算法为 `http-behavior-v3`；正式应用仍为 `dev-b7877ca`／v2，**未部署**。沿用用户暂缓耗时任务的要求，仅做源码审阅、短时模板复放和专项验证。
 

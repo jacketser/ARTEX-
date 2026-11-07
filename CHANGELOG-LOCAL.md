@@ -9,9 +9,13 @@
 - 测试结果、发布备份及回退镜像：[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
 - 当前完成状态、剩余优先级及不实施项：[项目总览](PROJECT-STATUS.md)；设计与阶段记录：[开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
 
-## 未发布
+## dev-806bc74 — 2026-11-07
 
-- Markdown 汇总／CSV 分享导出脱敏候选：每次读取当前凭据、生成标注副本、读取失败拒绝下载，不改源数据或复核语义。CSV 追加说明列；JSON／ZIP 等未新增覆盖。候选 `dev-806bc74` 专项测试、完整构建及隔离浏览器下载验收通过，待备份发布，详见[报告](TEXT-EXPORT-REDACTION.md)。
+应用源码：`806bc74`；隔离浏览器验收工具及记录：`8e99580`。前后端同时发布，无数据库结构、归档格式、依赖或认证格式变更。
+
+- 发现页 Markdown 汇总／CSV 每次读取当前凭据生成标注的脱敏副本，读取失败拒绝下载；源数据、原始证据和原复核状态保持。CSV 保留原 12 列顺序并追加第 13 列说明，固定列数的下游脚本需适配。
+- 专项、完整构建及隔离 Chromium 两格式×三范围下载验收通过；两次凭据源故障均 503 且零下载。停机备份 `/home/ARTEX/backups/pre-share-export-20261107-113141/` 后发布，健康、程序／前端、配置哈希、回环端口及 doctor 通过。
+- 回退 `jacketser/artex:rollback-before-share-export` 对应 `dev-6d4aa09`，将失去本次分享脱敏及新增列；蜜罐 v4 保持。JSON／ZIP、日志、会话、已下载副本及未知／旧凭据等不保证处理；详见[报告](TEXT-EXPORT-REDACTION.md)。
 
 ## dev-6d4aa09 — 2026-11-07
 
