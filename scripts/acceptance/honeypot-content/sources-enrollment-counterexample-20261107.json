@@ -1,0 +1,19 @@
+{
+  "corpus": "normal-enrollment-counterexample-20261107",
+  "detector_commit": "0b07cb49b4e06568da0dd88508d912e791e5052e",
+  "algorithm": "http-behavior-v3",
+  "groups": [
+    "normal_visible",
+    "normal_hidden"
+  ],
+  "sources": [
+    {
+      "repository": "kubernetes/website",
+      "commit": "e136b827da7537cdf5ec2a497335e6b42962a3a6",
+      "path": "content/en/docs/concepts/architecture/nodes.md",
+      "git_blob_sha1": "75840c1882456f40f5af9fc135fd5c622a84ae34",
+      "bytes": 14892,
+      "kind": "normal_document"
+    }
+  ]
+}
