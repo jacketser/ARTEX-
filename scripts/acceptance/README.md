@@ -42,6 +42,18 @@ go test ./traffic -run '^$' -bench '^BenchmarkCredentialScan$' -benchmem -bencht
 Go 样本测试已被现有 `regression.yml` 后端全量测试覆盖；浏览器脚本目前手动运行。
 
 
+## v4 内容风险与旧历史浏览器验收
+
+```sh
+ARTEX_ACCEPTANCE_CONTENT=1 ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:honeypot-v4-candidate bash scripts/acceptance/run.sh
+```
+
+必须选择同时包含 v4 后端及独立提示前端的候选镜像；脚本不构建镜像。未设置 `ARTEX_ACCEPTANCE_CONTENT=1` 时仍只执行原有验收，兼容旧版镜像；新合成服务通过 Compose `content` profile 按需启动。
+
+先保留原有代理／疑似／捕获／限流验证，再重启隔离应用清除该组刻意留下的进程内预算冷却，保留测试数据库。新增合成服务提供隐藏注册内容、普通响应头和未知路径 404，验证四请求后为 `no_signal`／`none`、独立内容提示、折叠摘要、刷新持久化及冷却 429。随后在临时库复制一条缺少新字段的 v3 历史，验证旧结论和提示保留、版本过期及读取不触发探测。目标收到的请求方法／路径、无凭据及原 Host 均单独核对。
+
+输出新增 `result-content.json`、`result-legacy.json`、`content.png`、`legacy.png`；原结果和截图继续保留。两种合成行为分别为疑似和无信号，旧版复核为注入的历史数据，不能合并成真实样本评估。2026-11-07 的构建、失败尝试及最终证据见[分离验证报告](../../HONEYPOT-CONTENT-SEPARATION.md)。
+
 ## 历史脱敏维护命令验收
 
 ```sh

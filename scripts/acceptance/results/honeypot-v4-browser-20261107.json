@@ -1,0 +1,141 @@
+{
+  "date": "2026-11-07",
+  "kind": "isolated-candidate-browser-acceptance",
+  "application_commit": "6d4aa09a06f62405ee543ae3a3830e798fa7d44f",
+  "application_version": "dev-6d4aa09",
+  "algorithm": "http-behavior-v4",
+  "image": "jacketser/artex:honeypot-v4-candidate",
+  "image_id": "sha256:1357072ed9e5329d5879253da779a6e56b3101cf8b0b956fa34c09f1f845ddbd",
+  "runtime_base_image": "jacketser/artex:honeypot-v2-candidate",
+  "runtime_base_id": "sha256:03d7d6e9e18c9a178dbdab4af1cb8fa0be6f367cd0b6fb84b5a1c79bc27fdf40",
+  "binary_sha256": "6f0d3749dfde7c377c8623b662ebb64cc2c52f38a700faed6c3eb240d8b5b37b",
+  "production_deployed": false,
+  "production_health": {
+    "ok": true,
+    "version": "dev-b7877ca"
+  },
+  "build": {
+    "frontend": "Next.js static production export, 31 pages, TypeScript passed",
+    "backend": "golang:1.26-bookworm, GOMAXPROCS=2, CGO_ENABLED=0, -p 1, embedui",
+    "dependencies": "reused existing local node_modules, Go caches and runtime; no dependency refresh",
+    "source_snapshot": "/tmp/artex-content-v4-build-y5OxnAwF/src",
+    "log": "/tmp/artex-content-v4-build.log"
+  },
+  "baseline": {
+    "settings_saved": true,
+    "policy_reloaded": true,
+    "behavior": "suspected",
+    "requests": 4,
+    "credentials_sent": false,
+    "upstream_connects": 4,
+    "original_host_preserved": true,
+    "cooldown": 429,
+    "passthrough_policy_saved": true,
+    "capture_off_protected": true,
+    "capture_toggle_preserved_history": true,
+    "page_errors": []
+  },
+  "content": {
+    "health": {
+      "ok": true,
+      "service": "artex",
+      "version": "dev-6d4aa09"
+    },
+    "algorithm": "http-behavior-v4",
+    "outcome": "no_signal",
+    "content_warnings": 1,
+    "persisted_after_reload": true,
+    "legacy_v3_preserved": false,
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "HEAD",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/artex-behavior-check-3b90974b145165b06b90980f"
+      }
+    ],
+    "credentials_sent": false,
+    "page_errors": []
+  },
+  "legacy": {
+    "health": {
+      "ok": true,
+      "service": "artex",
+      "version": "dev-6d4aa09"
+    },
+    "algorithm": "http-behavior-v4",
+    "outcome": "no_signal",
+    "content_warnings": 1,
+    "persisted_after_reload": false,
+    "legacy_v3_preserved": true,
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "HEAD",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/artex-behavior-check-3b90974b145165b06b90980f"
+      }
+    ],
+    "credentials_sent": false,
+    "page_errors": []
+  },
+  "final_run_dir": "/tmp/artex-acceptance-rXoq3sqs",
+  "browser_log": "/tmp/artex-content-v4-browser-final.log",
+  "earlier_failed_attempts": [
+    {
+      "log": "/tmp/artex-content-v4-browser.log",
+      "run_dir": "/tmp/artex-acceptance-g6pc9gxs",
+      "reason": "preceding budget test left a process-local cooldown; content probe stopped before target request"
+    },
+    {
+      "log": "/tmp/artex-content-v4-browser-retry.log",
+      "run_dir": "/tmp/artex-acceptance-N78q8k6T",
+      "reason": "same cooldown confirmed by security_budget_or_policy observation"
+    }
+  ],
+  "resolution": "restart disposable app between baseline and content checks; preserve database; no detector changes",
+  "tool_sha256": {
+    "scripts/acceptance/run.sh": "5a77b61afed37c6ce0e15e5c4a68e3c2287f3c6bfc5a57c0df2994b63f3f2d1d",
+    "scripts/acceptance/compose.yml": "1f3b289e95bee339ee3c92a2383941fd385b885bd938e9c6770f7f1e622a7574",
+    "scripts/acceptance/content-browser.cjs": "df78087633b3719165c72b231fd4db6018d8a5d00cd7e717eceb821aafd88d0d",
+    "scripts/acceptance/content-target.py": "4bf697194d42a1c00bd0d5d1271432dd3a5776c14c32a2ff25602c247d594bd7",
+    "scripts/acceptance/behavior-browser.cjs": "41310164e39ea615fb8b233a43d8b9fc9a6011c226176f5ba5741ea69244d7b9",
+    "scripts/acceptance/behavior-target.py": "dad9294de66875d63d38e9d933de9f9deddff9eb9818916480deb49da882e6d9",
+    "scripts/acceptance/behavior-proxy.py": "90f68b41785de56681ac9d65331c4b1f14dc7dd113780710a3c91e14e7741749"
+  },
+  "artifact_sha256": {
+    "result.json": "120e9cb66f42fa64b4ed1ee2ec8a062bc98f7f9d761cb0bec0674194a69cf5ac",
+    "result-content.json": "34e28cae8f4b72d3f06f2eb2c4baef26f9ad9b9d8ffda040162fff79bd73d44d",
+    "result-legacy.json": "8ec5de08d9b2c2d969522f04f45af4cc05430ad5dd48b3066a4dcf1275c6388d",
+    "settings.png": "b8dd45c1a5b79b1d3ca47f7d28d4a3371c7c681bd8ae680224607fe71db91bf3",
+    "assets.png": "9d7ecddf8b8a96ad48580ef71eb5285d81ff97455a1d6f9b7f26a0c3b12971f6",
+    "content.png": "9f78878e744a53de1478c683ab0a1af0670509092d96c371b6f8886a74f4f1e5",
+    "legacy.png": "685abc634fd64560a71b5c9f970bf4b6c547a3453ae11aec74e99be12673ecfa"
+  },
+  "limitations": [
+    "synthetic browser fixtures, not independent holdout or real honeypot detection rate",
+    "legacy record seeded in disposable DB",
+    "no full model experiments or long load",
+    "no production deployment or production database tests"
+  ]
+}

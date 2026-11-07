@@ -53,6 +53,17 @@ services:
       interval: 1s
       timeout: 3s
       retries: 60
+  content-target:
+    profiles: [content]
+    image: ${ARTEX_ACCEPTANCE_IMAGE:-jacketser/artex:local}
+    entrypoint: [python3, /acceptance/content-target.py]
+    volumes:
+      - ./:/acceptance:ro
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://127.0.0.1:8080/metrics]
+      interval: 1s
+      timeout: 3s
+      retries: 60
 networks:
   default:
     internal: true

@@ -34,8 +34,25 @@ v4 将提示从 `signals` 移至独立 `content_warnings: string[]`，无提示�
 
 Go 使用 `golang:1.26-bookworm`、`GOMAXPROCS=2`、`-p 1` 与现有模块／编译缓存。仅挂载跟踪源码的独立快照，未挂载正式数据或凭据；全包容器无网络，API 容器仅内部网络。测试数据库容器及其匿名卷、网络已清理。临时日志不是永久制品，回归源码随提交保存。
 
+## 候选构建与真实浏览器补充（2026-11-07）
+
+应用源码固定 `6d4aa09`，运行版本 `dev-6d4aa09`；构建前工作区干净。候选镜像 `jacketser/artex:honeypot-v4-candidate`，ID `sha256:1357072ed9e5329d5879253da779a6e56b3101cf8b0b956fa34c09f1f845ddbd`。从 Git 归档构建全新 Next.js 静态前端（31 页、类型检查通过），随后 Go `-p 1 -tags embedui` 编译并嵌入，未复用旧前端。使用现有 `node:22-bookworm-slim`、指定 Go 镜像及缓存，运行环境复用 `honeypot-v2-candidate`；无依赖升级，不声称重新验证基础依赖供应链。
+
+构建容器 `--network none`，仅挂载源码快照／前端依赖／缓存；没有加载正式 `.env`。构建脚本 `/tmp/artex-content-v4-build.sh`，日志 `/tmp/artex-content-v4-build.log`，源码与产物目录 `/tmp/artex-content-v4-build-y5OxnAwF/`。永久版本、二进制／工具／结果哈希见[结构化记录](scripts/acceptance/results/honeypot-v4-browser-20261107.json)。
+
+以该候选运行[浏览器验收](scripts/acceptance/README.md#v4-内容风险与旧历史浏览器验收)，全部服务使用内部网络、新建 PostgreSQL、无宿主机端口及正式数据挂载，真实 Chromium 验证：
+
+- 原有检查通过：持续响应头＋统一页面为疑似，四次请求全部经过认证 CONNECT 上游，目标无凭据且 Host 正确；五分钟冷却、策略保存／刷新、捕获关闭仍防护和捕获历史保持不变。
+- 内容合成服务：四次状态 200/200/200/404，蜜罐 `no_signal`／`none`，`signals=[]`，独立 `content_warnings` 仅一条；折叠摘要提示风险、展开详情可见、刷新后持久化。再次发起为 429，目标仅收到预定四次 GET／HEAD，无注册／心跳请求或目标凭据。
+- 复制一条 v3 合成历史后，旧 `needs_review`／`low`、旧提示和缺少新字段的 JSON 保持；页面标记过期，不伪装成 v4 提示区。读取／展开新旧历史后目标请求仍为四次，无自动重测。
+- 三个浏览器阶段页面脚本错误均为 0；人工查看最终截图确认新旧结果分别展示。原始目录 `/tmp/artex-acceptance-rXoq3sqs/`，最终日志 `/tmp/artex-content-v4-browser-final.log`。
+
+前两次尝试中原有验收通过，新增内容探测却被上一组刻意触发的进程内限流冷却阻止（`security_budget_or_policy`，未发出目标请求）。第一轮日志 `/tmp/artex-content-v4-browser.log`，补诊断复现日志 `/tmp/artex-content-v4-browser-retry.log`。修正验收编排，在两组之间重启临时应用、保留测试数据库，最终通过；没有放宽检测器或冷却逻辑，失败不计为通过。
+
+测试容器、网络及临时数据库已清理。正式健康接口仍为 `dev-b7877ca`，本轮**未部署**，只新增验收工具与报告。
+
 ## 限制与剩余工作
 
 这次改善结论表达与证据边界，没有扩大匹配覆盖，也没有证明提高真实蜜罐命中率或防止模型被接管。v3 的开发模板、154 个内容留出及后续针对性对照均未重跑，原结果与冻结工具保持原版本含义，不能用它们报告 v4 命中率。
 
-仍缺独立注册型阳性、覆盖完整词组合的真实正常反例和完整发布验收。候选发布前须完整构建、隔离浏览器验收，再按部署文档备份和发布；本轮未部署、未运行长负载或模型实验。其他优先级见 [PROJECT-STATUS.md](PROJECT-STATUS.md)。
+仍缺独立注册型阳性和覆盖完整词组合的真实正常反例。候选前后端构建及隔离浏览器验收已完成；下一步可按部署文档检查正式任务状态、备份并发布本次已验收镜像，正式发布后再核对健康、入口与凭据保持。本轮未部署、未运行长负载或模型实验。其他优先级见 [PROJECT-STATUS.md](PROJECT-STATUS.md)。

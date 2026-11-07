@@ -12,6 +12,13 @@
 - 最新发布收紧蜜罐行为疑似升级并标记旧算法历史过期；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
 
+## 候选构建与浏览器验收：v4（2026-11-07）
+
+- 应用源码 `6d4aa09`，版本 `dev-6d4aa09`；全新静态前端 31 页和 Go 嵌入构建通过，运行环境复用既有镜像，无依赖升级。候选 `jacketser/artex:honeypot-v4-candidate`，ID `sha256:1357072ed9e5329d5879253da779a6e56b3101cf8b0b956fa34c09f1f845ddbd`。日志 `/tmp/artex-content-v4-build.log`。
+- 实际 Chromium 验收通过：保留原有认证上游／疑似／冷却／捕获／防护检查；新增仅内容提示的无信号结果、折叠摘要、详情、刷新持久化和 v3 旧历史兼容。新目标严格四请求，无凭据、注册／心跳请求或历史读取自动探测；页面错误为 0。
+- 两次前置失败源于原有限流测试留下进程内冷却，补充诊断后改为组间重启临时应用、保留测试库；没有修改检测器或放宽安全边界。最终日志 `/tmp/artex-content-v4-browser-final.log`，制品 `/tmp/artex-acceptance-rXoq3sqs/`，永久[结构化记录](scripts/acceptance/results/honeypot-v4-browser-20261107.json)与[详细报告](HONEYPOT-CONTENT-SEPARATION.md)保留版本和失败尝试。
+- 测试资源已清理，正式健康检查仍为 `dev-b7877ca`，未部署、未测试正式库。本次只改验收工具／文档；合成 UI 场景不是独立留出或真实蜜罐准确率证据。下一步按文档备份并发布已验收候选。
+
 ## 候选验证：v4 内容风险与蜜罐结论分离（2026-11-07）
 
 - 基线 `2b761e7`，新增独立 `content_warnings`；仅有内容提示不再触发蜜罐复核，共用前端摘要及详情单独显示。旧 v3 及更早历史过期且原始字段保留，无迁移或自动重测。详细边界见[分离报告](HONEYPOT-CONTENT-SEPARATION.md)。
