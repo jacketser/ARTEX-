@@ -1233,18 +1233,23 @@ export default function FindingsPage() {
               <span className="text-xs text-muted-foreground">导出格式</span>
               <RadioGroup value={exportFormat} onValueChange={(v) => setExportFormat(v as typeof exportFormat)}>
                 <label htmlFor="export-format-md-single" className="flex items-center gap-2 text-sm">
-                  <RadioGroupItem id="export-format-md-single" value="md-single" /> Markdown 汇总报告（单个 .md 文件）
+                  <RadioGroupItem id="export-format-md-single" value="md-single" /> Markdown 汇总报告（脱敏副本，单个 .md 文件）
                 </label>
                 <label htmlFor="export-format-md-zip" className="flex items-center gap-2 text-sm">
                   <RadioGroupItem id="export-format-md-zip" value="md-zip" /> Markdown 分文件（一漏洞一 .md,打包 .zip）
                 </label>
                 <label htmlFor="export-format-csv" className="flex items-center gap-2 text-sm">
-                  <RadioGroupItem id="export-format-csv" value="csv" /> CSV 表格（.csv）
+                  <RadioGroupItem id="export-format-csv" value="csv" /> CSV 表格（脱敏副本，.csv）
                 </label>
                 <label htmlFor="export-format-json" className="flex items-center gap-2 text-sm">
                   <RadioGroupItem id="export-format-json" value="json" /> JSON（.json）
                 </label>
               </RadioGroup>
+              <p role="note" className="text-xs text-muted-foreground">
+                {exportFormat === "md-single" || exportFormat === "csv"
+                  ? "导出时处理当前已知凭据及部分结构化敏感值，不修改源数据。未知密码和其他编码可能遗漏，分享前请人工检查；脱敏副本不能替代原始证据。"
+                  : "此格式尚未增加统一导出脱敏，可能包含凭据或原始证据；请勿直接作为已脱敏副本分享。"}
+              </p>
             </div>
           </div>
 

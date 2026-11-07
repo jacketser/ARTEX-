@@ -35,6 +35,13 @@ func findingTitle(f *db.DBFinding) string {
 // FindingsMarkdown 把一批 findings 整合成一份汇总报告(摘要 + 按严重等级分组,
 // 每条含类别/状态/所属任务/证据/详细报告)。
 func FindingsMarkdown(fs []*db.DBFinding, generatedAt time.Time) string {
+	return findingsMarkdown(fs, generatedAt, unchangedExportText)
+}
+
+func unchangedExportText(s string) string { return s }
+
+// Filter only displayed text; review freshness always uses the original finding.
+func findingsMarkdown(fs []*db.DBFinding, generatedAt time.Time, text func(string) string) string {
 	items := append([]*db.DBFinding(nil), fs...)
 	sortFindingsForExport(items)
 
@@ -64,28 +71,28 @@ func FindingsMarkdown(fs []*db.DBFinding, generatedAt time.Time) string {
 
 	b.WriteString("## 漏洞明细\n\n")
 	for i, f := range items {
-		fmt.Fprintf(&b, "### %d. [%s] %s\n\n", i+1, strings.ToUpper(nz(f.Severity, "info")), findingTitle(f))
+		fmt.Fprintf(&b, "### %d. [%s] %s\n\n", i+1, text(strings.ToUpper(nz(f.Severity, "info"))), text(findingTitle(f)))
 		if f.VulnClass != "" {
-			fmt.Fprintf(&b, "- **类别**：%s\n", f.VulnClass)
+			fmt.Fprintf(&b, "- **类别**：%s\n", text(f.VulnClass))
 		}
-		fmt.Fprintf(&b, "- **状态**：%s\n", nz(f.Status, "pending"))
+		fmt.Fprintf(&b, "- **状态**：%s\n", text(nz(f.Status, "pending")))
 		if desc := strings.TrimSpace(f.TaskDescription); desc != "" {
-			fmt.Fprintf(&b, "- **所属任务**：%s\n", desc)
+			fmt.Fprintf(&b, "- **所属任务**：%s\n", text(desc))
 		}
 		fmt.Fprintf(&b, "- **发现时间**：%s\n\n", f.CreatedAt.Format("2006-01-02 15:04:05"))
 		if s := strings.TrimSpace(f.Summary); s != "" {
-			fmt.Fprintf(&b, "%s\n\n", s)
+			fmt.Fprintf(&b, "%s\n\n", text(s))
 		}
 		if e := strings.TrimSpace(f.Evidence); e != "" {
-			fmt.Fprintf(&b, "**证据：**\n\n```\n%s\n```\n\n", e)
+			fmt.Fprintf(&b, "**证据：**\n\n```\n%s\n```\n\n", text(e))
 		}
 		if rep := strings.TrimSpace(f.Report); rep != "" {
 			b.WriteString("**详细报告：**\n\n")
-			b.WriteString(rep)
+			b.WriteString(text(rep))
 			b.WriteString("\n\n")
 		}
-		b.WriteString(findingReviewMarkdown(f))
-		b.WriteString(findingTrafficMarkdown(f, false))
+		b.WriteString(findingReviewMarkdownText(f, text))
+		b.WriteString(findingTrafficMarkdownText(f, false, text))
 		b.WriteString("---\n\n")
 	}
 	return b.String()
@@ -145,15 +152,23 @@ func FindingFilename(f *db.DBFinding) string {
 // FindingsCSV 把一批 findings 渲染成 CSV(带 UTF-8 BOM,便于 Excel 正确识别中文)。
 // 不含大段 report/evidence 全文,只放摘要类字段;需要全文用 Markdown/JSON 导出。
 func FindingsCSV(fs []*db.DBFinding) []byte {
+	return findingsCSV(fs, unchangedExportText, "")
+}
+
+func findingsCSV(fs []*db.DBFinding, text func(string) string, notice string) []byte {
 	items := append([]*db.DBFinding(nil), fs...)
 	sortFindingsForExport(items)
 
 	var buf bytes.Buffer
 	buf.WriteString("\xEF\xBB\xBF") // UTF-8 BOM
 	w := csv.NewWriter(&buf)
-	_ = w.Write([]string{"ID", "名称", "类别", "严重等级", "状态", "所属任务", "发现时间", "概述", "流量证据数量", "流量证据ID", "人工复核", "复核是否过期"})
+	header := []string{"ID", "名称", "类别", "严重等级", "状态", "所属任务", "发现时间", "概述", "流量证据数量", "流量证据ID", "人工复核", "复核是否过期"}
+	if notice != "" {
+		header = append(header, "脱敏副本说明")
+	}
+	_ = w.Write(header)
 	for _, f := range items {
-		_ = w.Write([]string{
+		row := []string{
 			fmt.Sprintf("%d", f.ID),
 			findingTitle(f),
 			f.VulnClass,
@@ -163,7 +178,14 @@ func FindingsCSV(fs []*db.DBFinding) []byte {
 			f.CreatedAt.Format("2006-01-02 15:04:05"),
 			strings.TrimSpace(f.Summary),
 			fmt.Sprint(len(f.TrafficBindings)), findingTrafficIDs(f), reviewVerdict(f), fmt.Sprint(f.Review != nil && f.Review.Fingerprint != db.FindingFingerprint(f)),
-		})
+		}
+		for i := range row {
+			row[i] = text(row[i])
+		}
+		if notice != "" {
+			row = append(row, notice)
+		}
+		_ = w.Write(row)
 	}
 	w.Flush()
 	return buf.Bytes()
@@ -178,6 +200,9 @@ func findingTrafficIDs(f *db.DBFinding) string {
 }
 
 func findingTrafficMarkdown(f *db.DBFinding, attachments bool) string {
+	return findingTrafficMarkdownText(f, attachments, unchangedExportText)
+}
+func findingTrafficMarkdownText(f *db.DBFinding, attachments bool, text func(string) string) string {
 	stale := f.Report != "" && f.EvidenceVersion != f.ReportEvidenceVersion
 	if len(f.TrafficBindings) == 0 && !stale {
 		return ""
@@ -189,9 +214,9 @@ func findingTrafficMarkdown(f *db.DBFinding, attachments bool) string {
 		out.WriteString("证据已变更，详细报告待更新。\n\n")
 	}
 	for i, b := range f.TrafficBindings {
-		fmt.Fprintf(&out, "%d. **证据 #%d · %s** — `%s %s`，状态码 %d\n", i+1, b.ID, b.Role, b.Snapshot.Method, strings.ReplaceAll(b.Snapshot.URL, "`", "%60"), b.Snapshot.Status)
+		fmt.Fprintf(&out, "%d. **证据 #%d · %s** — `%s %s`，状态码 %d\n", i+1, b.ID, text(b.Role), text(b.Snapshot.Method), strings.ReplaceAll(text(b.Snapshot.URL), "`", "%60"), b.Snapshot.Status)
 		if b.Note != "" {
-			fmt.Fprintf(&out, "   %s\n", strings.ReplaceAll(b.Note, "\n", "\n   "))
+			fmt.Fprintf(&out, "   %s\n", strings.ReplaceAll(text(b.Note), "\n", "\n   "))
 		}
 		if attachments {
 			fmt.Fprintf(&out, "   [请求报文](evidence/%d/%d/request.http) · [响应报文](evidence/%d/%d/response.http)\n", f.ID, b.ID, f.ID, b.ID)
@@ -215,6 +240,9 @@ func reviewVerdict(f *db.DBFinding) string {
 	}
 }
 func findingReviewMarkdown(f *db.DBFinding) string {
+	return findingReviewMarkdownText(f, unchangedExportText)
+}
+func findingReviewMarkdownText(f *db.DBFinding, text func(string) string) string {
 	var b strings.Builder
 	b.WriteString("\n**证据与反证复核（人工）**\n\n")
 	fmt.Fprintf(&b, "结论：%s。\n\n", reviewVerdict(f))
@@ -223,7 +251,7 @@ func findingReviewMarkdown(f *db.DBFinding) string {
 			b.WriteString("复核已过期：证据或结论内容已变化，需要重新确认。\n\n")
 		}
 		for _, item := range []struct{ label, value string }{{"证据来源", r.Sources}, {"复现条件与实际观察", r.Reproduction}, {"反证与替代解释", r.CounterEvidence}, {"限制与缺失证据", r.Limitations}} {
-			fmt.Fprintf(&b, "%s：\n\n%s\n\n", item.label, item.value)
+			fmt.Fprintf(&b, "%s：\n\n%s\n\n", item.label, text(item.value))
 		}
 	}
 	return b.String()

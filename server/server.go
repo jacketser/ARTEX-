@@ -2202,8 +2202,7 @@ func (s *Server) findingsExport(w http.ResponseWriter, r *http.Request) {
 
 	switch format {
 	case "md-single":
-		setDownload("text/markdown; charset=utf-8", "findings-"+stamp+".md")
-		_, _ = w.Write([]byte(report.FindingsMarkdown(fs, now)))
+		s.sharedFindingsExport(w, r, fs, format, now)
 	case "md-zip":
 		path := filepath.Join(stage, "findings.zip")
 		if err := buildFindingsEvidenceZip(path, fs, stage, now); err != nil {
@@ -2219,8 +2218,7 @@ func (s *Server) findingsExport(w http.ResponseWriter, r *http.Request) {
 		setDownload("application/zip", "findings-"+stamp+".zip")
 		http.ServeContent(w, r, "findings.zip", now, file)
 	case "csv":
-		setDownload("text/csv; charset=utf-8", "findings-"+stamp+".csv")
-		_, _ = w.Write(report.FindingsCSV(fs))
+		s.sharedFindingsExport(w, r, fs, format, now)
 	case "json":
 		assets := s.resolveFindingAssets(fs)
 		out := make([]FindingDTO, 0, len(fs))
