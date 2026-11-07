@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Build the predeclared content corpus from verified local source downloads."""
+import ast
 import hashlib
 import html
 import json
@@ -11,8 +12,8 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def prepare(source_dir, output_dir):
-    lock = json.loads(pathlib.Path(__file__).with_name("sources.json").read_text())
+def prepare(source_dir, output_dir, lock_path=None):
+    lock = json.loads(pathlib.Path(lock_path or pathlib.Path(__file__).with_name("sources.json")).read_text())
     source_dir, output_dir = pathlib.Path(source_dir), pathlib.Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     # A failed preparation must not leave a previous complete manifest usable.
@@ -39,7 +40,44 @@ def prepare(source_dir, output_dir):
             raise ValueError("source does not match lock: " + filename)
         (output_dir / "sources" / filename).write_bytes(raw)
         sources.append(dict(**item, sha256=sha(raw)))
-        if item["repository"] == "mdn/learning-area":
+        kind = item.get("kind")
+        if kind == "normal_document":
+            text = raw.decode("utf-8")
+            for group, attribute in [("normal_visible", ""), ("normal_hidden", " hidden")]:
+                body = ("<!doctype html><html><body><section" + attribute + ">" + html.escape(text) + "</section></body></html>").encode()
+                add(group, item["path"], body, sha(raw))
+        elif kind == "html_lure_final_variants":
+            tree = ast.parse(raw)
+            assignments = [n for n in tree.body if isinstance(n, ast.AnnAssign) and isinstance(n.target, ast.Name) and n.target.id == "RECIPROCITY_LURE_TEMPLATES"]
+            if len(assignments) != 1 or not isinstance(assignments[0].value, ast.Tuple):
+                raise ValueError("unknown lure schema")
+            selected = []
+            for node in assignments[0].value.elts:
+                if not isinstance(node, ast.Call):
+                    raise ValueError("unknown template schema")
+                fields = {k.arg: k.value for k in node.keywords}
+                if ast.literal_eval(fields["id"]) == "html_reciprocity_canary":
+                    selected.append(ast.literal_eval(fields["final_variants"]))
+            if len(selected) != 1 or len(selected[0]) != 3:
+                raise ValueError("unexpected final variants")
+            for index, text in enumerate(selected[0]):
+                if not isinstance(text, str) or not text.strip():
+                    raise ValueError("nonliteral or empty variant")
+                key = f"html_reciprocity_canary/final/{index}"
+                add("lure_native", key, text.encode(), sha(raw))
+                add("lure_hidden", key, ("<!doctype html><html><body><section hidden>" + html.escape(text) + "</section></body></html>").encode(), sha(raw))
+        elif kind == "development_regression":
+            tree = ast.parse(raw)
+            matches = [n.value for n in tree.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "C2_RECRUIT_PROMPT" for t in n.targets)]
+            if len(matches) != 1:
+                raise ValueError("missing development template")
+            text = ast.literal_eval(matches[0])
+            if not isinstance(text, str):
+                raise ValueError("nonliteral development template")
+            add("development_regression", "C2_RECRUIT_PROMPT", text.encode(), sha(raw))
+        elif kind is not None:
+            raise ValueError("unknown source kind")
+        elif item["repository"] == "mdn/learning-area":
             add("normal_html", item["path"], raw, sha(raw))
         elif item["repository"] == "microsoft/BIPIA":
             dataset = json.loads(raw)

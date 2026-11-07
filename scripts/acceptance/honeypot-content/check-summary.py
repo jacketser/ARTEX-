@@ -8,7 +8,8 @@ import sys
 import tempfile
 from summarize import summarize
 
-manifest_path, measurements_path = map(pathlib.Path, sys.argv[1:])
+manifest_path, measurements_path = map(pathlib.Path, sys.argv[1:3])
+lock_path = sys.argv[3] if len(sys.argv) > 3 else None
 manifest = json.loads(manifest_path.read_text())
 measurements = json.loads(measurements_path.read_text())
 with tempfile.TemporaryDirectory(prefix='artex-content-summary-check-') as directory:
@@ -20,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix='artex-content-summary-check-') as direc
     def run(m, data):
         (root / 'samples.json').write_text(json.dumps(m))
         (root / 'measurements.json').write_text(json.dumps(data))
-        summarize(root / 'samples.json', root / 'measurements.json', output)
+        summarize(root / 'samples.json', root / 'measurements.json', output, lock_path)
 
     run(manifest, measurements)
     for mode in ('missing', 'duplicate', 'subset-both', 'label', 'version', 'outcome', 'requests', 'observations', 'body-hash', 'status', 'source'):

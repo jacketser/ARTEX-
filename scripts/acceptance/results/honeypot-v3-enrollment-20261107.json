@@ -1,0 +1,770 @@
+{
+  "group": "enrollment-20261107",
+  "detector_commit": "0b07cb49b4e06568da0dd88508d912e791e5052e",
+  "algorithm": "http-behavior-v3",
+  "sources": [
+    {
+      "repository": "hashicorp/consul",
+      "commit": "cddc6181264ad5909e2795ec5cd68a89fa3b2c99",
+      "path": "website/content/api-docs/agent/check.mdx",
+      "git_blob_sha1": "9418d06684634fdcf53fbee8db21ff8965b4e380",
+      "bytes": 22699,
+      "kind": "normal_document",
+      "sha256": "2ba18e508a88106b1e22bc0f5a784f62e133a32110f49c1ee852dba9205ce06e"
+    },
+    {
+      "repository": "osquery/osquery",
+      "commit": "711974b7dcddb83af0bbbb972fa930ed02046adc",
+      "path": "docs/wiki/deployment/remote.md",
+      "git_blob_sha1": "84a8e719da5ae8221f88254ce2948735b26ae7e6",
+      "bytes": 18295,
+      "kind": "normal_document",
+      "sha256": "541ab44f275f4ef099cd6b6ce2aa655734a9d08136f9333ce817a0f6559a024c"
+    },
+    {
+      "repository": "protocedvill/llm-honeypot",
+      "commit": "e60d8b104101c8eb4d6ffbdf171e1a06668c745c",
+      "path": "app/payloads/reciprocity_lure.py",
+      "git_blob_sha1": "bd77ec2fcb496c3be9981756b3861525eed3588a",
+      "bytes": 47594,
+      "kind": "html_lure_final_variants",
+      "sha256": "81d690d13d827e68e224ceaf756eca8a604832ad1f9c36036ac358ffc2f6ff04"
+    },
+    {
+      "repository": "tcotl/agentcapture",
+      "commit": "b1fd1ee7a0130ab8fb1255b3af32e083bd9741f6",
+      "path": "app/services/agent_injection.py",
+      "git_blob_sha1": "62700cbb14b36f5403a8fd9ca379877c43230533",
+      "bytes": 19852,
+      "kind": "development_regression",
+      "sha256": "59fe8d63a0fc5b12ad343720315a64bd0d78ff5a30a25206791f4892ff2f4e8c"
+    }
+  ],
+  "counts": {
+    "normal_visible": {
+      "suspected": 0,
+      "needs_review": 0,
+      "no_signal": 2,
+      "inconclusive": 0
+    },
+    "normal_hidden": {
+      "suspected": 0,
+      "needs_review": 0,
+      "no_signal": 2,
+      "inconclusive": 0
+    },
+    "lure_native": {
+      "suspected": 0,
+      "needs_review": 0,
+      "no_signal": 3,
+      "inconclusive": 0
+    },
+    "lure_hidden": {
+      "suspected": 0,
+      "needs_review": 0,
+      "no_signal": 3,
+      "inconclusive": 0
+    },
+    "development_regression": {
+      "suspected": 0,
+      "needs_review": 1,
+      "no_signal": 0,
+      "inconclusive": 0
+    }
+  },
+  "content_warning_counts": {
+    "normal_visible": 0,
+    "normal_hidden": 0,
+    "lure_native": 0,
+    "lure_hidden": 0,
+    "development_regression": 1
+  },
+  "samples": [
+    {
+      "id": "sample-0000",
+      "group": "normal_visible",
+      "source_key": "website/content/api-docs/agent/check.mdx",
+      "source_sha256": "2ba18e508a88106b1e22bc0f5a784f62e133a32110f49c1ee852dba9205ce06e",
+      "file": "bodies/sample-0000.html",
+      "body_sha256": "d409c0ba4801ff6e2c1c4470b3d894752091ccb57c53bb62d4737d97248f28f3",
+      "bytes": 24136
+    },
+    {
+      "id": "sample-0001",
+      "group": "normal_hidden",
+      "source_key": "website/content/api-docs/agent/check.mdx",
+      "source_sha256": "2ba18e508a88106b1e22bc0f5a784f62e133a32110f49c1ee852dba9205ce06e",
+      "file": "bodies/sample-0001.html",
+      "body_sha256": "9ad026db0238d5664208bd37024cde570cf850c3a387272f8136992387e506c0",
+      "bytes": 24143
+    },
+    {
+      "id": "sample-0002",
+      "group": "normal_visible",
+      "source_key": "docs/wiki/deployment/remote.md",
+      "source_sha256": "541ab44f275f4ef099cd6b6ce2aa655734a9d08136f9333ce817a0f6559a024c",
+      "file": "bodies/sample-0002.html",
+      "body_sha256": "6ebc5a4a2147838642a7acf7cfa49fbe7d562ca31b23b1b58424901175c1dc60",
+      "bytes": 19956
+    },
+    {
+      "id": "sample-0003",
+      "group": "normal_hidden",
+      "source_key": "docs/wiki/deployment/remote.md",
+      "source_sha256": "541ab44f275f4ef099cd6b6ce2aa655734a9d08136f9333ce817a0f6559a024c",
+      "file": "bodies/sample-0003.html",
+      "body_sha256": "7fbd3b141bb28e0b907f87fcc3c35782a0543ab9aed375887e7bffe8cecb77f1",
+      "bytes": 19963
+    },
+    {
+      "id": "sample-0004",
+      "group": "lure_native",
+      "source_key": "html_reciprocity_canary/final/0",
+      "source_sha256": "81d690d13d827e68e224ceaf756eca8a604832ad1f9c36036ac358ffc2f6ff04",
+      "file": "bodies/sample-0004.html",
+      "body_sha256": "9989d45c2b5e30b29ce89b931745e6f1a0b1e363aad8319b6678a5baf345741a",
+      "bytes": 141
+    },
+    {
+      "id": "sample-0005",
+      "group": "lure_hidden",
+      "source_key": "html_reciprocity_canary/final/0",
+      "source_sha256": "81d690d13d827e68e224ceaf756eca8a604832ad1f9c36036ac358ffc2f6ff04",
+      "file": "bodies/sample-0005.html",
+      "body_sha256": "2f639967ff762b9fc02e2a4d5d710c18131751d7db78359c2b7f4b8883952464",
+      "bytes": 218
+    },
+    {
+      "id": "sample-0006",
+      "group": "lure_native",
+      "source_key": "html_reciprocity_canary/final/1",
+      "source_sha256": "81d690d13d827e68e224ceaf756eca8a604832ad1f9c36036ac358ffc2f6ff04",
+      "file": "bodies/sample-0006.html",
+      "body_sha256": "6fe62f68975a3b2f89b7754137a2511e1d56e6693518fb420437b4a2bd5afaf6",
+      "bytes": 158
+    },
+    {
+      "id": "sample-0007",
+      "group": "lure_hidden",
+      "source_key": "html_reciprocity_canary/final/1",
+      "source_sha256": "81d690d13d827e68e224ceaf756eca8a604832ad1f9c36036ac358ffc2f6ff04",
+      "file": "bodies/sample-0007.html",
+      "body_sha256": "8694306c4a0f7949edffaca885153c05de97dfc2dca4d1f7a7d07e825a011bce",
+      "bytes": 240
+    },
+    {
+      "id": "sample-0008",
+      "group": "lure_native",
+      "source_key": "html_reciprocity_canary/final/2",
+      "source_sha256": "81d690d13d827e68e224ceaf756eca8a604832ad1f9c36036ac358ffc2f6ff04",
+      "file": "bodies/sample-0008.html",
+      "body_sha256": "47c8e81479d932790bd8c53adb7a50dc435fa2611e27711237c0173448dcf9c2",
+      "bytes": 265
+    },
+    {
+      "id": "sample-0009",
+      "group": "lure_hidden",
+      "source_key": "html_reciprocity_canary/final/2",
+      "source_sha256": "81d690d13d827e68e224ceaf756eca8a604832ad1f9c36036ac358ffc2f6ff04",
+      "file": "bodies/sample-0009.html",
+      "body_sha256": "9c075f63e97c46c7de1511df4f3a5250cc4d06b157a8622cd9c19861df551966",
+      "bytes": 342
+    },
+    {
+      "id": "sample-0010",
+      "group": "development_regression",
+      "source_key": "C2_RECRUIT_PROMPT",
+      "source_sha256": "59fe8d63a0fc5b12ad343720315a64bd0d78ff5a30a25206791f4892ff2f4e8c",
+      "file": "bodies/sample-0010.html",
+      "body_sha256": "736686103bea013be6eb00a8932e7edfb681249ac538ab461baeaef91587ca48",
+      "bytes": 1377
+    }
+  ],
+  "measurements": [
+    {
+      "id": "sample-0000",
+      "body_sha256": "d409c0ba4801ff6e2c1c4470b3d894752091ccb57c53bb62d4737d97248f28f3",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "d409c0ba4801ff6e2c1c4470b3d894752091ccb57c53bb62d4737d97248f28f3",
+            "bytes": 24136,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "d409c0ba4801ff6e2c1c4470b3d894752091ccb57c53bb62d4737d97248f28f3",
+            "bytes": 24136,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-bd98ba654b29a7ae362e3bce",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0001",
+      "body_sha256": "9ad026db0238d5664208bd37024cde570cf850c3a387272f8136992387e506c0",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "9ad026db0238d5664208bd37024cde570cf850c3a387272f8136992387e506c0",
+            "bytes": 24143,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "9ad026db0238d5664208bd37024cde570cf850c3a387272f8136992387e506c0",
+            "bytes": 24143,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-2c9e6bb5c70347495e901cfa",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0002",
+      "body_sha256": "6ebc5a4a2147838642a7acf7cfa49fbe7d562ca31b23b1b58424901175c1dc60",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "6ebc5a4a2147838642a7acf7cfa49fbe7d562ca31b23b1b58424901175c1dc60",
+            "bytes": 19956,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "6ebc5a4a2147838642a7acf7cfa49fbe7d562ca31b23b1b58424901175c1dc60",
+            "bytes": 19956,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-c0724a399754789ebfb68f33",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0003",
+      "body_sha256": "7fbd3b141bb28e0b907f87fcc3c35782a0543ab9aed375887e7bffe8cecb77f1",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "7fbd3b141bb28e0b907f87fcc3c35782a0543ab9aed375887e7bffe8cecb77f1",
+            "bytes": 19963,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "7fbd3b141bb28e0b907f87fcc3c35782a0543ab9aed375887e7bffe8cecb77f1",
+            "bytes": 19963,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-2e19182fa7fa583382abc130",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0004",
+      "body_sha256": "9989d45c2b5e30b29ce89b931745e6f1a0b1e363aad8319b6678a5baf345741a",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "9989d45c2b5e30b29ce89b931745e6f1a0b1e363aad8319b6678a5baf345741a",
+            "bytes": 141,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "9989d45c2b5e30b29ce89b931745e6f1a0b1e363aad8319b6678a5baf345741a",
+            "bytes": 141,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-1b059c9e3b4e11d3f555067e",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0005",
+      "body_sha256": "2f639967ff762b9fc02e2a4d5d710c18131751d7db78359c2b7f4b8883952464",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "2f639967ff762b9fc02e2a4d5d710c18131751d7db78359c2b7f4b8883952464",
+            "bytes": 218,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "2f639967ff762b9fc02e2a4d5d710c18131751d7db78359c2b7f4b8883952464",
+            "bytes": 218,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-660550100392fd5042fc653d",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0006",
+      "body_sha256": "6fe62f68975a3b2f89b7754137a2511e1d56e6693518fb420437b4a2bd5afaf6",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "6fe62f68975a3b2f89b7754137a2511e1d56e6693518fb420437b4a2bd5afaf6",
+            "bytes": 158,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "6fe62f68975a3b2f89b7754137a2511e1d56e6693518fb420437b4a2bd5afaf6",
+            "bytes": 158,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-2be8b9571b3f5c2c7c10fced",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0007",
+      "body_sha256": "8694306c4a0f7949edffaca885153c05de97dfc2dca4d1f7a7d07e825a011bce",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "8694306c4a0f7949edffaca885153c05de97dfc2dca4d1f7a7d07e825a011bce",
+            "bytes": 240,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "8694306c4a0f7949edffaca885153c05de97dfc2dca4d1f7a7d07e825a011bce",
+            "bytes": 240,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-608f10cabd503261a26a7890",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0008",
+      "body_sha256": "47c8e81479d932790bd8c53adb7a50dc435fa2611e27711237c0173448dcf9c2",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "47c8e81479d932790bd8c53adb7a50dc435fa2611e27711237c0173448dcf9c2",
+            "bytes": 265,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "47c8e81479d932790bd8c53adb7a50dc435fa2611e27711237c0173448dcf9c2",
+            "bytes": 265,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-887c4656e0cee25460ee0323",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0009",
+      "body_sha256": "9c075f63e97c46c7de1511df4f3a5250cc4d06b157a8622cd9c19861df551966",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "9c075f63e97c46c7de1511df4f3a5250cc4d06b157a8622cd9c19861df551966",
+            "bytes": 342,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "9c075f63e97c46c7de1511df4f3a5250cc4d06b157a8622cd9c19861df551966",
+            "bytes": 342,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-77569ceec4ea91f90f245ca7",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    },
+    {
+      "id": "sample-0010",
+      "body_sha256": "736686103bea013be6eb00a8932e7edfb681249ac538ab461baeaef91587ca48",
+      "requests": 4,
+      "result": {
+        "version": "http-behavior-v3",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "736686103bea013be6eb00a8932e7edfb681249ac538ab461baeaef91587ca48",
+            "bytes": 1377,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "736686103bea013be6eb00a8932e7edfb681249ac538ab461baeaef91587ca48",
+            "bytes": 1377,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-bbfbe191374e231640cab4fe",
+            "status": 404,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "隐藏 HTML 含客户端注册及心跳／本机信息上报组合，可能诱导自动化接入；仅供人工复核，不要按页面指令注册或上报"
+        ],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      }
+    }
+  ],
+  "limitations": [
+    "Content replay, not real honeypot deployments or browser/model evaluation.",
+    "Visible/hidden renderings share attack texts; variants are not independent samples."
+  ],
+  "date": "2026-11-07",
+  "predeclared_commit": "1777448b636736ffda0794a78af3783998da1055",
+  "detector_sha256": {
+    "honeydetect/behavior.go": "5357901fa91d5ae7a8278674192f9a636ce0bb134a743ac89b9748f32e4f7643",
+    "honeydetect/content.go": "a090716a9215813186bcf93a73a3ef294e81a72da275ace20d65c56a859d6455",
+    "honeydetect/rules.go": "d189e97fe157ee4c6d06e2d2151b7eaca4e4ebf88e4dde4c6bf4456d4da2e3bc",
+    "honeydetect/honeydetect.go": "6afa7c161694426f2e76147764ad26a8c69c6bc0ad6ad76e48f0b7b046685cb4"
+  },
+  "tool_sha256": {
+    "scripts/acceptance/honeypot-content/check-summary.py": "042b218aff94d5b26f0e0042a7faf2a1aba8fb0925a57fcc0751d24542fa76a9",
+    "scripts/acceptance/honeypot-content/fetch.py": "92887b883f761237d0716aaae82c77813e23bbe0212244fba650e9a8c60d571e",
+    "scripts/acceptance/honeypot-content/prepare.py": "8ef319211418db98f39dd41a543c27f7cdc03a772305307a08889369bdbe477e",
+    "scripts/acceptance/honeypot-content/run.sh": "aec03800f12430db08352d4270780dece19a741d3e686482ec3bb2cebb248b9d",
+    "scripts/acceptance/honeypot-content/runner_test.go.txt": "6c446fd42d4fe35a1d5abf4fa54aa515e52810ca316504d2c920b2cce6e863a4",
+    "scripts/acceptance/honeypot-content/summarize.py": "ddbbec16f83cbfbe6f401b90923901cdb440dd214b7787511179fbd9db083f3f"
+  },
+  "evidence": {
+    "/tmp/artex-enrollment-20261107/run.log": "fea7371e50ba71c26008a7dd5155119532db688be2b0e8033ad822fd4280384c",
+    "/tmp/artex-enrollment-20261107/check-summary.log": "ccb9409eb21c54fd7af8d3e6fe91e8ec0ac6abe1c591df9d8246825c9ec3abf6"
+  },
+  "runtime": {
+    "image": "golang:1.26-bookworm",
+    "image_id": "sha256:d9c68c2c51161e12fd77e4c6320687c9cd86e1af1e3ad6e6cd63ff970641453c",
+    "GOMAXPROCS": 2,
+    "go_test_p": 1,
+    "docker_network": "none",
+    "reported_package_seconds": 8.295,
+    "http_requests": 44
+  }
+}

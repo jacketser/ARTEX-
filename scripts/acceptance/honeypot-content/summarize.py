@@ -10,11 +10,11 @@ import pathlib
 import sys
 
 
-def summarize(manifest_path, measurements_path, output_path):
+def summarize(manifest_path, measurements_path, output_path, lock_path=None):
     output = pathlib.Path(output_path)
     output.unlink(missing_ok=True)
     manifest = json.loads(pathlib.Path(manifest_path).read_text())
-    lock = json.loads(pathlib.Path(__file__).with_name("sources.json").read_text())
+    lock = json.loads(pathlib.Path(lock_path or pathlib.Path(__file__).with_name("sources.json")).read_text())
     if manifest['detector_commit'] != lock['detector_commit'] or manifest['algorithm'] != lock['algorithm']:
         raise ValueError('wrong detector')
     if [{k: s[k] for k in lock['sources'][i]} for i, s in enumerate(manifest['sources'])] != lock['sources']:
@@ -23,7 +23,7 @@ def summarize(manifest_path, measurements_path, output_path):
     # subsets or renderings even when a matching partial result is supplied.
     with tempfile.TemporaryDirectory(prefix='artex-content-manifest-') as temp:
         with contextlib.redirect_stdout(io.StringIO()):
-            prepare(pathlib.Path(manifest_path).parent / 'sources', temp)
+            prepare(pathlib.Path(manifest_path).parent / 'sources', temp, lock_path)
         if json.loads((pathlib.Path(temp) / 'samples.json').read_text()) != manifest:
             raise ValueError('manifest differs from predeclared corpus')
     measurements = json.loads(pathlib.Path(measurements_path).read_text())
@@ -32,7 +32,8 @@ def summarize(manifest_path, measurements_path, output_path):
     if len(by_id) != len(samples) or len(measurements) != len(samples) or not samples:
         raise ValueError('incomplete manifest or run')
     outcomes = ('suspected', 'needs_review', 'no_signal', 'inconclusive')
-    groups = {g: dict.fromkeys(outcomes, 0) for g in ('normal_html', 'injection_visible', 'injection_hidden')}
+    groups = {g: dict.fromkeys(outcomes, 0) for g in lock.get('groups', ('normal_html', 'injection_visible', 'injection_hidden'))}
+    content_warnings = dict.fromkeys(groups, 0)
     seen = set()
     for item in measurements:
         s = by_id[item['id']]
@@ -51,10 +52,12 @@ def summarize(manifest_path, measurements_path, output_path):
         if any(o['body_sha256'] != s['body_sha256'] for o in obs[:2]):
             raise ValueError('observed body mismatch')
         groups[s['group']][result['outcome']] += 1
+        if any(signal.startswith('隐藏 HTML 含客户端注册及心跳／本机信息上报组合，') for signal in result['signals']):
+            content_warnings[s['group']] += 1
     if not all(sum(g.values()) for g in groups.values()):
         raise ValueError('missing group')
-    result = dict(group='source_independent_content_holdout', detector_commit=manifest['detector_commit'],
-                  algorithm=manifest['algorithm'], sources=manifest['sources'], counts=groups,
+    result = dict(group=lock.get('corpus', 'source_independent_content_holdout'), detector_commit=manifest['detector_commit'],
+                  algorithm=manifest['algorithm'], sources=manifest['sources'], counts=groups, content_warning_counts=content_warnings,
                   samples=samples, measurements=measurements,
                   limitations=['Content replay, not real honeypot deployments or browser/model evaluation.',
                                'Visible/hidden renderings share attack texts; variants are not independent samples.'])
