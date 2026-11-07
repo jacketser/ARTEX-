@@ -2,6 +2,8 @@
 
 历史脱敏使用停机命令 `artex history-redact`，不是后台自动修改。先预览，再以预览返回的指纹执行。本文针对本 fork 的 `compose.source.yml`；版本变化见[二开更新日志](CHANGELOG-LOCAL.md)。
 
+独立备份、下载导出、日志、模型记录、会话及工作区的保存路径与缺口见[独立副本盘点](SENSITIVE-COPIES-INVENTORY.md)。该盘点没有新增维护 scope，也没有处理正式数据。
+
 ## 处理范围
 
 | scope | 处理内容 | 一致性保证 |
