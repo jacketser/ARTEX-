@@ -1,0 +1,51 @@
+package honeydetect
+
+import (
+ "crypto/sha256"
+ "encoding/hex"
+ "encoding/json"
+ "net/http"
+ "net/http/httptest"
+ "os"
+ "path/filepath"
+ "regexp"
+ "sync/atomic"
+ "testing"
+)
+
+// Injected only into an isolated snapshot of the frozen detector. It exercises
+// the HTTP analysis path on loopback; it does not bypass production origin policy.
+func TestContentHoldout(t *testing.T) {
+ type sample struct { ID string `json:"id"`; Group string `json:"group"`; File string `json:"file"`; Hash string `json:"body_sha256"` }
+ var manifest struct { Algorithm string `json:"algorithm"`; Samples []sample `json:"samples"` }
+ raw,err:=os.ReadFile("/fixtures/samples.json");if err!=nil{t.Fatal(err)}
+ if err=json.Unmarshal(raw,&manifest);err!=nil{t.Fatal(err)}
+ if manifest.Algorithm!=BehaviorVersion || len(manifest.Samples)==0 {t.Fatal("invalid manifest or algorithm")}
+ type measurement struct {ID string `json:"id"`; Hash string `json:"body_sha256"`; Requests int64 `json:"requests"`; Result BehaviorResult `json:"result"`}
+ results:=[]measurement{}
+ seen:=map[string]bool{}
+ allowedPath:=regexp.MustCompile(`^/artex-behavior-check-[0-9a-f]{24}$`)
+ for _,s:=range manifest.Samples {
+  if seen[s.ID] || filepath.Base(s.File)!=s.ID+".html" || s.File!="bodies/"+s.ID+".html" {t.Fatal("duplicate or invalid fixture")};seen[s.ID]=true
+  t.Run(s.ID,func(t *testing.T){
+   body,err:=os.ReadFile("/fixtures/"+s.File);if err!=nil{t.Fatal(err)}
+   sum:=sha256.Sum256(body);if hex.EncodeToString(sum[:])!=s.Hash {t.Fatal("body hash mismatch")}
+   var count atomic.Int64;var bad atomic.Bool
+   srv:=httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
+    count.Add(1)
+    if (r.Method!="GET" && r.Method!="HEAD") || (r.URL.Path!="/" && !allowedPath.MatchString(r.URL.Path)) || r.URL.RawQuery!="" || r.Header.Get("Authorization")!="" || r.Header.Get("Cookie")!="" || r.Header.Get("Proxy-Authorization")!="" {bad.Store(true)}
+    w.Header().Set("Content-Type","text/html; charset=utf-8")
+    if r.URL.Path!="/" {w.WriteHeader(404);return}
+    if r.Method!="HEAD" {_,_=w.Write(body)}
+   }));defer srv.Close()
+   client:=srv.Client();client.CheckRedirect=func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}
+   result:=probeWithClient(t.Context(),client,srv.URL,DefaultRules(),nil)
+   if bad.Load() || count.Load()!=4 || len(result.Observations)!=4 {t.Fatal("unexpected request sequence")}
+   results=append(results,measurement{s.ID,s.Hash,count.Load(),result})
+  })
+ }
+ if t.Failed(){return}
+ raw,err=json.MarshalIndent(results,"","  ");if err!=nil{t.Fatal(err)}
+ if err=os.WriteFile("/output/measurements.json.tmp",append(raw,'\n'),0600);err!=nil{t.Fatal(err)}
+ if err=os.Rename("/output/measurements.json.tmp","/output/measurements.json");err!=nil{t.Fatal(err)}
+}
