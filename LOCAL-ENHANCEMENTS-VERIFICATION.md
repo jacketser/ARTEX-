@@ -12,6 +12,13 @@
 - 最新发布收紧蜜罐行为疑似升级并标记旧算法历史过期；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
 
+## 候选验收：隐藏 HTML 接入诱导提示（2026-11-07）
+
+- 起点 `9a8a0b9`；候选 `http-behavior-v3`，完整 HTML 的隐藏注册＋心跳／本机信息组合仅提示复核，不新增请求或疑似升级依据。参考固定 AgentCapture 源码，来源、哈希、结果和限制见[专项报告](AGENTCAPTURE-REVIEW.md)。
+- `honeydetect` 全包通过（27.5 秒），9 个开发模板 HTTP 复放通过（6.8 秒）：0 疑似／1 复核／8 无信号／0 无法判断。原正常文档回退与 TLS／跳转边界保留；这些模板不是完整部署或独立留出。
+- 独立内部网络／全新 PostgreSQL 的 `TestBehaviorAuthorizationAuditAndPolicyAPI` 通过（1.7 秒），明确包含 v2 历史过期且旧内容保留。沿用指定 Go 镜像、两核限制及缓存；日志 `/tmp/artex-agentcapture-go.log`、`/tmp/artex-agentcapture-templates.log`、`/tmp/artex-agentcapture-api.log`。测试容器、网络及本轮数据库卷已清理，没有使用正式库。
+- 未做完整发布／浏览器／前端验收或模型实验，未部署；正式仍为 `dev-b7877ca`。候选不宣称识别默认 AgentCapture、免疫提示注入或提高真实蜜罐命中率。
+
 ## 源码审阅：独立敏感副本盘点（2026-11-07）
 
 - 基线 `8dceb13`，本轮仅修改文档；[盘点报告](SENSITIVE-COPIES-INVENTORY.md)列出写入／导出路径、已有覆盖和未实现的分步计划。未读取正式数据库、备份、日志、会话或凭据内容，不能据此判断实际泄露或清理数量。

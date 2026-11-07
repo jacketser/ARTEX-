@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const BehaviorVersion = "http-behavior-v2"
+const BehaviorVersion = "http-behavior-v3"
 const ProbeMaxBytes = 64 * 1024
 
 // A manually configured allowlist and explicit per-run consent bound active checks.
@@ -246,6 +246,9 @@ func probeWithClient(ctx context.Context, client *http.Client, origin string, ru
 		if o.Error == "" && !o.Truncated {
 			r := DetectWithRules(Input{ServerHeader: o.server, PoweredBy: resp.Header.Get("X-Powered-By"), ResponseSummary: string(b)}, rules)
 			o.markers = r.Signals
+			if hiddenEnrollment(b, o.contentType) && !containsSignal(out.Signals, hiddenEnrollmentSignal) {
+				out.Signals = append(out.Signals, hiddenEnrollmentSignal)
+			}
 		}
 		out.Observations = append(out.Observations, o)
 		if o.Error != "" || o.Status >= 300 && o.Status < 400 || o.Status == 401 || o.Status == 403 || o.Status == 429 || o.Status >= 500 {
@@ -268,6 +271,7 @@ func analyzeBehavior(out BehaviorResult) BehaviorResult {
 		out.Signals = append(out.Signals, "重复请求响应不稳定，无法建立可靠对照")
 		return out
 	}
+	behaviorStart := len(out.Signals)
 	if a.Status >= 200 && a.Status < 300 && n.Status == a.Status && n.BodySHA256 == a.BodySHA256 && a.Bytes > 0 {
 		out.Signals = append(out.Signals, "随机不存在路径与主页返回相同成功响应；也常见于 SPA、统一错误页或反向代理")
 	}
@@ -278,7 +282,7 @@ func analyzeBehavior(out BehaviorResult) BehaviorResult {
 		out.Signals = append(out.Signals, "HEAD 与 GET 的 Server 标记不一致；也可能来自网关或负载均衡")
 	}
 	// Never turn ordinary wildcard routes/protocol quirks into a honeypot verdict.
-	behavioral := len(out.Signals) > 0
+	behavioral := len(out.Signals) > behaviorStart
 	markers := map[string]bool{}
 	for _, o := range out.Observations {
 		for _, m := range o.markers {
@@ -318,6 +322,15 @@ func persistentHeaderMarker(observations ...Observation) bool {
 	}
 	for _, count := range counts {
 		if count == len(observations) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsSignal(signals []string, value string) bool {
+	for _, signal := range signals {
+		if signal == value {
 			return true
 		}
 	}

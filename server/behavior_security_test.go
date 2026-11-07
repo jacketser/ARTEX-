@@ -90,7 +90,7 @@ func TestBehaviorAuthorizationAuditAndPolicyAPI(t *testing.T) {
 	}
 	// Changing only the algorithm must invalidate old verdicts, while preserving
 	// the recorded outcome and never issuing another request.
-	for _, version := range []string{honeydetect.BehaviorVersion, "http-behavior-v1", ""} {
+	for _, version := range []string{honeydetect.BehaviorVersion, "http-behavior-v2", "http-behavior-v1", ""} {
 		result, _ := json.Marshal(map[string]string{"version": version, "outcome": "suspected"})
 		if _, err := s.m.pg.Exec("UPDATE asset_honeypot_probes SET result=$1::jsonb WHERE asset_id=$2", string(result), id); err != nil {
 			t.Fatal(err)

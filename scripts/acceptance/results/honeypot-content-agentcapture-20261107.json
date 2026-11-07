@@ -1,0 +1,73 @@
+{
+  "date": "2026-11-07",
+  "group": "development_source_template_replay",
+  "not_a_deployment_or_independent_holdout": true,
+  "source_repository": "https://github.com/tcotl/agentcapture",
+  "source_commit": "b1fd1ee7a0130ab8fb1255b3af32e083bd9741f6",
+  "source_file": "app/services/agent_injection.py",
+  "source_sha256": "59fe8d63a0fc5b12ad343720315a64bd0d78ff5a30a25206791f4892ff2f4e8c",
+  "algorithm": "http-behavior-v3",
+  "method": "Python AST literal extraction without imports; each template served verbatim as root text/html, HEAD empty, unknown path 404, isolated httptest, no external network; no placeholder expansion or JS execution. HTTP behavior is synthetic, not upstream middleware.",
+  "counts": {
+    "suspected": 0,
+    "needs_review": 1,
+    "no_signal": 8,
+    "inconclusive": 0
+  },
+  "samples": [
+    {
+      "template": "AGENT_BLOCKING_PROMPT",
+      "outcome": "no_signal",
+      "observations": 4
+    },
+    {
+      "template": "API_AGENT_WARNING_PROMPT",
+      "outcome": "no_signal",
+      "observations": 4
+    },
+    {
+      "template": "C2_RECRUIT_PROMPT",
+      "outcome": "needs_review",
+      "observations": 4
+    },
+    {
+      "template": "FAKE_BASH_OUTPUT",
+      "outcome": "no_signal",
+      "observations": 4
+    },
+    {
+      "template": "FAKE_VULNERABILITY_BAIT",
+      "outcome": "no_signal",
+      "observations": 4
+    },
+    {
+      "template": "HIDDEN_EXFILTRATION_PROMPT",
+      "outcome": "no_signal",
+      "observations": 4
+    },
+    {
+      "template": "MARKDOWN_CODE_BAIT",
+      "outcome": "no_signal",
+      "observations": 4
+    },
+    {
+      "template": "NL_TASK_DIRECTIVE",
+      "outcome": "no_signal",
+      "observations": 4
+    },
+    {
+      "template": "SYSTEM_OVERRIDE_INJECTION",
+      "outcome": "no_signal",
+      "observations": 4
+    }
+  ],
+  "detector_sha256": {
+    "honeydetect/content.go": "a090716a9215813186bcf93a73a3ef294e81a72da275ace20d65c56a859d6455",
+    "honeydetect/behavior.go": "5357901fa91d5ae7a8278674192f9a636ce0bb134a743ac89b9748f32e4f7643"
+  },
+  "log": "/tmp/artex-agentcapture-templates.log",
+  "limitations": [
+    "Same-family development fixtures; no independent holdout or live AgentCapture evaluation.",
+    "No claim of detection rate or protection against model takeover."
+  ]
+}

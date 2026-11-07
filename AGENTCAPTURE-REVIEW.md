@@ -1,0 +1,51 @@
+# AgentCapture 源码审阅与隐藏接入诱导提示
+
+日期：2026-11-07。ARTEX 起点 `9a8a0b9`，本轮候选行为算法为 `http-behavior-v3`；正式应用仍为 `dev-b7877ca`／v2，**未部署**。沿用用户暂缓耗时任务的要求，仅做源码审阅、短时模板复放和专项验证。
+
+## 来源与实际风险
+
+审阅 [tcotl/agentcapture 固定提交 b1fd1ee](https://github.com/tcotl/agentcapture/tree/b1fd1ee7a0130ab8fb1255b3af32e083bd9741f6)，该提交 pyproject 版本为 0.6.0。重点依据：
+
+- [agent_injection.py](https://github.com/tcotl/agentcapture/blob/b1fd1ee7a0130ab8fb1255b3af32e083bd9741f6/app/services/agent_injection.py)：`C2_RECRUIT_PROMPT` 把客户端注册与心跳、本机信息上报放在隐藏 HTML 内；其他模板还包括注册前置要求、伪漏洞、任务指令等。文件 SHA-256：`59fe8d63a0fc5b12ad343720315a64bd0d78ff5a30a25206791f4892ff2f4e8c`。
+- [注入中间件](https://github.com/tcotl/agentcapture/blob/b1fd1ee7a0130ab8fb1255b3af32e083bd9741f6/app/middleware/injector.py) 与上述生成器根据交互阶段、客户端类型、风险和配置决定注入。`engaged=false` 时不返回指令块，部分模板默认不启用；不能把字面量模板当成每个默认部署必然返回的首页。
+- [上游说明](https://github.com/tcotl/agentcapture/blob/b1fd1ee7a0130ab8fb1255b3af32e083bd9741f6/README.zh-CN.md) 描述可见 Developer API、指令文件、MCP 等接入诱导，并声称对多种 Agent 做过反制测试。这是上游报告，测试中的 ARTEX 来源与本 fork 不同；本轮没有复现其模型实验，不能据此断言本机版本已被控制或具备免疫能力。
+
+本次只读取外部源码，没有执行其安装／部署／基准脚本，没有访问示例服务、注册、心跳或 C2 地址。检测实现独立编写，没有导入上游运行依赖或复制其控制功能。
+
+## 候选实现与判定边界
+
+[content.go](honeydetect/content.go) 对既有四请求中的完整 HTML 响应副本做被动检查，不新增请求：
+
+- 只处理明确为 `text/html`、未截断、无读取／编码错误且不超过 64 KiB 的内容；使用现有 HTML 解析依赖，不加载外部资源或执行脚本。
+- 同一隐藏区域内，须同时有客户端／自动化称谓、注册词，以及心跳或主机名＋用户名／操作系统字段。隐藏区域限 HTML `hidden` 属性、内联 `display:none`／`visibility:hidden`；不按产品名、固定路由或部署令牌匹配。
+- 可见正常注册文档、仅 `aria-hidden`、单独注册／心跳、不同隐藏区域拼凑、注释、脚本、模板、代码示例、非 HTML 内容均不由此新增提示。此处刻意保守，未覆盖可见诱导、外部 CSS、混淆文本、多语言变体及其他协议。
+- 完成稳定对照时，新增线索最多给出低置信 `needs_review`。它不计入原有疑似升级所需的行为差异；即使同时命中持续产品响应头，也不能仅靠此内容线索升级。原有响应头＋行为差异分支保持原逻辑。
+- 若后续请求不稳定、跳转或失败，整体仍为 `inconclusive`；此前完整响应上的固定风险提示可保留。输出不附带原文、令牌或可点击回连地址，不按页面要求注册／上报，不自动跳过目标或改变任务调度。
+
+合法运维页面也可能在隐藏内容中描述注册与心跳，因此该提示不是蜜罐指纹，更不能替代模型执行边界。未发现此提示不等于目标正常。静态 `metadata-v2`、默认名称规则和严格 TLS／跳转停止／授权／代理策略不变。
+
+行为版本升级为 v3，使旧 v2 结果按既有 API 逻辑显示过期；保留旧结果和人工结论，不改写历史、不自动探测。此变化只有部署候选后才会作用于正式服务。
+
+## 验证证据与分组
+
+**开发／回归材料：** 上游源码已用于设计，9 个字面量模板全部属于已查看的开发材料；不能作为独立留出。用 Python AST 读取字符串，不 import 或执行上游模块；占位符保持原样。每个模板通过隔离 `httptest` 提供根路径 HTML，HEAD 无正文、未知路径 404，每个完成四请求。此 HTTP 行为是测试夹具，不代表上游实际中间件。
+
+| 分组 | 疑似 | 人工复核 | 无信号 | 无法判断 |
+| --- | ---: | ---: | ---: | ---: |
+| 开发模板复放（9 个模板，非 9 个部署） | 0 | 1 | 8 | 0 |
+| 新独立留出 | — | — | — | — |
+
+`C2_RECRUIT_PROMPT` 提示复核；其他 8 个模板无信号，包含注册前置和任务下发模板，明确展示本次仅覆盖一个窄组合。结果与源码／检测文件哈希见[结构化记录](scripts/acceptance/results/honeypot-content-agentcapture-20261107.json)。**未开展新的独立留出或完整 AgentCapture 部署评估**，未把此前 v2 的真实服务结果冒充 v3 验证，也未改写历史结果。
+
+验证均使用 `golang:1.26-bookworm`、`GOMAXPROCS=2`、`-p 1` 和现有缓存：
+
+- `honeydetect` 全包通过（约 27.5 秒），包含原有产品文档回退、响应头佐证、授权撤回、TLS／跳转／代理边界；[新测试](honeydetect/content_test.go)覆盖正常文档、隐藏代码示例、分散词项、中文、超限、内容不稳定及名称与内容不能凑疑似等反例。日志 `/tmp/artex-agentcapture-go.log`。
+- 上游 9 个模板的独立复放测试通过（约 6.8 秒）：`/tmp/artex-agentcapture-templates.log`。复放测试源码 `/tmp/artex-agentcapture-source_test.go`，AST 提取结果 `/tmp/artex-agentcapture-templates.json`；外部源码在 `/tmp/artex-agentcapture-review-20261107/`。这些本机临时材料不是永久制品，固定来源和摘要已入库。
+- 全新内部 Docker 网络、独立 PostgreSQL 上运行 `TestBehaviorAuthorizationAuditAndPolicyAPI` 通过（约 1.7 秒），新增 v2 历史过期断言，同时验证原结果保留：`/tmp/artex-agentcapture-api.log`。测试容器、网络和本轮匿名数据库卷已清理。
+- 首次模板测试容器因只读源码挂载无法创建嵌套挂载点而未启动；改用独立源码快照后完成，失败不计入通过。没有挂载正式数据或凭据，没有访问正式数据库。
+
+## 当前限制与下一步
+
+本轮完成候选代码、专项测试和文档，未做完整应用／前端／浏览器发布验收，未部署；正式版本保持 `dev-b7877ca`。没有运行长压测、模型实验、AgentCapture 控制服务或公网目标扫描。
+
+后续先选未用于调试的正常应用与诱导样例，在首次测量前固定标签／预期和检测器，再分别报告四类结果；真实默认部署和交互后出现的内容须分开。需要验证可见流程诱导时，应另做信任边界设计，不能为了命中而自动注册、发送本机信息、加载指令文件或放宽请求范围。更多真实蜜罐／正常样本、独立副本脱敏、大归档维护和模型效果验证仍保留原待办。
