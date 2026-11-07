@@ -124,3 +124,5 @@ bash scripts/acceptance/honeypot-real/run.sh
 固定 OpenCanary／QeeqBox 源码和 nginx 正常对照，在内部 Docker 网络运行原装响应逻辑。7 个有效部署各测三次，保留部署标签、规则、版本、配置哈希与逐次结论；不跟随跳转或放宽 TLS，测量缺失时拒绝汇总。
 
 [方法与运行要求](honeypot-real/README.md)、[实际评估报告](../../HONEYPOT-EVALUATION.md)、[结构化结果](results/honeypot-real-20261106.json)。本轮发现正常文档回退页面的疑似误报，以及跳转／证书边界造成的无法判断；脚本完成不等于效果达标，更不是公网准确率证明。
+
+2026-11-07 已扩展[固定判定的新应用留出组](honeypot-real/HOLDOUT-20261107.md)：Log4Pot 两个原装配置、httpbin、Datasette，使用 `build-holdout-20261107.sh` 与 `run.sh holdout-20261107`。原七部署与前次五部署均作为回归组复验；三个分组独立报告。新蜜罐均能完成四请求但只提示复核，正常应用均无信号；检测规则与正式版本不变。完整统计和限制见[当前评估报告](../../HONEYPOT-EVALUATION.md)。

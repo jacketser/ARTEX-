@@ -64,4 +64,26 @@ bash scripts/acceptance/honeypot-real/run.sh holdout
 python3 scripts/acceptance/honeypot-real/check-summary.py /tmp/某次完整评估目录
 ```
 
-检查正常输入及七类损坏输入；缺失／重复数据、分组错误、未知结论与混入算法版本均拒绝产出新摘要。原结果清单记录测量当时的脚本版本；之后增加的离线检查不改变检测器和测量结果。
+最初检查正常输入及七类损坏输入，2026-11-07 扩为下述十类；缺失／重复数据、分组错误、未知结论与混入算法版本均拒绝产出新摘要。原结果清单记录测量当时的脚本版本；之后增加的离线检查不改变检测器和测量结果。
+
+## 冻结规则的新应用留出组（2026-11-07）
+
+[首次检测前提交的约定](HOLDOUT-20261107.md)固定 `b7877ca` 检测器及四个部署：Log4Pot 原装 JSON／Tomcat 页面、httpbin、Datasette。Log4Pot 两个配置属于同一家族；正常侧是两个真实应用。标签从实际程序和配置确定，不按检测结果挑选。之前 `tuning` 和 `holdout` 分组现在都只用于回归，分组 ID 保留用于历史比较；新组在摘要中标为 `new_holdout`，旧两组为 `regression`。
+
+```sh
+# 固定源码提交和下载归档 SHA-256，构建隔离镜像。
+bash scripts/acceptance/honeypot-real/build-holdout-20261107.sh
+# 运行新留出；完成后清理容器与网络。
+bash scripts/acceptance/honeypot-real/run.sh holdout-20261107
+# 两组旧样本回归（复用已有镜像）。
+bash scripts/acceptance/honeypot-real/run.sh tuning
+bash scripts/acceptance/honeypot-real/run.sh holdout
+```
+
+运行脚本比较检测文件与 `b7877ca`，不只检查工作区是否已提交；不同则拒绝。构建源码通过 GitHub API 归档获取，核对 `sources-20261107.json` 中 SHA-256；依赖通过阿里云 PyPI，记录各应用独立 venv 的完整版本。基础运行镜像和未固定的传递依赖仍可能变化，复验应核对镜像和版本清单。
+
+Log4Pot 使用上游文档支持的无外部依赖模式，只启用本地日志，未启用下载器／云日志；没有修改原装响应或指定带蜜罐名称的响应头。两个正常应用均使用原装路由／模板，Datasette 仅挂载这次生成的三条合成目录记录，不读取正式数据库。检测请求无攻击字符串、认证信息或跳转跟随。浏览器不会打开目标页面，HTML 中的远端脚本／资源不会被加载。
+
+新组额外复制 Log4Pot 的目标请求日志，核对每部署 15 次请求（三个元数据 GET，九个行为 GET，三个行为 HEAD），无 Cookie/Authorization/Proxy-Authorization、无非预期路径／方法或 exploit 事件；只提交计数摘要，不提交原始日志。`behavior_four_requests` 表示发完四请求，`behavior_completed_comparison` 表示得到可分析结果；动态／截断等仍无法判断，不能把两项混同。
+
+汇总完整性检查新增固定标签、观测完整和请求记账验证，共十类损坏反例；失败时删除旧摘要，避免旧结果误充当新结果。旧测量产物和旧报告不重写。首次新组检测后若将其用于调参，就应把它转为回归并另设留出，不能反复称为独立验证。

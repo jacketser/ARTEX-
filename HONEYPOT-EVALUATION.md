@@ -1,6 +1,51 @@
 # 蜜罐真实程序样本评估
 
-## 当前轮：减少文档回退误报，分组验证（2026-11-06）
+## 当前轮：冻结判定，扩展可分析的蜜罐与正常应用（2026-11-07）
+
+本轮保持 `b7877ca` 的 `metadata-v2`／`http-behavior-v2` 和默认规则不变。新增 **Log4Pot 一个蜜罐家族的两个原装配置**，以及 **httpbin、Datasette 两个独立正常应用**。四个部署均完成稳定四请求对照；两个蜜罐均提示复核，两个正常应用均无信号。**新增了可分析的真实蜜罐样本，但没有提高检测器能力，也仍未取得真实 `suspected` 的验证证据。** 正式服务保持 `dev-b7877ca`，本轮仅验收工具和文档，无重新部署。
+
+### 预先固定与分组
+
+- [样本约定](scripts/acceptance/honeypot-real/HOLDOUT-20261107.md)、来源／归档哈希、启动配置及工具在首次探测前提交为 **`e9bad8b`**；运行脚本强制检测文件与 `b7877ca` 一致。新组首次完整测量成功后未调整判定、目标响应或样本选择。
+- 原 7 个调试部署和前次 5 个已查看留出部署，本轮都作为回归集；保留原 `tuning`／`holdout` ID 以便比较，但不再宣称是未查看留出。新组 ID 为 `holdout-20261107`，四部署各三次，共 12 次。三组分别汇总，不合并估计准确率。
+- 原七部署回归 21 次、原五部署回归 15 次，所有重复的静态置信度、行为结论／置信度及 HTTP 状态／错误码与 11 月 6 日一致。nginx 和 Apache 文档回退反例、OpenCanary 跳转、QeeqBox 严格 TLS 和 Heralding／Apache 认证停止边界均保留。
+
+| 分组／已知标签 | 部署数 | 疑似 | 人工复核 | 无信号 | 无法判断 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 新留出：Log4Pot 蜜罐 | 2 | 0 | 2 | 0 | 0 |
+| 新留出：正常应用 | 2 | 0 | 0 | 2 | 0 |
+| 原调试组回归：蜜罐 | 3 | 0 | 1 | 0 | 2 |
+| 原调试组回归：正常 | 4 | 0 | 3 | 1 | 0 |
+| 原留出组回归：蜜罐 | 1 | 0 | 0 | 0 | 1 |
+| 原留出组回归：正常 | 4 | 0 | 1 | 2 | 1 |
+
+新组静态四个部署都成功采集、均未命中名称规则；发完四次行为请求和四次结果可分析均为 4/4。三次重复结论一致，只证明同一运行实例的重复稳定性，不代表四个部署变成十二个独立样本。
+
+### 新留出逐部署事实
+
+| 部署 | 版本／来源 | 四次行为状态 | 观测与结论 |
+| --- | --- | --- | --- |
+| Log4Pot 默认 JSON | [5002b1f](https://github.com/thomaspatzke/Log4Pot/tree/5002b1fe0f82359ef32dbc3a899e8a701dc3256e)，上游 0.1.0 | 200/200/200/200 | 默认 64 字节正文；未知路径与主页相同，无名称标记，复核 |
+| Log4Pot 原装 Tomcat 页面 | 同一提交，使用原装 `--response`／`--content-type` 参数 | 200/200/200/200 | 原装 1895 字节 HTML；未知路径与主页相同，无名称标记，复核；不是第二个独立家族 |
+| httpbin | [9c38edc](https://github.com/postmanlabs/httpbin/tree/9c38edc39e695d7757cad0e081b85238976ef53d)，源码 0.9.2，gunicorn 单 worker | 200/200/200/404 | 原装 Swagger UI，主页 9420 字节；无信号 |
+| Datasette | [0.65.1 / b9bcd6b](https://github.com/simonw/datasette/tree/b9bcd6b6aefe77539abf10c073c1f6666f464e01)，uvicorn | 200/200/200/404 | 原装数据目录页面，主页 1545 字节；全新三条合成 SQLite 记录，无信号 |
+
+标签来自实际运行源码与配置；服务 ID／已知标签不传入名称检测输入。没有为目标注入名称标记、补造 HTTP 响应代码或使用伪造 TANNER 等后端。Log4Pot 原装 Server 为 `BaseHTTP/0.6 Python/3.11.2`；下载器、Azure/S3 日志均未启用。所有探测仅内部 Docker 网络、无宿主机端口、无正式配置或数据挂载，无登录／攻击字符串／证书绕过／跳转跟随。采集器不加载页面 JS 或外部资源。
+
+### 证据、验证和局限
+
+- 新组时间 **09:39:24–09:39:35**；原调试回归 **09:39:49–09:40:03**，原留出回归 **09:40:10–09:40:18**（Asia/Shanghai）。结果分别为[新留出](scripts/acceptance/results/honeypot-v2-holdout-20261107.json)、[原调试回归](scripts/acceptance/results/honeypot-v2-regression-tuning-20261107.json)、[原留出回归](scripts/acceptance/results/honeypot-v2-regression-holdout-20261107.json)。默认规则修订仍为 `93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c`。
+- 新镜像 `jacketser/artex:honeypot-holdout-20261107`，ID `sha256:68179e94ba989d6079d87cf73dbb7cfe7b92de9a5eb99ce6700adbe36a6d9cc2`。来源锁记录源码提交及下载归档 SHA-256；结果记录镜像、脚本／检测文件哈希、合成库配置哈希、各独立 venv 完整依赖。基础镜像和未固定传递依赖仍可变化，复验要核对清单。构建日志 `/tmp/artex-honey-20261107-build.log`。
+- Log4Pot 两个目标各记录 **15 次**请求：9 次主页 GET（含 3 次元数据）、3 次 HEAD、3 次随机路径 GET；逐条核验路径／方法、无 Authorization/Cookie/Proxy-Authorization、无 exploit 事件。提交结果仅含审计计数，原始请求日志留在本机。少请求、多请求、凭据、非预期路径、非预期方法、exploit 事件六类破坏均被检查拒绝：`/tmp/artex-honey-20261107-audit-negative.log`。
+- `go test -p 1 ./honeydetect ./scripts/acceptance/honeypot-real -count=1`、Shell/Python 语法及实际驱动构建通过：`/tmp/artex-honey-20261107-go.log`。沿用 `golang:1.26-bookworm`、`GOMAXPROCS=2`、现有缓存。正式代码未改，不重复应用全量／前端构建或部署。
+- 三组汇总都通过有效输入与十类损坏反例：缺测量、重复轮次、缺部署、缺完成标记、错误分组、未知结论、混合算法、改标签、缺观测、错误请求计数。失败清除旧摘要，避免旧结果冒充成功。日志 `/tmp/artex-honey-20261107-summary-new.log`、`summary-regression-tuning.log`、`summary-regression-holdout.log`（后两项同一 `artex-honey-20261107-` 前缀）。
+- 原始新组 `/tmp/artex-honeypot-real-tYapeq5k/`，原调试回归 `/tmp/artex-honeypot-real-fQl3EaFb/`，原留出回归 `/tmp/artex-honeypot-real-YojPy8fD/`；运行日志 `/tmp/artex-honey-20261107-holdout.log`、`regression-tuning.log`、`regression-holdout.log`（同前缀）。所有测试容器／网络已清理，历史结果文件保持原样。
+- 样本选择阶段只读检查了 Conpot 默认根路径 302、SNARE 对配套 TANNER 的依赖，未将其不完整部署混入本次分母；不存在根据检测结果删除的样本。最初 Git/raw 下载停滞，改为 GitHub API 固定归档成功，三组实际评估均一次完成，没有失败测量被算作通过。
+
+**当前证据不支持继续提高这些弱线索的权重。** 新蜜罐的统一页面行为同样存在于正常 SPA／回退站点，不能为获得 `suspected` 把统一页面升级，或通过人为设置产品名验证所谓真实命中。新增样本缩小了“只测到认证／跳转拒绝”的验证空白；它没有证明当前疑似分支能识别实际蜜罐。下一步若要调整判定，应先有稳定、可复核且与正常应用区分的独立证据，再另设未查看留出。当前新组也已查看，将来调参时须转为回归。更多家族／版本、真实部署分布和授权现场样本仍待补充；不报告总体准确率、精确率或召回率。
+
+
+## 前轮：减少文档回退误报，分组验证（2026-11-06）
 
 行为算法 `http-behavior-v2` 已修复已知的“仅正文产品名称＋统一页面”疑似误报：原 nginx 文档回退反例降为 `needs_review`，线索仍保留。**这次改善是减少疑似升级，不是提高蜜罐识别覆盖，也没有消除人工复核负担。** 默认名称规则和静态 `metadata-v2` 未改；下方 v1 基线原样保留供对照。
 
