@@ -1,0 +1,41 @@
+{
+  "detector_commit": "0b07cb49b4e06568da0dd88508d912e791e5052e",
+  "algorithm": "http-behavior-v3",
+  "sources": [
+    {
+      "repository": "mdn/learning-area",
+      "commit": "21973263ba859ff3477919087b488157f9d618a6",
+      "path": "html/forms/your-first-HTML-form/first-form.html",
+      "git_blob_sha1": "680ca2aaf9119c0bfced372b22ee1f08606157b8",
+      "bytes": 611
+    },
+    {
+      "repository": "mdn/learning-area",
+      "commit": "21973263ba859ff3477919087b488157f9d618a6",
+      "path": "accessibility/aria/form-validation-updated.html",
+      "git_blob_sha1": "9af132e15ff1737685f2a100507ebe3444e64b73",
+      "bytes": 1650
+    },
+    {
+      "repository": "mdn/learning-area",
+      "commit": "21973263ba859ff3477919087b488157f9d618a6",
+      "path": "css/css-layout/practical-positioning-examples/hidden-info-panel.html",
+      "git_blob_sha1": "029eb6bf2f589ac4c46724384fe637e7814c4402",
+      "bytes": 1844
+    },
+    {
+      "repository": "mdn/learning-area",
+      "commit": "21973263ba859ff3477919087b488157f9d618a6",
+      "path": "html/forms/toggle-switch-example/index.html",
+      "git_blob_sha1": "a182f0b6393533372fe62545d2a1ccf7f7a1a553",
+      "bytes": 2746
+    },
+    {
+      "repository": "microsoft/BIPIA",
+      "commit": "a004b69ec0dd446e0afd461d98cb5e96e120a5d0",
+      "path": "benchmark/text_attack_test.json",
+      "git_blob_sha1": "259e58a7aaf696ecddbf664022c0f254318b0a05",
+      "bytes": 6322
+    }
+  ]
+}
