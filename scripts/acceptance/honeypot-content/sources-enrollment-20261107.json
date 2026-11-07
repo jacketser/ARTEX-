@@ -1,0 +1,46 @@
+{
+  "corpus": "enrollment-20261107",
+  "detector_commit": "0b07cb49b4e06568da0dd88508d912e791e5052e",
+  "algorithm": "http-behavior-v3",
+  "groups": [
+    "normal_visible",
+    "normal_hidden",
+    "lure_native",
+    "lure_hidden",
+    "development_regression"
+  ],
+  "sources": [
+    {
+      "repository": "hashicorp/consul",
+      "commit": "cddc6181264ad5909e2795ec5cd68a89fa3b2c99",
+      "path": "website/content/api-docs/agent/check.mdx",
+      "git_blob_sha1": "9418d06684634fdcf53fbee8db21ff8965b4e380",
+      "bytes": 22699,
+      "kind": "normal_document"
+    },
+    {
+      "repository": "osquery/osquery",
+      "commit": "711974b7dcddb83af0bbbb972fa930ed02046adc",
+      "path": "docs/wiki/deployment/remote.md",
+      "git_blob_sha1": "84a8e719da5ae8221f88254ce2948735b26ae7e6",
+      "bytes": 18295,
+      "kind": "normal_document"
+    },
+    {
+      "repository": "protocedvill/llm-honeypot",
+      "commit": "e60d8b104101c8eb4d6ffbdf171e1a06668c745c",
+      "path": "app/payloads/reciprocity_lure.py",
+      "git_blob_sha1": "bd77ec2fcb496c3be9981756b3861525eed3588a",
+      "bytes": 47594,
+      "kind": "html_lure_final_variants"
+    },
+    {
+      "repository": "tcotl/agentcapture",
+      "commit": "b1fd1ee7a0130ab8fb1255b3af32e083bd9741f6",
+      "path": "app/services/agent_injection.py",
+      "git_blob_sha1": "62700cbb14b36f5403a8fd9ca379877c43230533",
+      "bytes": 19852,
+      "kind": "development_regression"
+    }
+  ]
+}
