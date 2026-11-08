@@ -6,6 +6,22 @@
 
 当前正式版本为 `dev-0fb610d`／v5。复现当前结果请使用下方显式计划入口；不带计划的命令仍冻结为历史 v2，不能直接用于当前源码。
 
+## v5 新真实服务留出（2026-11-08）
+
+[测前约定](HOLDOUT-20261108.md)及[计划](holdout-v5-20261108.json)冻结 v5 检测器、独立采集器提交、四个新来源、镜像和配置字节。首次运行结果已查看，日常复现使用[回归计划](replay-v5-20261108.json)，今后调参必须把这组转为回归；计划中的 `new_holdout` 只描述该次首次测量，不代表反复运行仍是独立留出。
+
+```sh
+# 首次构建只获取已锁定源码和 wheel；已有对应镜像时无需重建。
+bash scripts/acceptance/honeypot-real/build-holdout-20261108.sh
+bash scripts/acceptance/honeypot-real/run.sh holdout-20261108 scripts/acceptance/honeypot-real/replay-v5-20261108.json
+```
+
+新镜像复用固定基础环境，仅增加 termcolor 2.5.0。运行只连接内部网络，不发布端口；正常文件服务仅提供两份合成文件。HoneyHTTPD／Elasticpot 为两新蜜罐家族，RangeHTTPServer／copyparty 为正常服务；RangeHTTPServer 共享 Python 标准库 HTTP 实现血缘。生产检测器不改，最多四请求及 TLS／跳转边界保持。
+
+`schema=2` 计划仅允许新分组，额外锁定来源、采集器、运行镜像和实际配置字节；旧 `schema=1` 保持回归角色，不能重标为新留出。最新入口分别从固定提交取检测器和采集器，不依赖当前工作树修改。汇总完整性通过有效＋21 类损坏反例；`check-requests-20261108.py` 离线核对四目标访问日志与测量请求，报告为 `request-audit.json`。记账不是完整抓包，不用其替代请求代码的凭据边界。
+
+首次新组完成四部署／12 次；蜜罐和正常各为 0 疑似／0 复核／1 无信号／1 无法判断。原七部署另行回归保持，详细漏检、动态正常反例及限制见[报告](../../../HONEYPOT-EVALUATION.md#v5-新真实服务留出2026-11-08)。
+
 ## 已发布 v5 的真实软件回归（2026-11-08）
 
 [预先提交的约定](REGRESSION-V5-20261108.md)与[版本／镜像锁](regression-v5-20261108.json)固定已发布应用 `0fb610d`／v5；旧 `tuning`、`holdout`、`holdout-20261107` 都已查看，本轮全部作为回归。三个分组 ID 保留，不代表仍是独立留出。以下命令在仓库根目录运行：

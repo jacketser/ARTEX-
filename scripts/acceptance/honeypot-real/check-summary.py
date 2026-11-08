@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='artex-honey-summary-') as tmp:
             c['behavior_version'] = 'unknown'
             for row in r: row['behavior']['version'] = 'unknown'
         (target / 'measurements.json').write_text(json.dumps(r))
-        (target / 'samples.json').write_text(json.dumps(s))
+        (target / 'samples.json').write_bytes((original / 'samples.json').read_bytes() if s == samples else json.dumps(s).encode())
         (target / 'evaluation-complete.json').write_text(json.dumps(c))
         if case == 'missing-completion': (target / 'evaluation-complete.json').unlink()
         (target / 'summary.json').write_text('{}')

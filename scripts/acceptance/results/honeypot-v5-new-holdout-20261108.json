@@ -1,0 +1,1178 @@
+{
+  "completion": {
+    "behavior_version": "http-behavior-v5",
+    "finished_at": "2026-11-08T07:24:01.091637623Z",
+    "measurements": 12,
+    "metadata_version": "metadata-v2",
+    "repetitions": 3,
+    "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+    "samples": 4,
+    "split": "holdout-20261108",
+    "started_at": "2026-11-08T07:23:51.736637181Z"
+  },
+  "samples": [
+    {
+      "id": "honeyhttpd-apache",
+      "origin": "http://honeyhttpd:8080",
+      "label": "honeypot",
+      "family": "HoneyHTTPD",
+      "expected_root_status": 426,
+      "configuration": "Stock ApacheServer, HTTP only, stdout logger; unmodified response code",
+      "evidence": "Pinned HTTP imitation honeypot; default Apache handler selected",
+      "split": "holdout-20261108",
+      "label_basis": "controlled_deployment"
+    },
+    {
+      "id": "elasticpot",
+      "origin": "http://elasticpot:8080",
+      "label": "honeypot",
+      "family": "Elasticpot",
+      "expected_root_status": 200,
+      "configuration": "Stock Elasticsearch imitation; local IP file; no external output plugins",
+      "evidence": "Pinned Elasticsearch honeypot and stock response templates",
+      "split": "holdout-20261108",
+      "label_basis": "controlled_deployment"
+    },
+    {
+      "id": "rangehttpserver",
+      "origin": "http://rangehttpserver:8080",
+      "label": "benign",
+      "family": "RangeHTTPServer",
+      "expected_root_status": 200,
+      "configuration": "Stock RangeHTTPServer with two synthetic files; no custom headers or handlers",
+      "evidence": "Normal range-capable file server; derives from Python SimpleHTTPRequestHandler, not an independent HTTP stack",
+      "split": "holdout-20261108",
+      "label_basis": "controlled_deployment"
+    },
+    {
+      "id": "copyparty",
+      "origin": "http://copyparty:8080",
+      "label": "benign",
+      "family": "copyparty",
+      "expected_root_status": 200,
+      "configuration": "Stock read-only public volume; HTTP only, no thumbnails or media scanning",
+      "evidence": "Normal file sharing application; two synthetic files, no private files or credentials",
+      "split": "holdout-20261108",
+      "label_basis": "controlled_deployment"
+    }
+  ],
+  "measurements": [
+    {
+      "sample_id": "honeyhttpd-apache",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 426,
+        "bytes": 477,
+        "truncated": false,
+        "title": "426 Upgrade Required",
+        "server": "Apache/2.4.9 (Ubuntu)",
+        "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+        "input_sha256": "d9dca3379dba98b5bc3eb0d79bc8cd78dcfacff83a294d62330713f11252b149",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ce62bab42e68a560e9c1e33004b7946fd495a9e8d7b3bc2436a807e482070330",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 426,
+            "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+            "bytes": 477,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 426,
+            "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+            "bytes": 477,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 501,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 3
+    },
+    {
+      "sample_id": "elasticpot",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 339,
+        "truncated": false,
+        "title": "",
+        "server": "Apache",
+        "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+        "input_sha256": "10b1139a7b5c1b24846f898433b95415d1dadf703a6569ad737b275737c923b5",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "c3310296844b72c92c5ac360f601f6424dffdc2a766ea2504332a094041c5d7e",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+            "bytes": 339,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+            "bytes": 339,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-a7355462425c486367b15ec3",
+            "status": 200,
+            "body_sha256": "b7261f781a1abc6c8224af5d83814293261e9f2641de36d11827a0337f3ff362",
+            "bytes": 599,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "rangehttpserver",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 281,
+        "truncated": false,
+        "title": "Directory listing for /",
+        "server": "SimpleHTTP/0.6 Python/3.11.2",
+        "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+        "input_sha256": "b901b5ee16a3f66d4e9cad459969a5e3e7f11fae123c7ed27632d39bd8a00616",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "092cd4f5e111730ad7c0b567761d2c96bcc04d9a14e9aa11ba86b642e9de290a",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+            "bytes": 281,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+            "bytes": 281,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-2be742e0cb37e7e43f8b0087",
+            "status": 404,
+            "body_sha256": "860b53ed6ea6a0cf602fae632cfcd28dbcf637f85a8bee28d2ee9c6cc9081669",
+            "bytes": 335,
+            "truncated": false,
+            "duration_ms": 3
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "copyparty",
+      "repetition": 1,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 5400,
+        "truncated": false,
+        "title": "d325cf3f5efa",
+        "server": "",
+        "body_sha256": "a7272d41e775b52049c29efa12e833df532c09f63754471fe8df2b6a029921d0",
+        "input_sha256": "ebfde39857a1c42791419d4650653ef0563c93de5ea544d30b4b9ef38dbbdaa9",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "dbb2c221460b8d229a62087e5023dad2fad9e3a54a79a40adecd258a2ea8f103",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "5a309f9c0cd5e036b14e5b8d2e9a1a1aa066ad7eb2b4caa75d41235d9aa3349b",
+            "bytes": 5400,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "4700494d5792661d97d2b5d22e503fcdce1914f55c5b54aabef31d30e4b07f04",
+            "bytes": 5400,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-53014e910d4b48760fde339b",
+            "status": 404,
+            "body_sha256": "6faff953a7462d63371c68ed095da276583a6f6d01d02f1de7b47995fa6fab2e",
+            "bytes": 2561,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "重复请求响应不稳定，无法建立可靠对照"
+        ],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "honeyhttpd-apache",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 426,
+        "bytes": 477,
+        "truncated": false,
+        "title": "426 Upgrade Required",
+        "server": "Apache/2.4.9 (Ubuntu)",
+        "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+        "input_sha256": "d9dca3379dba98b5bc3eb0d79bc8cd78dcfacff83a294d62330713f11252b149",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ce62bab42e68a560e9c1e33004b7946fd495a9e8d7b3bc2436a807e482070330",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 426,
+            "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+            "bytes": 477,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 426,
+            "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+            "bytes": 477,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 501,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 3
+    },
+    {
+      "sample_id": "elasticpot",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 339,
+        "truncated": false,
+        "title": "",
+        "server": "Apache",
+        "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+        "input_sha256": "10b1139a7b5c1b24846f898433b95415d1dadf703a6569ad737b275737c923b5",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "c3310296844b72c92c5ac360f601f6424dffdc2a766ea2504332a094041c5d7e",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+            "bytes": 339,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+            "bytes": 339,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-8c299cbd5942f4705e449a93",
+            "status": 200,
+            "body_sha256": "cba93da19b0deecb9e75807d3c5a653d1e88ea4d59a154112ebfb7170f84e10b",
+            "bytes": 599,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "rangehttpserver",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 281,
+        "truncated": false,
+        "title": "Directory listing for /",
+        "server": "SimpleHTTP/0.6 Python/3.11.2",
+        "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+        "input_sha256": "b901b5ee16a3f66d4e9cad459969a5e3e7f11fae123c7ed27632d39bd8a00616",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "092cd4f5e111730ad7c0b567761d2c96bcc04d9a14e9aa11ba86b642e9de290a",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+            "bytes": 281,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+            "bytes": 281,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-ca7a9de2c140730bf448bfbc",
+            "status": 404,
+            "body_sha256": "860b53ed6ea6a0cf602fae632cfcd28dbcf637f85a8bee28d2ee9c6cc9081669",
+            "bytes": 335,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "copyparty",
+      "repetition": 2,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 5400,
+        "truncated": false,
+        "title": "d325cf3f5efa",
+        "server": "",
+        "body_sha256": "d430b41f770187465928d0c1a804e468e31bd599309f5784514d4f693d7e51b2",
+        "input_sha256": "63c493ca851a9f1d93665cc8fad339b637ded95d7b7c03535bc3ac6ec3c86804",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "73ee6ea2fcc6376eb091384ff2d6599874be3bbece8123d6cee61e253eb3d628",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "785781b26763b2289da85f4d82ee4f2960a95cdaa28b2ec7671183787fdfab7f",
+            "bytes": 5400,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "89d9f321bf29d9496a62640b41e037590d3f95702c40b3cc7c68d2c48a584451",
+            "bytes": 5400,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 1
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-c889e913cf8504204681eccc",
+            "status": 404,
+            "body_sha256": "10bf57e0d486d5ed4ee5586e347d5d191bf86ee6c1afa5a366862914501677d1",
+            "bytes": 2561,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "重复请求响应不稳定，无法建立可靠对照"
+        ],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "honeyhttpd-apache",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 426,
+        "bytes": 477,
+        "truncated": false,
+        "title": "426 Upgrade Required",
+        "server": "Apache/2.4.9 (Ubuntu)",
+        "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+        "input_sha256": "d9dca3379dba98b5bc3eb0d79bc8cd78dcfacff83a294d62330713f11252b149",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "ce62bab42e68a560e9c1e33004b7946fd495a9e8d7b3bc2436a807e482070330",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 426,
+            "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+            "bytes": 477,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 426,
+            "body_sha256": "19ae3ba892f330dc0b859af7d515d8a131abe2a231b8e8e06d8cfc23e82b206d",
+            "bytes": 477,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 501,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 3
+    },
+    {
+      "sample_id": "elasticpot",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 339,
+        "truncated": false,
+        "title": "",
+        "server": "Apache",
+        "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+        "input_sha256": "10b1139a7b5c1b24846f898433b95415d1dadf703a6569ad737b275737c923b5",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "c3310296844b72c92c5ac360f601f6424dffdc2a766ea2504332a094041c5d7e",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+            "bytes": 339,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "5385c32ba49d92059a5aca04b4e49c940dc6d4b86c20bea21c71ed0174e05f4c",
+            "bytes": 339,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 2
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-680344116e0ebe023a690857",
+            "status": 200,
+            "body_sha256": "37ea6586a86fb1840adab26ee37395c3991836e0509ed63bbcdc96ab87d2467e",
+            "bytes": 599,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "rangehttpserver",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 281,
+        "truncated": false,
+        "title": "Directory listing for /",
+        "server": "SimpleHTTP/0.6 Python/3.11.2",
+        "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+        "input_sha256": "b901b5ee16a3f66d4e9cad459969a5e3e7f11fae123c7ed27632d39bd8a00616",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "092cd4f5e111730ad7c0b567761d2c96bcc04d9a14e9aa11ba86b642e9de290a",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+            "bytes": 281,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "4adf977aaf8585a6c2234b872b65b48c33fbf6dfa8da9cdf91dccd90cf2ea1ac",
+            "bytes": 281,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-a7135b1f446f2153dbc8eefc",
+            "status": 404,
+            "body_sha256": "860b53ed6ea6a0cf602fae632cfcd28dbcf637f85a8bee28d2ee9c6cc9081669",
+            "bytes": 335,
+            "truncated": false,
+            "duration_ms": 1
+          }
+        ],
+        "signals": [],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    },
+    {
+      "sample_id": "copyparty",
+      "repetition": 3,
+      "metadata": {
+        "evaluated": true,
+        "status": 200,
+        "bytes": 5400,
+        "truncated": false,
+        "title": "d325cf3f5efa",
+        "server": "",
+        "body_sha256": "c96474d4c5be72254087b2fc18006853b78ba7a0fa3fd071dac23775b9d8eda3",
+        "input_sha256": "4ac652a908d164382fe5871144a737196ceafb4ca045824ca076d7d2a2b44af4",
+        "result": {
+          "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+          "sources": [],
+          "stale": false,
+          "assessed_at": 0,
+          "version": "metadata-v2",
+          "fingerprint": "d4a4ff6e6ca2c839cef0650392f305985a22af29369f35fd292b5c7d6ed3d496",
+          "matched": false,
+          "score": 0,
+          "confidence": "none",
+          "signals": [],
+          "evidence": [],
+          "limitations": "仅按规则检查已保存元数据；评分不是概率，标记不代表确认。未发现签名不代表不是蜜罐；需人工核对，不影响任务执行或拦截规则。"
+        }
+      },
+      "behavior": {
+        "version": "http-behavior-v5",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "observations": [
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "275a0e5d65466b7d7843b7dfbfe215938861530a30c5482ddfef294d252da17c",
+            "bytes": 5400,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "ff5b560ea158f71525acf3d1237c80524e62b85a686f0dbb68c133fe6cb07667",
+            "bytes": 5400,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "HEAD",
+            "path": "/",
+            "status": 200,
+            "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "bytes": 0,
+            "truncated": false,
+            "duration_ms": 0
+          },
+          {
+            "method": "GET",
+            "path": "/artex-behavior-check-3cc9070e0a771871621c29c5",
+            "status": 404,
+            "body_sha256": "61480ac564bce814500b78866aadca15adef43ff8541acad5c287f58f07497aa",
+            "bytes": 2561,
+            "truncated": false,
+            "duration_ms": 0
+          }
+        ],
+        "signals": [
+          "重复请求响应不稳定，无法建立可靠对照"
+        ],
+        "content_warnings": [],
+        "limitations": "最多四次无凭据 HTTP 请求；协议差异、统一页面或名称标记均可能来自正常服务。结果不是蜜罐定论，不触发目标跳过、伪装、规避或任务调度改变。未发现线索不代表安全。"
+      },
+      "authorized_requests": 4
+    }
+  ],
+  "unstable_samples": [],
+  "counts": {
+    "honeypot": {
+      "deployments": 2,
+      "behavior_four_requests": 1,
+      "behavior_completed_comparison": 1,
+      "metadata_evaluated": 2,
+      "metadata_any_match": 0,
+      "metadata_medium_or_high": 0,
+      "behavior_suspected": 0,
+      "behavior_needs_review": 0,
+      "behavior_no_signal": 1,
+      "behavior_inconclusive": 1,
+      "content_warning_deployments": 0
+    },
+    "benign": {
+      "deployments": 2,
+      "behavior_four_requests": 2,
+      "behavior_completed_comparison": 1,
+      "metadata_evaluated": 2,
+      "metadata_any_match": 0,
+      "metadata_medium_or_high": 0,
+      "behavior_suspected": 0,
+      "behavior_needs_review": 0,
+      "behavior_no_signal": 1,
+      "behavior_inconclusive": 1,
+      "content_warning_deployments": 0
+    }
+  },
+  "provenance": {
+    "artex-commit": "ba2543d3f8a59da6e89fa12f891d000512b0ccb6",
+    "harness-sha256": "ec12dae01baba7146723336d3a5dd783b11c1207b2d3e263cd366ead064b22e9  scripts/acceptance/honeypot-real/Dockerfile\ne22391066807a8e3b39306a98765fec67f8891aa76945fe29886c9b6b02bcdd4  scripts/acceptance/honeypot-real/Dockerfile.holdout\n507df494844ac8aa1a1b40db31b2ee23e6f72df34922a209a299b6f2883e52cf  scripts/acceptance/honeypot-real/Dockerfile.holdout-20261107\n38b7cbca08c661b42be583f48055cdf0db9aa57a8de763e43554d1017cde7bf4  scripts/acceptance/honeypot-real/Dockerfile.holdout-20261108\n7895e524200ac510375dade40e1edf1dd2f1eb11be52737a871318166ea5cc5f  scripts/acceptance/honeypot-real/HOLDOUT-20261107.md\n9a5264636a3e54b8d789e7ea218dade20b27221a229a6294bbc922725027b997  scripts/acceptance/honeypot-real/HOLDOUT-20261108.md\n85b3769dcd21acfdd978dcfe83080c1567a56b8f000319dc3d6c66925a82acd9  scripts/acceptance/honeypot-real/README.md\n4d04c167f2b5e097fce1332ca903c9c85694b4997ed4d0d4f99b1fe1cab93779  scripts/acceptance/honeypot-real/REGRESSION-V5-20261108.md\n79ee0085a560f8b8a71d9635faee65ac1dd2aa39adc8b270451307a4f989d1eb  scripts/acceptance/honeypot-real/build-holdout-20261107.sh\n70774b4351a99909ffc964b9687baf233116b38a0d75c96c114c6e8dc5dcd055  scripts/acceptance/honeypot-real/build-holdout-20261108.sh\nb61af9a2728fa4b65604eb904458f77b180b5adb7d10f13d069a1ae855028651  scripts/acceptance/honeypot-real/build-holdout.sh\nb02e52819f45119720779187115dd9096143373c8a425b24c7c47e54256e20c5  scripts/acceptance/honeypot-real/build.sh\n698b6cba0a6a4710a1c90f50bbc9f82c34b02c312a8b5e48a9ba1743ef51dcb6  scripts/acceptance/honeypot-real/check-log4pot-requests.py\nc2f76d41861bcc6d50db465d4ca02c3d0e77a183db309ec8b4bcb55b1f9c7a75  scripts/acceptance/honeypot-real/check-summary.py\nf40f28f05452fb7004d7572738f838eff9bcc6f7f7fde20afd6fc306153c89fe  scripts/acceptance/honeypot-real/compose.holdout-20261107.yml\ne76e6b0fbc9892c6bdd02cde53e7951aabb4cd3843204b6f8450320cb4968afa  scripts/acceptance/honeypot-real/compose.holdout-20261108.yml\n8672467c0dd64530ece26a7cd3c672f9b885fc3ada60a3a26cf7cf1a2f5605ad  scripts/acceptance/honeypot-real/compose.holdout.yml\neaf114cbb6c0df2346c37dd0d7ca788668f0a5987316bb9ec062a679ae1a2468  scripts/acceptance/honeypot-real/compose.yml\need1a8fb3f356bac51c2b4bc99685348272e8adf75c76043a3c82e98ce8fbb5d  scripts/acceptance/honeypot-real/dependencies-20261108.json\nb28e8330e349a9b31946baa8b5ca42588638a539ac87ff27068950e48f9a6bab  scripts/acceptance/honeypot-real/fetch-20261108.py\na6c7d9b4c4bf59d0cf6cfd96a3d78cb91795272aec80ff71010de34412ab2496  scripts/acceptance/honeypot-real/holdout-v5-20261108.json\n315cd030b44048e3021df3ce81ec728150f40548f75f5629efb0b4c738e64fe1  scripts/acceptance/honeypot-real/main.go\n67d6031ce4562cc783b47f84c3a038a40bd8c910fcfef88984af24bb62939dbc  scripts/acceptance/honeypot-real/prepare-20261107.py\n28c6e245edf0a08a10c024acf859a150d5f210f2729b35f0d4be69855d709050  scripts/acceptance/honeypot-real/prepare-20261108.py\n678f0d155faa247d9c36f81917b5824ca002046b7a830d31ead0f636f4d79589  scripts/acceptance/honeypot-real/prepare-holdout.py\n45ba578dcddadab9bdddd0c980fecff53d360c0862d1849e56aee6f75645e2fb  scripts/acceptance/honeypot-real/prepare.py\nd1aa81b68f3672df40c8aa0331d4fb1652e100e6bbe545846a9aaac1e1e4000a  scripts/acceptance/honeypot-real/regression-v5-20261108.json\n01ab7b885123f18d44db1b8b8de836c3f5ecff17ba8f4fc4a7da13d3a13e1a44  scripts/acceptance/honeypot-real/run.sh\n9cea4897bbc9651b794c63fb569721c6826c1023b7194036836abc0a91a5ff62  scripts/acceptance/honeypot-real/sources-20261107.json\nd2348bb22eddcc97dd66ee16ae31e6bbf33e0e013d1a73b11aa0ae52bc96eb75  scripts/acceptance/honeypot-real/sources-20261108.json\nb55efc2ddb7f267d397eb6cd212bd5ad4eb73dfda4f0703578f97e1d179ef7e0  scripts/acceptance/honeypot-real/summarize.py",
+    "image-id": "sha256:6b194d9f6e29bf1f3312fd9ee4078f471f73715b2ecfb5179c9997a2ca06fe13",
+    "python-version": "Python 3.11.2",
+    "collector-commit": "9c488207245e5ca4d49c8f86569c6b9b6cd7346e",
+    "detector-commit": "0fb610dd9a7e93f93cd5a7ec18185aca1119036e",
+    "detector-sha256": "a3cfca0a0285a197165e7e010ded6ccc8e1299723f1a7544b8e678334cb81d74  honeydetect/behavior.go\n8db924c7717ee8a856bac1f5fe4336f2e79e67651c08d612588900a3be65ea26  honeydetect/behavior_boundary_test.go\naf0e81b46d3f464823059bded20f822d88589a52c477b1e9ec1c0855001697af  honeydetect/behavior_proxy.go\n522b09fa329b039ae611c5189b6a5332355e8b24b74b07d86b443903cc770b9b  honeydetect/behavior_proxy_test.go\n2912c2630957afc6c71f728680779eb2743d34d2beaa8d749b4f7b3f4b55fcc5  honeydetect/behavior_regression_test.go\n2a3c1d431034feb51cf9cad785c4a52cfdf587a3da83369a7b84c5b05e9f5a9d  honeydetect/behavior_test.go\n81822af0e9e8f4563b6ca6eacf62aae6826f2111c2d55304c080cc1f00936a3a  honeydetect/content.go\n1a0f2c4cd8b55b4e3e3128edaa5b67af15a3f6847b8c2cf7780b35e6e2d30c13  honeydetect/content_test.go\n6afa7c161694426f2e76147764ad26a8c69c6bc0ad6ad76e48f0b7b046685cb4  honeydetect/honeydetect.go\nbd260102d4edaaf9bc413f0b613ae19deb4b245fae7c8e0a828cfae6316a26d2  honeydetect/honeydetect_test.go\nd189e97fe157ee4c6d06e2d2151b7eaca4e4ebf88e4dde4c6bf4456d4da2e3bc  honeydetect/rules.go\n842153576e3e2d45929423c5344a43e5ebbfaf3df2b59294dc5d6fd3ed5a4324  honeydetect/rules_test.go\n315cd030b44048e3021df3ce81ec728150f40548f75f5629efb0b4c738e64fe1  scripts/acceptance/honeypot-real/main.go",
+    "driver-image-id": "sha256:e4666f59b73f3e8f0645196a17fef3a9da601e8be347511264044126c3c1a5b9",
+    "driver-binary-sha256": "2d94075039e1e0f594be9cd7b6117073dadbf211bf3c85e91e2db89fdba150e0"
+  },
+  "evaluation_role": "new_holdout",
+  "evaluation_plan": {
+    "schema": 2,
+    "evaluation_role": "new_holdout",
+    "detector_commit": "0fb610dd9a7e93f93cd5a7ec18185aca1119036e",
+    "behavior_version": "http-behavior-v5",
+    "metadata_version": "metadata-v2",
+    "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+    "repetitions": 3,
+    "image_ids": {
+      "holdout-20261108": "sha256:6b194d9f6e29bf1f3312fd9ee4078f471f73715b2ecfb5179c9997a2ca06fe13"
+    },
+    "collector_commit": "9c488207245e5ca4d49c8f86569c6b9b6cd7346e",
+    "driver_image_id": "sha256:e4666f59b73f3e8f0645196a17fef3a9da601e8be347511264044126c3c1a5b9",
+    "sources_sha256": "d2348bb22eddcc97dd66ee16ae31e6bbf33e0e013d1a73b11aa0ae52bc96eb75",
+    "configuration_hashes": {
+      "elasticpot.cfg": "786422e6f3b0e86fe5885fdf7094f6def66be9fdf5ba75577127dfd037ec9da6",
+      "files/catalog.json": "5c9865360016cfa8464cab26d5da16f6bde95842dbf32480d6d35e773795358d",
+      "files/sample.txt": "2dba8c0f02dd6615b5944f18270ccec725e80de0720a20f89bcc48a00dfe5faa",
+      "honeyhttpd.json": "ddc909e6d6d74d56e30dc6d115f9a2e3a1e5588c3cde05d4efaf15ab7279d31c",
+      "public-ip.txt": "d1aa74fdddc060ca4e2e10401f2f4e0ef37f94b0d8b25137e8c530d59f4aba75",
+      "samples.json": "01fc26147c3a37b957f2cbaeab14298fdc0f37fbdf546ade05a5378d0407a048"
+    }
+  },
+  "evaluation_plan_sha256": "a6c7d9b4c4bf59d0cf6cfd96a3d78cb91795272aec80ff71010de34412ab2496",
+  "excluded_deployments": [],
+  "runtime_compatibility": "Existing Python 3.11.2 / Twisted 24.10.0 environment; only termcolor 2.5.0 added with wheel hash. Upstream response code unchanged. Elasticpot public-IP lookup reads a local synthetic file, no external output plugins.",
+  "source_archives": [
+    {
+      "id": "honeyhttpd",
+      "repository": "bocajspear1/honeyhttpd",
+      "commit": "edec2700f3248b73fce00893a9ed6f2833ac05fd",
+      "archive_url": "https://api.github.com/repos/bocajspear1/honeyhttpd/tarball/edec2700f3248b73fce00893a9ed6f2833ac05fd",
+      "archive_sha256": "9ea0b1e4464a5a485df639383bd1289c818d777057c618cf6a48af3a7bbabefa",
+      "bytes": 51834
+    },
+    {
+      "id": "elasticpot",
+      "repository": "bontchev/elasticpot",
+      "commit": "d12649730d819bd78ea622361b6c65120173ad45",
+      "archive_url": "https://api.github.com/repos/bontchev/elasticpot/tarball/d12649730d819bd78ea622361b6c65120173ad45",
+      "archive_sha256": "e1c88dfe50baca0220bc3f2007ba27559758675be78a7ab82b71b44ac5936b46",
+      "bytes": 47835
+    },
+    {
+      "id": "rangehttpserver",
+      "repository": "danvk/RangeHTTPServer",
+      "commit": "e5052e30e983d63846eb8fb0518ea5044bcb2235",
+      "archive_url": "https://api.github.com/repos/danvk/RangeHTTPServer/tarball/e5052e30e983d63846eb8fb0518ea5044bcb2235",
+      "archive_sha256": "98db669faad29328d4fcf568a4a7472397afdebd82c57f3884d6c8a65b346d1d",
+      "bytes": 8518
+    },
+    {
+      "id": "copyparty",
+      "repository": "9001/copyparty",
+      "commit": "1af7efeca858dcfa29f797d7ae93f22eb2fdecf0",
+      "archive_url": "https://api.github.com/repos/9001/copyparty/tarball/1af7efeca858dcfa29f797d7ae93f22eb2fdecf0",
+      "archive_sha256": "0faba2da6ac7312e5e73feaf7cf22a4e9b599bb4e360841b2fa29b7ca642f15e",
+      "bytes": 1637516
+    }
+  ],
+  "configuration_hashes": {
+    "elasticpot.cfg": "786422e6f3b0e86fe5885fdf7094f6def66be9fdf5ba75577127dfd037ec9da6",
+    "files/catalog.json": "5c9865360016cfa8464cab26d5da16f6bde95842dbf32480d6d35e773795358d",
+    "files/sample.txt": "2dba8c0f02dd6615b5944f18270ccec725e80de0720a20f89bcc48a00dfe5faa",
+    "honeyhttpd.json": "ddc909e6d6d74d56e30dc6d115f9a2e3a1e5588c3cde05d4efaf15ab7279d31c",
+    "public-ip.txt": "d1aa74fdddc060ca4e2e10401f2f4e0ef37f94b0d8b25137e8c530d59f4aba75",
+    "samples.json": "01fc26147c3a37b957f2cbaeab14298fdc0f37fbdf546ade05a5378d0407a048"
+  },
+  "dependency_versions": {
+    "runtime": [
+      "attrs==26.1.0",
+      "Automat==25.4.16",
+      "bcrypt==5.0.0",
+      "blinker==1.9.0",
+      "certifi==2026.10.23",
+      "cffi==2.1.1",
+      "chardet==7.7.0",
+      "charset-normalizer==3.5.2",
+      "click==8.5.0",
+      "constantly==23.10.4",
+      "cryptography==44.0.3",
+      "dnspython==2.9.2",
+      "Flask==3.1.3",
+      "future==1.0.0",
+      "honeypots @ file:///sources/honeypots",
+      "hyperlink==21.0.0",
+      "idna==3.20",
+      "impacket==0.9.24",
+      "Incremental==24.11.0",
+      "itsdangerous==2.2.0",
+      "Jinja2==3.1.6",
+      "ldap3==2.9.1",
+      "ldapdomaindump==0.10.0",
+      "MarkupSafe==3.0.4",
+      "netifaces==0.11.0",
+      "packaging==26.3",
+      "paramiko==3.5.0",
+      "psutil==5.9.0",
+      "psycopg==3.3.8",
+      "psycopg-binary==3.3.8",
+      "pyasn1==0.6.5",
+      "pyasn1_modules==0.4.2",
+      "pycparser==3.12",
+      "pycryptodome==3.19.1",
+      "pycryptodomex==3.24.2",
+      "PyNaCl==1.6.2",
+      "pyOpenSSL==24.3.0",
+      "PySocks==1.7.1",
+      "requests==2.32.0",
+      "scapy==2.8.0",
+      "service-identity==21.1.0",
+      "six==1.17.0",
+      "termcolor @ file:///wheels/termcolor-2.5.0-py3-none-any.whl",
+      "Twisted==24.10.0",
+      "typing_extensions==4.16.0",
+      "urllib3==2.8.0",
+      "Werkzeug==3.1.9",
+      "zope.interface==8.7"
+    ]
+  },
+  "rules": {
+    "rules": [
+      {
+        "id": "cowrie",
+        "pattern": "cowrie",
+        "provider": "cowrie",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "dionaea",
+        "pattern": "dionaea",
+        "provider": "dionaea",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "hfish",
+        "pattern": "hfish",
+        "provider": "hfish",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "opencanary",
+        "pattern": "opencanary",
+        "provider": "opencanary",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "kippo",
+        "pattern": "kippo",
+        "provider": "kippo",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "glastopf",
+        "pattern": "glastopf",
+        "provider": "glastopf",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "honeypot",
+        "pattern": "honeypot",
+        "provider": "honeypot",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      },
+      {
+        "id": "蜜罐",
+        "pattern": "蜜罐",
+        "provider": "蜜罐",
+        "source": "内置显式名称规则；仅匹配元数据自述，非已验证产品指纹",
+        "match": "token",
+        "fields": []
+      }
+    ]
+  },
+  "limits": [
+    "Controlled local deployments, not independently labeled Internet observations.",
+    "First measurement of two new honeypot families and two normal file services; frozen detector. RangeHTTPServer shares Python stdlib implementation ancestry with earlier controls. Once viewed, these samples must become regression material for future tuning.",
+    "Labels come from controlled source/configuration, not independent Internet labels. No signal overlap was injected into target responses.",
+    "Three repetitions measure stability only; counts use the first result per deployment.",
+    "Inconclusive and no_signal do not establish a benign verdict. No population accuracy or precision estimate.",
+    "Detector and fixture images frozen by explicit plan; no rule tuning in this run. No login attempts, payloads, redirects or TLS bypass.",
+    "Metadata extraction is the evaluation collector; behavior calls production Probe directly, not the asset UI."
+  ]
+}

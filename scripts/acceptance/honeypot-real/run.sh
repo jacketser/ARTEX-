@@ -22,7 +22,11 @@ source_dir=""
 cleanup() {
   status=$?
   trap - EXIT
-  dc logs --no-color > "$ARTEX_HONEY_DIR/containers.log" 2>&1 || true
+  log_name=containers.log
+  if [[ "$corpus" == holdout-20261108 && -f "$ARTEX_HONEY_DIR/request-audit.json" ]]; then
+    log_name=containers-final.log # preserve the exact audited access-log snapshot
+  fi
+  dc logs --no-color > "$ARTEX_HONEY_DIR/$log_name" 2>&1 || true
   dc ps -a --format json > "$ARTEX_HONEY_DIR/containers.json" || true
   if ! dc down --volumes --remove-orphans > "$ARTEX_HONEY_DIR/cleanup.log" 2>&1; then status=1; fi
   if [[ -n "$source_dir" ]]; then rm -rf -- "$source_dir"; fi
@@ -59,7 +63,7 @@ if [[ -n "$plan" ]]; then
   collector_ref=$(python3 - "$plan" <<'PYCOLLECTOR'
 import json, sys
 p = json.load(open(sys.argv[1]))
-print(p.get('collector_commit', p['detector_commit']))
+print(p['collector_commit'] if p['schema'] == 2 else p['detector_commit'])
 PYCOLLECTOR
 )
   git -C "$repo_root" show "$collector_ref:scripts/acceptance/honeypot-real/main.go" > "$source_dir/scripts/acceptance/honeypot-real/main.go"
@@ -146,5 +150,9 @@ if [[ "$corpus" == holdout-20261107 ]]; then
     dc cp "$service:/tmp/log4pot.json" "$ARTEX_HONEY_DIR/$service-requests.jsonl"
   done
   python3 check-log4pot-requests.py "$ARTEX_HONEY_DIR"
+fi
+if [[ "$corpus" == holdout-20261108 ]]; then
+  dc logs --no-color > "$ARTEX_HONEY_DIR/containers.log"
+  python3 check-requests-20261108.py "$ARTEX_HONEY_DIR"
 fi
 python3 summarize.py "$ARTEX_HONEY_DIR"

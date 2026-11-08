@@ -144,6 +144,9 @@ if plan is not None:
     summary['limits'][5] = 'Detector and fixture images frozen by explicit plan; no rule tuning in this run. No login attempts, payloads, redirects or TLS bypass.'
 if split == 'holdout-20261108' and plan['evaluation_role'] == 'new_holdout':
     summary['limits'][1] = 'First measurement of two new honeypot families and two normal file services; frozen detector. RangeHTTPServer shares Python stdlib implementation ancestry with earlier controls. Once viewed, these samples must become regression material for future tuning.'
+if split == 'holdout-20261108':
+    if plan['evaluation_role'] == 'regression':
+        summary['limits'][1] = 'Previously viewed holdout-20261108 samples replayed as regression. No new independent holdout.'
     summary['limits'][2] = 'Labels come from controlled source/configuration, not independent Internet labels. No signal overlap was injected into target responses.'
 (root / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n')
 lines = ['| Deployment | Known label | Metadata | Behavior | HTTP observations |',

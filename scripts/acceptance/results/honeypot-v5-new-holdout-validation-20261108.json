@@ -1,0 +1,107 @@
+{
+  "date": "2026-11-08",
+  "preregistration_commits": [
+    "9c488207245e5ca4d49c8f86569c6b9b6cd7346e",
+    "ba2543d3f8a59da6e89fa12f891d000512b0ccb6"
+  ],
+  "detector_commit": "0fb610dd9a7e93f93cd5a7ec18185aca1119036e",
+  "algorithm": "http-behavior-v5",
+  "new_holdout": {
+    "deployments": 4,
+    "measurements": 12,
+    "elapsed_measurement_seconds": 9.355,
+    "metadata_requests": 12,
+    "behavior_requests": 45,
+    "excluded": [],
+    "artifacts": "/tmp/artex-honeypot-real-GVIAKsFr",
+    "results_file": "honeypot-v5-new-holdout-20261108.json",
+    "sha256": "235a236d071cb12c3ecedb76c113b883d00bbe99dd90aac91ede991d911d70ab"
+  },
+  "regression": {
+    "deployments": 7,
+    "measurements": 21,
+    "changed_classification_or_status_rows": 0,
+    "compared_fields": "metadata evaluated/matched/confidence; behavior outcome/confidence/warnings; HTTP status/error/truncation",
+    "baseline_result": "honeypot-v5-regression-tuning-20261108.json",
+    "results_file": "honeypot-v5-tuning-followup-20261108.json",
+    "sha256": "967da6a767704e9b6c60c221293d67fccd03c8dc08bffd8f195c64b82bc0cb40",
+    "artifacts": "/tmp/artex-honeypot-real-hQLDBUlQ",
+    "other_existing_groups_rerun": false
+  },
+  "request_audit": {
+    "targets": {
+      "honeyhttpd-apache": {
+        "requests": 12,
+        "root_get": 9,
+        "root_head": 3,
+        "random_get": 0,
+        "matched": true
+      },
+      "elasticpot": {
+        "requests": 15,
+        "root_get": 9,
+        "root_head": 3,
+        "random_get": 3,
+        "matched": true
+      },
+      "rangehttpserver": {
+        "requests": 15,
+        "root_get": 9,
+        "root_head": 3,
+        "random_get": 3,
+        "matched": true
+      },
+      "copyparty": {
+        "requests": 15,
+        "root_get": 9,
+        "root_head": 3,
+        "random_get": 3,
+        "matched": true
+      }
+    },
+    "target_log_sha256": "b6cf826f8368e253815d1ae6bdde4b2d2832435af3615206f7b183626364953e",
+    "limits": "Target access-log accounting, not a full packet capture. No credentials in the frozen collector/Probe requests; logs alone do not prove header absence for every target."
+  },
+  "integrity_validation": {
+    "/tmp/artex-honey-newholdout-validator.log": {
+      "valid_and_rejected_cases": 22,
+      "sha256": "dbdc922808fe7c9b659351b9be897a539fc2e598d32644a206909f8411590f5a"
+    },
+    "/tmp/artex-honey-newholdout-tuning-validator.log": {
+      "valid_and_rejected_cases": 17,
+      "sha256": "955347168ec3aabf17931db7d1b0a3b9a06cbd911362feddc339b2d5858060d9"
+    },
+    "/tmp/artex-honey-newholdout-legacy-check.log": {
+      "valid_and_rejected_cases": 17,
+      "sha256": "955347168ec3aabf17931db7d1b0a3b9a06cbd911362feddc339b2d5858060d9"
+    }
+  },
+  "request_audit_checks": [
+    "valid",
+    "missing-request",
+    "duplicate-request",
+    "unplanned-path"
+  ],
+  "copyparty_observation": {
+    "metadata_samples": 3,
+    "only_observed_script_nonce_differs_after_replacement": true,
+    "normalized_metadata_sha256": "c1935d739c3e66745751d19dbcb353c8e4f63abd7b449d8c19f5057d84d21d13",
+    "limitation": "Offline explanation of three metadata responses only; production detector still compares exact body hashes and inconclusive behavior was not reclassified."
+  },
+  "cleanup_verified": true,
+  "production_deployed": false,
+  "production_version_unchanged": "dev-0fb610d",
+  "rules_changed": false,
+  "failures_and_repairs": [
+    "Initial source extraction used unsupported Python tarfile filter keyword; replaced before measurement with path-checked extraction including safe relative symlinks.",
+    "Offline validator initially rewrote samples.json with different whitespace and failed the new byte-level config lock on valid input; preserved original bytes, then valid input and 21 damaged cases passed. No measurement rerun or detector change."
+  ],
+  "limits": [
+    "Controlled local deployments, not population accuracy.",
+    "No suspected positive observed; Elasticpot is a full-comparison no_signal miss. HoneyHTTPD abstains at HEAD 501; copyparty abstains on changing response hashes.",
+    "RangeHTTPServer is a new normal service but shares stdlib implementation ancestry with prior Python controls.",
+    "New holdout is now viewed; future rule tuning must treat it as regression and preregister another unseen set.",
+    "No new independent enrollment-content positive/normal counterexample or model-security result."
+  ],
+  "replay_plan_role_check": "PASS: previously viewed new corpus summarized as regression using separate replay plan; original measurements unchanged"
+}
