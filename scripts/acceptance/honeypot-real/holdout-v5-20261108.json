@@ -1,0 +1,23 @@
+{
+  "schema": 2,
+  "evaluation_role": "new_holdout",
+  "detector_commit": "0fb610dd9a7e93f93cd5a7ec18185aca1119036e",
+  "behavior_version": "http-behavior-v5",
+  "metadata_version": "metadata-v2",
+  "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+  "repetitions": 3,
+  "image_ids": {
+    "holdout-20261108": "sha256:6b194d9f6e29bf1f3312fd9ee4078f471f73715b2ecfb5179c9997a2ca06fe13"
+  },
+  "collector_commit": "9c488207245e5ca4d49c8f86569c6b9b6cd7346e",
+  "driver_image_id": "sha256:e4666f59b73f3e8f0645196a17fef3a9da601e8be347511264044126c3c1a5b9",
+  "sources_sha256": "d2348bb22eddcc97dd66ee16ae31e6bbf33e0e013d1a73b11aa0ae52bc96eb75",
+  "configuration_hashes": {
+    "elasticpot.cfg": "786422e6f3b0e86fe5885fdf7094f6def66be9fdf5ba75577127dfd037ec9da6",
+    "files/catalog.json": "5c9865360016cfa8464cab26d5da16f6bde95842dbf32480d6d35e773795358d",
+    "files/sample.txt": "2dba8c0f02dd6615b5944f18270ccec725e80de0720a20f89bcc48a00dfe5faa",
+    "honeyhttpd.json": "ddc909e6d6d74d56e30dc6d115f9a2e3a1e5588c3cde05d4efaf15ab7279d31c",
+    "public-ip.txt": "d1aa74fdddc060ca4e2e10401f2f4e0ef37f94b0d8b25137e8c530d59f4aba75",
+    "samples.json": "01fc26147c3a37b957f2cbaeab14298fdc0f37fbdf546ade05a5378d0407a048"
+  }
+}
