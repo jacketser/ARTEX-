@@ -1,6 +1,7 @@
 """Synthetic hidden enrollment text; ordinary headers and a real 404 fallback."""
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import os
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -34,6 +35,10 @@ class Handler(BaseHTTPRequestHandler):
             if self.path != '/':
                 status, body = 404, b'not found'
         self.send_response(status)
+        if os.environ.get('ARTEX_ACCEPTANCE_BASELINE') == '1' and self.path != '/metrics':
+            # Same body, rotating root GET header, stable marker in another field.
+            self.send_header('Server', 'gateway-a' if len(Handler.requests) == 1 else 'gateway-b')
+            self.send_header('X-Powered-By', 'Cowrie')
         self.send_header('Content-Type', 'text/html')
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()

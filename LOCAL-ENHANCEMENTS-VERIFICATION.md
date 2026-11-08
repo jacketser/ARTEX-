@@ -442,3 +442,7 @@
 包含 postgres.dump、files.tar.gz、release.json；pg_restore --list 校验通过，目录权限 700。回退镜像 jacketser/artex:rollback-before-security-refresh 已校验，对应 dev-e0556f7。新 auth_sessions 表增量迁移，不删除旧业务数据。原密码哈希、jwt.key、.env 和初始登录文件哈希保持不变。应用/数据库健康，仍只绑定 127.0.0.1:8787。此次认证格式升级需要重新登录一次；回退旧认证方式时须更换签名密钥以免接受旧凭据。
 
 验收结束后已清理隔离应用、测试 PostgreSQL 及其数据卷、Go 测试容器和隔离网络；保留源码镜像与命名构建缓存。
+
+## 蜜罐 Server 基线稳定性修复（2026-11-08）
+
+回到蜜罐主线，行为 v5 将两次 GET 已轮换 Server 的比较标记无法判断，避免当作 HEAD 差异参与疑似升级；原内容提示独立保留，旧 v4 历史过期但不改写。五个旧版反例复现后，蜜罐全包、隔离 PG 历史 API 及固定 AgentCapture 九模板回归通过。合成反例和已查看开发模板不是独立留出，无真实命中率收益证据。候选待发布验收，详情见[稳定性报告](HONEYPOT-BASELINE-STABILITY.md)。JSON／ZIP 支线暂停，长评估继续暂缓。

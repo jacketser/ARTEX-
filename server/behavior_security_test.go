@@ -91,7 +91,7 @@ func TestBehaviorAuthorizationAuditAndPolicyAPI(t *testing.T) {
 	}
 	// Changing only the algorithm must invalidate old verdicts, while preserving
 	// the recorded outcome and never issuing another request.
-	for _, version := range []string{honeydetect.BehaviorVersion, "http-behavior-v3", "http-behavior-v2", "http-behavior-v1", ""} {
+	for _, version := range []string{honeydetect.BehaviorVersion, "http-behavior-v4", "http-behavior-v3", "http-behavior-v2", "http-behavior-v1", ""} {
 		stored := map[string]any{"version": version, "outcome": "needs_review", "signals": []string{"legacy content signal"}}
 		if version == honeydetect.BehaviorVersion {
 			stored["outcome"] = "no_signal"

@@ -154,3 +154,11 @@ bash scripts/acceptance/honeypot-real/run.sh
 [方法与运行要求](honeypot-real/README.md)、[实际评估报告](../../HONEYPOT-EVALUATION.md)、[结构化结果](results/honeypot-real-20261106.json)。本轮发现正常文档回退页面的疑似误报，以及跳转／证书边界造成的无法判断；脚本完成不等于效果达标，更不是公网准确率证明。
 
 2026-11-07 已扩展[固定判定的新应用留出组](honeypot-real/HOLDOUT-20261107.md)：Log4Pot 两个原装配置、httpbin、Datasette，使用 `build-holdout-20261107.sh` 与 `run.sh holdout-20261107`。原七部署与前次五部署均作为回归组复验；三个分组独立报告。新蜜罐均能完成四请求但只提示复核，正常应用均无信号；检测规则与正式版本不变。完整统计和限制见[当前评估报告](../../HONEYPOT-EVALUATION.md)。
+
+## v5 服务标记稳定性浏览器验收
+
+```sh
+ARTEX_ACCEPTANCE_BASELINE=1 ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:honeypot-v5-candidate bash scripts/acceptance/run.sh
+```
+
+自动启用 content profile，沿用原代理／稳定疑似回归，再通过轮换 Server、持续 X-Powered-By 名称的合成目标验证 v5 无法判断、通用原因、独立内容提示、刷新持久化及四请求边界。随后注入一条 v4 合成疑似历史，验证过期提示与原结论保留。未设置 baseline 时原 v4 工具入口不变。没有新增真实样本／留出；目标中的产品名称仅用于既有规则分支验证。结果和范围见[报告](../../HONEYPOT-BASELINE-STABILITY.md)。

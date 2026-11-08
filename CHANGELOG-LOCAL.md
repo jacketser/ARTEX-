@@ -9,6 +9,10 @@
 - 测试结果、发布备份及回退镜像：[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
 - 当前完成状态、剩余优先级及不实施项：[项目总览](PROJECT-STATUS.md)；设计与阶段记录：[开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
 
+## 未发布
+
+- 蜜罐行为 v5：两次主页 GET 的 Server 标记不稳定时返回无法判断，避免将网关轮换归因于 HEAD 方法并升级疑似。旧历史标记过期且原样保留，内容提示仍独立；详见[验证报告](HONEYPOT-BASELINE-STABILITY.md)。
+
 ## dev-806bc74 — 2026-11-07
 
 应用源码：`806bc74`；隔离浏览器验收工具及记录：`8e99580`。前后端同时发布，无数据库结构、归档格式、依赖或认证格式变更。

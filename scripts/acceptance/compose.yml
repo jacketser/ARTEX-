@@ -55,6 +55,8 @@ services:
       retries: 60
   content-target:
     profiles: [content]
+    environment:
+      ARTEX_ACCEPTANCE_BASELINE: ${ARTEX_ACCEPTANCE_BASELINE:-0}
     image: ${ARTEX_ACCEPTANCE_IMAGE:-jacketser/artex:local}
     entrypoint: [python3, /acceptance/content-target.py]
     volumes:

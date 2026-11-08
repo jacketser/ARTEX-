@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const BehaviorVersion = "http-behavior-v4"
+const BehaviorVersion = "http-behavior-v5"
 const ProbeMaxBytes = 64 * 1024
 
 // A manually configured allowlist and explicit per-run consent bound active checks.
@@ -271,6 +271,14 @@ func analyzeBehavior(out BehaviorResult) BehaviorResult {
 	}
 	if a.Status != b.Status || a.BodySHA256 != b.BodySHA256 {
 		out.Signals = append(out.Signals, "重复请求响应不稳定，无法建立可靠对照")
+		return out
+	}
+	// Identical bodies do not establish a stable header baseline. A gateway
+	// may rotate Server values independently of the request method; a name
+	// in another header or a wildcard page cannot resolve that ambiguity.
+	// Keep content warnings, but do not infer a honeypot from this comparison.
+	if a.server != b.server {
+		out.Signals = append(out.Signals, "重复主页 GET 的 Server 标记不稳定，无法将差异归因于 HEAD 方法；也可能来自网关或负载均衡")
 		return out
 	}
 	behaviorStart := len(out.Signals)
