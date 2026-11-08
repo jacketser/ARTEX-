@@ -1,0 +1,2918 @@
+{
+  "date": "2026-11-08",
+  "evaluation_role": "regression",
+  "preregistered_tool_plan_commit": "15f72f1b1d5b8a619171efc26ffe82f6b0eaea52",
+  "detector_commit": "0fb610dd9a7e93f93cd5a7ec18185aca1119036e",
+  "behavior_version": "http-behavior-v5",
+  "metadata_version": "metadata-v2",
+  "groups": [
+    {
+      "name": "tuning",
+      "result": "honeypot-v5-regression-tuning-20261108.json",
+      "sha256": "5f2e50e923eb9d609f30e7558101cc9d55c7a0960bc656772dabddea4a6317cc",
+      "artifacts": "/tmp/artex-honeypot-real-e5ke4lBp",
+      "measurement_seconds": 12.529,
+      "counts": {
+        "honeypot": {
+          "deployments": 3,
+          "behavior_four_requests": 1,
+          "behavior_completed_comparison": 1,
+          "metadata_evaluated": 2,
+          "metadata_any_match": 0,
+          "metadata_medium_or_high": 0,
+          "behavior_suspected": 0,
+          "behavior_needs_review": 1,
+          "behavior_no_signal": 0,
+          "behavior_inconclusive": 2,
+          "content_warning_deployments": 0
+        },
+        "benign": {
+          "deployments": 4,
+          "behavior_four_requests": 4,
+          "behavior_completed_comparison": 4,
+          "metadata_evaluated": 4,
+          "metadata_any_match": 2,
+          "metadata_medium_or_high": 0,
+          "behavior_suspected": 0,
+          "behavior_needs_review": 3,
+          "behavior_no_signal": 1,
+          "behavior_inconclusive": 0,
+          "content_warning_deployments": 0
+        }
+      },
+      "measurements": 21,
+      "authorized_behavior_requests": 66,
+      "cleanup_log_sha256": "0e7ac527a90f0073b8bb8bfc261d1b0871a33739d393ca8cfcfa1dfa7cdd4a65",
+      "validator_log": "/tmp/artex-v5-real-tuning-validator.log",
+      "validator_cases_passed": 17
+    },
+    {
+      "name": "holdout",
+      "result": "honeypot-v5-regression-holdout-20261108.json",
+      "sha256": "a92b6bb47ecf42683ee3f03d812570e346fe48bdcb499dd4118d234dbeb23391",
+      "artifacts": "/tmp/artex-honeypot-real-YdoxY8do",
+      "measurement_seconds": 7.85,
+      "counts": {
+        "honeypot": {
+          "deployments": 1,
+          "behavior_four_requests": 0,
+          "behavior_completed_comparison": 0,
+          "metadata_evaluated": 1,
+          "metadata_any_match": 0,
+          "metadata_medium_or_high": 0,
+          "behavior_suspected": 0,
+          "behavior_needs_review": 0,
+          "behavior_no_signal": 0,
+          "behavior_inconclusive": 1,
+          "content_warning_deployments": 0
+        },
+        "benign": {
+          "deployments": 4,
+          "behavior_four_requests": 3,
+          "behavior_completed_comparison": 3,
+          "metadata_evaluated": 4,
+          "metadata_any_match": 1,
+          "metadata_medium_or_high": 0,
+          "behavior_suspected": 0,
+          "behavior_needs_review": 1,
+          "behavior_no_signal": 2,
+          "behavior_inconclusive": 1,
+          "content_warning_deployments": 0
+        }
+      },
+      "measurements": 15,
+      "authorized_behavior_requests": 42,
+      "cleanup_log_sha256": "44fcb131d94abbf6191b377a741ee18a3164a663871aaa63f0d0abf2deb51b5e",
+      "validator_log": "/tmp/artex-v5-real-holdout-validator.log",
+      "validator_cases_passed": 17
+    },
+    {
+      "name": "apps",
+      "result": "honeypot-v5-regression-apps-20261108.json",
+      "sha256": "6938825e6ae7182501e79ce3abb2c98b051337a2369c1398b5188948ac6926f0",
+      "artifacts": "/tmp/artex-honeypot-real-Firsplrw",
+      "measurement_seconds": 11.3,
+      "counts": {
+        "honeypot": {
+          "deployments": 2,
+          "behavior_four_requests": 2,
+          "behavior_completed_comparison": 2,
+          "metadata_evaluated": 2,
+          "metadata_any_match": 0,
+          "metadata_medium_or_high": 0,
+          "behavior_suspected": 0,
+          "behavior_needs_review": 2,
+          "behavior_no_signal": 0,
+          "behavior_inconclusive": 0,
+          "content_warning_deployments": 0
+        },
+        "benign": {
+          "deployments": 2,
+          "behavior_four_requests": 2,
+          "behavior_completed_comparison": 2,
+          "metadata_evaluated": 2,
+          "metadata_any_match": 0,
+          "metadata_medium_or_high": 0,
+          "behavior_suspected": 0,
+          "behavior_needs_review": 0,
+          "behavior_no_signal": 2,
+          "behavior_inconclusive": 0,
+          "content_warning_deployments": 0
+        }
+      },
+      "measurements": 12,
+      "authorized_behavior_requests": 48,
+      "cleanup_log_sha256": "39d027af80820fcb6d435cb24db29068bd6f1d969cc863c79f3017ecd9086790",
+      "validator_log": "/tmp/artex-v5-real-apps-validator.log",
+      "validator_cases_passed": 17
+    }
+  ],
+  "deployments": 16,
+  "measurements": 48,
+  "new_independent_holdout_deployments": 0,
+  "rules_changed": false,
+  "production_deployed_this_task": false,
+  "production_version_unchanged": "dev-0fb610d",
+  "all_repetitions_stable": true,
+  "changed_measurements": [],
+  "comparison": [
+    {
+      "sample_id": "opencanary-nas",
+      "repetition": 1,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            302,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            302,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "qeeqbox-http",
+      "repetition": 1,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "qeeqbox-https",
+      "repetition": 1,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": false,
+        "metadata_matched": null,
+        "metadata_confidence": null,
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            0,
+            "network_tls_or_timeout",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": false,
+        "metadata_matched": null,
+        "metadata_confidence": null,
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            0,
+            "network_tls_or_timeout",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-default",
+      "repetition": 1,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-fallback",
+      "repetition": 1,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-product-doc",
+      "repetition": 1,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-product-doc-fallback",
+      "repetition": 1,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "opencanary-nas",
+      "repetition": 2,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            302,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            302,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "qeeqbox-http",
+      "repetition": 2,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "qeeqbox-https",
+      "repetition": 2,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": false,
+        "metadata_matched": null,
+        "metadata_confidence": null,
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            0,
+            "network_tls_or_timeout",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": false,
+        "metadata_matched": null,
+        "metadata_confidence": null,
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            0,
+            "network_tls_or_timeout",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-default",
+      "repetition": 2,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-fallback",
+      "repetition": 2,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-product-doc",
+      "repetition": 2,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-product-doc-fallback",
+      "repetition": 2,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "opencanary-nas",
+      "repetition": 3,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            302,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            302,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "qeeqbox-http",
+      "repetition": 3,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "qeeqbox-https",
+      "repetition": 3,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": false,
+        "metadata_matched": null,
+        "metadata_confidence": null,
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            0,
+            "network_tls_or_timeout",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": false,
+        "metadata_matched": null,
+        "metadata_confidence": null,
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            0,
+            "network_tls_or_timeout",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-default",
+      "repetition": 3,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-fallback",
+      "repetition": 3,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-product-doc",
+      "repetition": 3,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "nginx-product-doc-fallback",
+      "repetition": 3,
+      "group": "tuning",
+      "previous_result": "honeypot-v2-regression-tuning-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "heralding-http",
+      "repetition": 1,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-default",
+      "repetition": 1,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-document-fallback",
+      "repetition": 1,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-auth",
+      "repetition": 1,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "python-static",
+      "repetition": 1,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "heralding-http",
+      "repetition": 2,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-default",
+      "repetition": 2,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-document-fallback",
+      "repetition": 2,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-auth",
+      "repetition": 2,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "python-static",
+      "repetition": 2,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "heralding-http",
+      "repetition": 3,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-default",
+      "repetition": 3,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-document-fallback",
+      "repetition": 3,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": true,
+        "metadata_confidence": "low",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "apache-auth",
+      "repetition": 3,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "inconclusive",
+        "confidence": "none",
+        "http_observations": [
+          [
+            401,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "python-static",
+      "repetition": 3,
+      "group": "holdout",
+      "previous_result": "honeypot-v2-regression-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "log4pot-json",
+      "repetition": 1,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "log4pot-tomcat",
+      "repetition": 1,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "httpbin",
+      "repetition": 1,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "datasette",
+      "repetition": 1,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "log4pot-json",
+      "repetition": 2,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "log4pot-tomcat",
+      "repetition": 2,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "httpbin",
+      "repetition": 2,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "datasette",
+      "repetition": 2,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "log4pot-json",
+      "repetition": 3,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "log4pot-tomcat",
+      "repetition": 3,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "needs_review",
+        "confidence": "low",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "httpbin",
+      "repetition": 3,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    },
+    {
+      "sample_id": "datasette",
+      "repetition": 3,
+      "group": "apps",
+      "previous_result": "honeypot-v2-holdout-20261107.json",
+      "same_classification_and_http_statuses": true,
+      "before": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      },
+      "after": {
+        "metadata_evaluated": true,
+        "metadata_matched": false,
+        "metadata_confidence": "none",
+        "outcome": "no_signal",
+        "confidence": "none",
+        "http_observations": [
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            200,
+            "",
+            false
+          ],
+          [
+            404,
+            "",
+            false
+          ]
+        ]
+      }
+    }
+  ],
+  "legacy_validator": {
+    "groups": 3,
+    "cases_each": 12,
+    "log": "/tmp/artex-v5-regression-legacy-validator.log"
+  },
+  "cleanup_verified": true,
+  "source_review": {
+    "repository": "thomaspatzke/Log4Pot",
+    "commit": "5002b1fe0f82359ef32dbc3a899e8a701dc3256e",
+    "file": "log4pot-server.py",
+    "finding": "do() returns configurable constant response with default Python HTTP header; __getattribute__ routes do_* methods to do(). These observations overlap ordinary catch-all services; no new discriminative rule added."
+  },
+  "limits": [
+    "All real-service groups were already viewed. No fresh holdout or population accuracy estimate.",
+    "No suspected result in these honeypot deployments; manual review and inconclusive remain unresolved.",
+    "Content warnings are all zero in this real-service corpus, not evidence of general prompt-injection safety.",
+    "No new deployed application changes, long load or model evaluation."
+  ]
+}

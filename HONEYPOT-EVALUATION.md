@@ -5,6 +5,47 @@
 
 > 行为 `http-behavior-v4` 已自 `dev-6d4aa09` 正式发布，后续 `dev-806bc74` 保留该算法：内容风险提示独立展示，不再单独触发蜜罐复核，构建、浏览器验收及发布证据见[分离验证报告](HONEYPOT-CONTENT-SEPARATION.md)。下文 v3／v2 结果保留原版本含义，未重算为 v4 评估。
 
+## v5 真实软件回归（2026-11-08）
+
+按用户要求继续蜜罐主线，本轮补齐已发布 `dev-0fb610d`／`http-behavior-v5` 的真实软件回归，不修改检测规则或正式部署。测前提交 **`15f72f1`** 固定[方法](scripts/acceptance/honeypot-real/REGRESSION-V5-20261108.md)和[检测器／镜像计划](scripts/acceptance/honeypot-real/regression-v5-20261108.json)；检测源码固定 `0fb610dd9a7e93f93cd5a7ec18185aca1119036e`。
+
+16 个既有部署，每部署三次，共 48 次测量；原调试组及两个历史留出组均已查看，**本轮全部是回归集，无新增独立留出**。按部署报告，重复次数不扩大样本量：
+
+| 历史分组／标签 | 部署数 | 疑似 | 人工复核 | 无信号 | 无法判断 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| tuning 蜜罐 | 3 | 0 | 1 | 0 | 2 |
+| tuning 正常 | 4 | 0 | 3 | 1 | 0 |
+| holdout 蜜罐 | 1 | 0 | 0 | 0 | 1 |
+| holdout 正常 | 4 | 0 | 1 | 2 | 1 |
+| holdout-20261107 蜜罐 | 2 | 0 | 2 | 0 | 0 |
+| holdout-20261107 正常 | 2 | 0 | 0 | 2 | 0 |
+
+六个蜜罐部署涉及 OpenCanary、QeeqBox、Heralding、Log4Pot 四家族；Log4Pot 两配置不算两个独立家族。十个正常部署包含同一 Web 服务器的不同配置。结果为蜜罐 0 疑似／3 复核／0 无信号／3 无法判断，正常 0／4／5／1；不计算公网准确率。全部三次稳定，内容风险提示均为零；这不代表页面可信或通用注入检查有效。
+
+与对应 v2 的 48 条记录逐项比较，静态是否完成／命中／置信度、行为结论／置信度、状态码／错误／截断均保持。已知 nginx／Apache 文档回退仍是复核；OpenCanary NAS／Heralding 跳转、自签名 QeeqBox TLS 和正常 Apache 认证保持无法判断。旧 OpenCanary basicLogin 缺文件排除保留，未重新当作通过样本。v5 的服务标记不稳定分支已有开发／浏览器反例，本次真实样本未触发该分支，不能用不变结果推导其真实误报下降幅度。
+
+### 为什么没有增加疑似规则
+
+审阅固定 [Log4Pot 请求处理源码](https://github.com/thomaspatzke/Log4Pot/blob/5002b1fe0f82359ef32dbc3a899e8a701dc3256e/log4pot-server.py)：`do()` 返回可配置的固定状态／正文，默认 Server 来自 Python HTTP 基类；`__getattribute__` 将 `do_*` 方法映射到同一处理器。现有 GET／HEAD／随机路径观测主要体现统一响应，与正常回退页面重叠，Python 标记也不是蜜罐专属。固定 JSON／Tomcat 页面内容、产品名或统一页面不能作为新增独立证据，因此本轮不加权、不硬编码、不增加探测方法或执行 exploit。QeeqBox HTTP 的实际观测同样仅有统一页面线索。
+
+### 工具、请求边界与结果
+
+- 显式计划入口从固定 Git 归档编译生产检测器与采集器；源树、样本镜像、规则、驱动二进制及运行镜像均记录摘要。不挂载正式环境文件、数据库、日志或会话，测试目标仅在独立内部 Docker 网络运行，无宿主端口。使用 `golang:1.26-bookworm`、`GOMAXPROCS=2`、`-p 1` 及既有缓存，无镜像／依赖升级。
+- 三组测量阶段约 12.529／7.850／11.300 秒，共约 31.7 秒（不含编译、启动、清理）。48 次元数据尝试和 156 次行为请求尝试；TLS 拒绝包含在尝试数内，不把它当目标已收到 HTTP 请求。所有实际请求仅 GET／HEAD，无凭据、跳转跟随、TLS 绕过、注册／心跳或漏洞载荷。
+- Log4Pot 两部署的目标日志各验证 15 次请求（三次元数据＋十二次行为）：路径／方法正确、无凭据、无 exploit 事件。仅提交记账摘要，未提交第三方正文或目标日志。
+- 每组摘要通过有效输入和 16 类损坏反例；三组旧 v2 制品在临时副本中通过有效输入和 11 类反例。新增检查防止整体替换版本、缺失计划、修改提交／镜像及把旧样本重标为留出；拒绝后删除旧摘要。旧测量文件和冻结工具对应的历史结论不改写。
+- 三组首次实际运行均完成，临时编译源码、容器和网络清理已核对；正式应用保持 `dev-0fb610d`，本轮没有部署、生产业务测试、长负载或模型请求。
+
+| 分组 | 永久结果 | 本机原始制品 |
+| --- | --- | --- |
+| tuning 回归 | [完整摘要](scripts/acceptance/results/honeypot-v5-regression-tuning-20261108.json) | `/tmp/artex-honeypot-real-e5ke4lBp/` |
+| holdout 回归 | [完整摘要](scripts/acceptance/results/honeypot-v5-regression-holdout-20261108.json) | `/tmp/artex-honeypot-real-YdoxY8do/` |
+| holdout-20261107 回归 | [完整摘要](scripts/acceptance/results/honeypot-v5-regression-apps-20261108.json) | `/tmp/artex-honeypot-real-Firsplrw/` |
+
+[逐项对比和完整性记录](scripts/acceptance/results/honeypot-v5-real-comparison-20261108.json)汇总三组结果哈希、历史对应项及验证日志。运行日志 `/tmp/artex-v5-real-{tuning,holdout,apps}.log`；完整性日志同前缀 `-validator.log`，旧制品检查 `/tmp/artex-v5-regression-legacy-validator.log`。
+
+本轮补足 v5 的现有真实软件回归证据及可冻结新版本的评估工具，**没有新增真实疑似命中或识别能力**。后续继续寻找能区分正常服务的独立特征／注册诱导来源，选定未查看的正负例并在测前固定；不能重复使用本轮样本声称独立验证，也不恢复 JSON／ZIP 支线。
+
 ## 最新针对性对照（2026-11-07）
 
 冻结 `0b07cb4` 后，新增合法接入文档与独立诊断诱导的 11 个呈现对照，另单列 2 个正常文档呈现检查。仅旧 AgentCapture 开发模板复核，新来源都无信号；正常文本未覆盖完整词组合，诊断诱导也并非注册型，仍不能声称取得独立阳性或关键误报边界证据。详见[针对性报告](HONEYPOT-ENROLLMENT-CHECK.md)。本轮只改工具／报告，未部署；后续优先明确内容风险提示与蜜罐判定的分离，不继续以扩大无关语料数量代替证据。

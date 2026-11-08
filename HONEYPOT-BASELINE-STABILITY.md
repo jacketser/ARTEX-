@@ -55,3 +55,7 @@ v5 要求两次主页 GET 的 Server 字段也一致（包含有无变化），�
 - 回退 `jacketser/artex:rollback-before-honeypot-v5` 对应 `dev-806bc74`／v4。回退会失去本次稳定性检查并使 v5 历史按旧算法过期；保留分享脱敏和独立内容提示。通常无需数据恢复，步骤见[部署说明](DEPLOYMENT.md)。
 
 [结构化发布结果](scripts/acceptance/results/honeypot-v5-release-20261108.json)保存检查结论；日志 `/tmp/artex-honey-v5-publish.log`、`/tmp/artex-honey-v5-doctor.log`。没有新增真实部署／独立留出或长评估，不将“无法判断”增加解释成准确率提高。下一步仍围绕独立蜜罐特征与正常反例补证据，JSON／ZIP 扩展暂停。
+
+## 后续真实软件回归（2026-11-08）
+
+在上述发布后，按测前冻结计划复跑原 16 个真实部署、每个三次，三组全部归为已查看回归集。结论与对应 v2 一致且三次稳定，没有真实疑似命中或新独立留出；正式版本未变，本轮只修改评估工具和报告。详情见[真实软件评估](HONEYPOT-EVALUATION.md#v5-真实软件回归2026-11-08)，不能把历史正常对照或无法判断计为检测准确率提升。
