@@ -1,5 +1,7 @@
 # 内容风险与蜜罐结论分离验证
 
+> 历史发布说明：本文记录 v4 的实现、验证与发布；当前正式 `dev-0fb610d`／v5 继承独立内容提示，并增加[服务标记稳定性检查](HONEYPOT-BASELINE-STABILITY.md)。各阶段“未部署／未重跑”仅指当时，当前状态与排期见[项目总览](PROJECT-STATUS.md)。
+
 日期：2026-11-07。开发基线 `2b761e7`，算法 `http-behavior-v4`；应用源码 `6d4aa09` 已正式发布为 **`dev-6d4aa09`**。下文开发／候选验收中的未部署状态为对应阶段记录。
 
 ## 变化与依据
@@ -40,7 +42,7 @@ Go 使用 `golang:1.26-bookworm`、`GOMAXPROCS=2`、`-p 1` 与现有模块／编
 
 构建容器 `--network none`，仅挂载源码快照／前端依赖／缓存；没有加载正式 `.env`。构建脚本 `/tmp/artex-content-v4-build.sh`，日志 `/tmp/artex-content-v4-build.log`，源码与产物目录 `/tmp/artex-content-v4-build-y5OxnAwF/`。永久版本、二进制／工具／结果哈希见[结构化记录](scripts/acceptance/results/honeypot-v4-browser-20261107.json)。
 
-以该候选运行[浏览器验收](scripts/acceptance/README.md#v4-内容风险与旧历史浏览器验收)，全部服务使用内部网络、新建 PostgreSQL、无宿主机端口及正式数据挂载，真实 Chromium 验证：
+以该候选运行[浏览器验收](scripts/acceptance/README.md#历史-v4-内容风险与旧历史浏览器验收)，全部服务使用内部网络、新建 PostgreSQL、无宿主机端口及正式数据挂载，真实 Chromium 验证：
 
 - 原有检查通过：持续响应头＋统一页面为疑似，四次请求全部经过认证 CONNECT 上游，目标无凭据且 Host 正确；五分钟冷却、策略保存／刷新、捕获关闭仍防护和捕获历史保持不变。
 - 内容合成服务：四次状态 200/200/200/404，蜜罐 `no_signal`／`none`，`signals=[]`，独立 `content_warnings` 仅一条；折叠摘要提示风险、展开详情可见、刷新后持久化。再次发起为 429，目标仅收到预定四次 GET／HEAD，无注册／心跳请求或目标凭据。
@@ -59,7 +61,7 @@ Go 使用 `golang:1.26-bookworm`、`GOMAXPROCS=2`、`-p 1` 与现有模块／编
 - 运行镜像 ID 与候选一致；程序 SHA-256 为 `6f0d3749dfde7c377c8623b662ebb64cc2c52f38a700faed6c3eb240d8b5b37b`。正式健康接口 `dev-6d4aa09`，应用和数据库健康；仅发布 `127.0.0.1:8787`。
 - `.env`、`jwt.key`、`.deployment-credentials` 哈希与发布前一致，未显示其内容。资产页面 HTML 及两个含独立内容提示的 JS 包与候选构建产物逐字节一致。
 - doctor 无失败，唯一警告是尚未配置模型；未调用模型。发布后任务／活动复测／活动探测仍为 0，其他应用未重启。正式环境只做只读状态、自检和公开静态资源核对，未写入验收样例或发起目标探测。
-- 回退镜像 `jacketser/artex:rollback-before-honeypot-v4` 对应 `dev-b7877ca`。回退可读取现有数据，但失去内容提示能力，旧界面不显示 v4 独立字段，v4 历史会过期；原始 JSON 保留。操作见[部署文档](DEPLOYMENT.md#当前-v4-发布与回退)。
+- 回退镜像 `jacketser/artex:rollback-before-honeypot-v4` 对应 `dev-b7877ca`。回退可读取现有数据，但失去内容提示能力，旧界面不显示 v4 独立字段，v4 历史会过期；原始 JSON 保留。操作见[部署文档](DEPLOYMENT.md#前序-v4-发布与回退)。
 
 发布日志 `/tmp/artex-honey-v4-publish.log`，自检日志 `/tmp/artex-honey-v4-doctor.log`；[正式发布记录](scripts/acceptance/results/honeypot-v4-release-20261107.json)保存非敏感证据。前述[候选浏览器结果](scripts/acceptance/results/honeypot-v4-browser-20261107.json)保持当时未部署的历史事实，没有重写。
 
@@ -67,4 +69,4 @@ Go 使用 `golang:1.26-bookworm`、`GOMAXPROCS=2`、`-p 1` 与现有模块／编
 
 这次改善结论表达与证据边界，没有扩大匹配覆盖，也没有证明提高真实蜜罐命中率或防止模型被接管。v3 的开发模板、154 个内容留出及后续针对性对照均未重跑，原结果与冻结工具保持原版本含义，不能用它们报告 v4 命中率。
 
-仍缺独立注册型阳性和覆盖完整词组合的真实正常反例。前后端构建、隔离浏览器验收、备份及正式发布均已完成。本轮没有新增真实样本评估、长负载或模型实验；后续按证据缺口选样，或转入纯文本分享导出脱敏等短任务。其他优先级见 [PROJECT-STATUS.md](PROJECT-STATUS.md)。
+仍缺独立注册型阳性和覆盖完整词组合的真实正常反例。前后端构建、隔离浏览器验收、备份及正式发布均已完成。本轮没有新增真实样本评估、长负载或模型实验；当时建议按证据缺口选样，或转入纯文本分享导出脱敏等短任务。后续 Markdown／CSV 已发布，JSON／ZIP 扩展现已暂停，当前继续蜜罐主线。其他优先级见 [PROJECT-STATUS.md](PROJECT-STATUS.md)。

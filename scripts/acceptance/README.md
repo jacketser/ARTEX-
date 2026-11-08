@@ -1,5 +1,19 @@
 # 隔离浏览器验收
 
+当前正式版本为 `dev-0fb610d`／行为 v5。以下命令均从仓库根目录运行；脚本验证所选镜像或固定源码，不自动构建或部署正式应用。
+
+- 当前蜜罐浏览器验收：[v5 稳定性](#v5-服务标记稳定性浏览器验收)。
+- 当前真实软件回归：[v5 固定源码计划](honeypot-real/README.md#已发布-v5-的真实软件回归2026-11-08)。
+- 各版本结果与限制：[验收记录](../../LOCAL-ENHANCEMENTS-VERIFICATION.md)及[蜜罐评估](../../HONEYPOT-EVALUATION.md)。
+
+## v5 服务标记稳定性浏览器验收
+
+```sh
+ARTEX_ACCEPTANCE_BASELINE=1 ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:honeypot-v5-candidate bash scripts/acceptance/run.sh
+```
+
+自动启用 content profile，沿用原代理／稳定疑似回归，再通过轮换 Server、持续 X-Powered-By 名称的合成目标验证 v5 无法判断、通用原因、独立内容提示、刷新持久化及四请求边界。随后注入一条 v4 合成疑似历史，验证过期提示与原结论保留。未设置 baseline 时原 v4 工具入口不变。没有新增真实样本／留出；目标中的产品名称仅用于既有规则分支验证。结果和范围见[报告](../../HONEYPOT-BASELINE-STABILITY.md)。
+
 ## Markdown／CSV 分享导出
 
 ```sh
@@ -22,7 +36,7 @@ bash scripts/acceptance/export-run.sh
 bash scripts/acceptance/run.sh
 ```
 
-验收本轮已构建的本地候选版本：
+指定已构建的历史全局上游代理候选镜像（示例）：
 
 ```sh
 ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:upstream-candidate bash scripts/acceptance/run.sh
@@ -58,7 +72,7 @@ go test ./traffic -run '^$' -bench '^BenchmarkCredentialScan$' -benchmem -bencht
 Go 样本测试已被现有 `regression.yml` 后端全量测试覆盖；浏览器脚本目前手动运行。
 
 
-## v4 内容风险与旧历史浏览器验收
+## 历史 v4 内容风险与旧历史浏览器验收
 
 ```sh
 ARTEX_ACCEPTANCE_CONTENT=1 ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:honeypot-v4-candidate bash scripts/acceptance/run.sh
@@ -144,21 +158,14 @@ ARTEX_LOAD_MODE=soak bash scripts/acceptance/proxy-load/run.sh
 
 ## 真实蜜罐程序隔离评估
 
-```sh
-bash scripts/acceptance/honeypot-real/build.sh
-bash scripts/acceptance/honeypot-real/run.sh
-```
-
-固定 OpenCanary／QeeqBox 源码和 nginx 正常对照，在内部 Docker 网络运行原装响应逻辑。7 个有效部署各测三次，保留部署标签、规则、版本、配置哈希与逐次结论；不跟随跳转或放宽 TLS，测量缺失时拒绝汇总。
-
-[方法与运行要求](honeypot-real/README.md)、[实际评估报告](../../HONEYPOT-EVALUATION.md)、[结构化结果](results/honeypot-real-20261106.json)。本轮发现正常文档回退页面的疑似误报，以及跳转／证书边界造成的无法判断；脚本完成不等于效果达标，更不是公网准确率证明。
-
-2026-11-07 已扩展[固定判定的新应用留出组](honeypot-real/HOLDOUT-20261107.md)：Log4Pot 两个原装配置、httpbin、Datasette，使用 `build-holdout-20261107.sh` 与 `run.sh holdout-20261107`。原七部署与前次五部署均作为回归组复验；三个分组独立报告。新蜜罐均能完成四请求但只提示复核，正常应用均无信号；检测规则与正式版本不变。完整统计和限制见[当前评估报告](../../HONEYPOT-EVALUATION.md)。
-
-## v5 服务标记稳定性浏览器验收
+当前 v5 使用预先固定的源码／镜像计划，在内部 Docker 网络复跑三组既有样本：
 
 ```sh
-ARTEX_ACCEPTANCE_BASELINE=1 ARTEX_ACCEPTANCE_IMAGE=jacketser/artex:honeypot-v5-candidate bash scripts/acceptance/run.sh
+for corpus in tuning holdout holdout-20261107; do
+  bash scripts/acceptance/honeypot-real/run.sh "$corpus" scripts/acceptance/honeypot-real/regression-v5-20261108.json
+done
 ```
 
-自动启用 content profile，沿用原代理／稳定疑似回归，再通过轮换 Server、持续 X-Powered-By 名称的合成目标验证 v5 无法判断、通用原因、独立内容提示、刷新持久化及四请求边界。随后注入一条 v4 合成疑似历史，验证过期提示与原结论保留。未设置 baseline 时原 v4 工具入口不变。没有新增真实样本／留出；目标中的产品名称仅用于既有规则分支验证。结果和范围见[报告](../../HONEYPOT-BASELINE-STABILITY.md)。
+16 个有效部署各测三次；三组全部已查看，均为回归集。保留四类结论、来源标签、配置／规则／镜像哈希及逐次结果；不跟随跳转或放宽 TLS。蜜罐为 0 疑似／3 复核／0 无信号／3 无法判断，正常为 0／4／5／1；没有新增独立留出或真实疑似命中。
+
+[方法与构建要求](honeypot-real/README.md)、[实际评估报告](../../HONEYPOT-EVALUATION.md)、[v5 逐项比较](results/honeypot-v5-real-comparison-20261108.json)。原 v1 七部署基线、v2 分组评估与 2026-11-07 新应用留出保留历史版本含义；省略第二参数的旧入口检查 v2 源码，不能用来测 v5。脚本完成只表示测量完整，不代表效果达标或公网准确率。
