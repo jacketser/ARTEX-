@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "evaluation_role": "regression",
+  "detector_commit": "0fb610dd9a7e93f93cd5a7ec18185aca1119036e",
+  "behavior_version": "http-behavior-v5",
+  "metadata_version": "metadata-v2",
+  "rule_revision": "93aabeefd105c7739e3a3ae8ce129f0971804c175bd077aa877be2c38bbf7c3c",
+  "repetitions": 3,
+  "image_ids": {
+    "tuning": "sha256:dbd70b4d075e906774db6129d5577ec012914c4084c6fbb2cd5eb468a1372043",
+    "holdout": "sha256:5535d32867f157bbeab5dc513bd1e17a25c1bd416f54fce1d65b33743d78c476",
+    "holdout-20261107": "sha256:68179e94ba989d6079d87cf73dbb7cfe7b92de9a5eb99ce6700adbe36a6d9cc2"
+  }
+}

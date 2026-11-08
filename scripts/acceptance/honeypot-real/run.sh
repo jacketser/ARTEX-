@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Resolve the optional plan relative to the caller, before changing directory.
+plan=""
+if [[ -n ${2:-} ]]; then plan=$(realpath "$2"); fi
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 repo_root=$(cd ../../.. && pwd)
 corpus=${1:-tuning}
@@ -14,16 +17,45 @@ ARTEX_HONEY_DIR=$(mktemp -d /tmp/artex-honeypot-real-XXXXXXXX)
 project="artex-honey-${ARTEX_HONEY_DIR##*-}"
 project=${project,,}
 dc() { docker compose -p "$project" -f "$compose" "$@"; }
+source_dir=""
 cleanup() {
   status=$?
   trap - EXIT
   dc logs --no-color > "$ARTEX_HONEY_DIR/containers.log" 2>&1 || true
   dc ps -a --format json > "$ARTEX_HONEY_DIR/containers.json" || true
-  dc down --volumes --remove-orphans >/dev/null 2>&1 || true
+  if ! dc down --volumes --remove-orphans > "$ARTEX_HONEY_DIR/cleanup.log" 2>&1; then status=1; fi
+  if [[ -n "$source_dir" ]]; then rm -rf -- "$source_dir"; fi
   printf 'Labeled honeypot evaluation artifacts: %s\n' "$ARTEX_HONEY_DIR"
   exit "$status"
 }
 trap cleanup EXIT
+detector_ref=b7877ca
+if [[ -n "$plan" ]]; then
+  cp "$plan" "$ARTEX_HONEY_DIR/evaluation-plan.json"
+  detector_ref=$(python3 - "$plan" "$corpus" "$image" <<'PYPLAN'
+import json, re, subprocess, sys
+p = json.load(open(sys.argv[1]))
+assert p['schema'] == 1 and p['evaluation_role'] == 'regression'
+assert p['repetitions'] == 3 and re.fullmatch('[0-9a-f]{40}', p['detector_commit'])
+actual = subprocess.check_output(['docker', 'image', 'inspect', '--format', '{{.Id}}', sys.argv[3]], text=True).strip()
+assert actual == p['image_ids'][sys.argv[2]], 'Fixture image differs from frozen plan'
+print(p['detector_commit'])
+PYPLAN
+)
+else
+  git -C "$repo_root" diff b7877ca -- honeydetect server/honeypot_behavior.go > "$ARTEX_HONEY_DIR/detector-diff.txt"
+  [[ ! -s "$ARTEX_HONEY_DIR/detector-diff.txt" ]]
+fi
+source_dir=$(mktemp -d /tmp/artex-honey-frozen-source-XXXXXXXX)
+git -C "$repo_root" archive "$detector_ref" | tar -x -C "$source_dir"
+# Explicit plans freeze the collector too; legacy v2 keeps its existing harness.
+if [[ -n "$plan" ]]; then
+  cmp main.go "$source_dir/scripts/acceptance/honeypot-real/main.go"
+else
+  cp main.go "$source_dir/scripts/acceptance/honeypot-real/main.go"
+fi
+git -C "$repo_root" rev-parse "$detector_ref" > "$ARTEX_HONEY_DIR/detector-commit.txt"
+git -C "$repo_root" rev-parse HEAD > "$ARTEX_HONEY_DIR/artex-commit.txt"
 docker run --rm --network none --entrypoint sh -v "$ARTEX_HONEY_DIR:/output" "$image" -c '
   cp -a /sources/opencanary /output/opencanary-source
   /opt/opencanary/bin/pip freeze > /output/opencanary-packages.txt
@@ -55,25 +87,25 @@ elif [[ "$corpus" == holdout-20261107 ]]; then
 else
   python3 prepare.py "$ARTEX_HONEY_DIR/opencanary-source" "$ARTEX_HONEY_DIR"
 fi
-git -C "$repo_root" diff b7877ca -- honeydetect server/honeypot_behavior.go > "$ARTEX_HONEY_DIR/detector-diff.txt"
-[[ ! -s "$ARTEX_HONEY_DIR/detector-diff.txt" ]]
-git -C "$repo_root" rev-parse b7877ca > "$ARTEX_HONEY_DIR/detector-commit.txt"
-git -C "$repo_root" rev-parse HEAD > "$ARTEX_HONEY_DIR/artex-commit.txt"
-python3 - "$repo_root" "$ARTEX_HONEY_DIR" <<'PYHASH'
+python3 - "$repo_root" "$ARTEX_HONEY_DIR" "$source_dir" <<'PYHASH'
 import hashlib
 from pathlib import Path
 import sys
-repo, out = map(Path, sys.argv[1:])
-files = sorted((repo/'scripts/acceptance/honeypot-real').glob('*')) + sorted((repo/'honeydetect').glob('*.go'))
+repo, out, source = map(Path, sys.argv[1:])
+files = sorted((repo/'scripts/acceptance/honeypot-real').glob('*'))
 manifest = ''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + str(p.relative_to(repo)) + '\n' for p in files if p.is_file())
 (out/'harness-sha256.txt').write_text(manifest)
+files = sorted((source/'honeydetect').glob('*.go')) + [source/'scripts/acceptance/honeypot-real/main.go']
+(out/'detector-sha256.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + str(p.relative_to(source)) + '\n' for p in files))
 PYHASH
 docker image inspect --format '{{.Id}}' "$image" > "$ARTEX_HONEY_DIR/image-id.txt"
-docker run --rm --network none -e GOMAXPROCS=2 -v "$repo_root:/src:ro" -w /src -v "$ARTEX_HONEY_DIR:/output" \
+docker image inspect --format '{{.Id}}' jacketser/artex:local > "$ARTEX_HONEY_DIR/driver-image-id.txt"
+docker run --rm --network none -e GOMAXPROCS=2 -v "$source_dir:/src:ro" -w /src -v "$ARTEX_HONEY_DIR:/output" \
   -v artex-dev-gomod:/go/pkg/mod -v artex-dev-gocache:/root/.cache/go-build \
   golang:1.26-bookworm go build -p 1 -o /output/honeypot-eval ./scripts/acceptance/honeypot-real
-dc up -d
-dc run --rm --no-deps driver | tee "$ARTEX_HONEY_DIR/run.log"
+sha256sum "$ARTEX_HONEY_DIR/honeypot-eval" | cut -d ' ' -f 1 > "$ARTEX_HONEY_DIR/driver-binary-sha256.txt"
+dc up -d --pull never
+dc run --rm --no-deps --pull never driver | tee "$ARTEX_HONEY_DIR/run.log"
 if [[ "$corpus" == holdout-20261107 ]]; then
   for service in log4pot-json log4pot-tomcat; do
     dc cp "$service:/tmp/log4pot.json" "$ARTEX_HONEY_DIR/$service-requests.jsonl"

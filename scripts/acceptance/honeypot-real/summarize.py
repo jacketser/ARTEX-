@@ -1,5 +1,7 @@
 """Report abstention and review burdens separately; repeats are not samples."""
+import hashlib
 import json
+import re
 from pathlib import Path
 import sys
 
@@ -16,6 +18,17 @@ expected = {
     'holdout': {'heralding-http', 'apache-default', 'apache-document-fallback', 'apache-auth', 'python-static'},
 }
 split = complete['split']
+plan_path = root / 'evaluation-plan.json'
+plan = json.loads(plan_path.read_text()) if plan_path.exists() else None
+if plan is not None:
+    if (plan['schema'] != 1 or plan['evaluation_role'] != 'regression'
+            or plan['repetitions'] != 3 or not re.fullmatch('[0-9a-f]{40}', plan['detector_commit'])
+            or any(complete[key] != plan[key] for key in ('behavior_version', 'metadata_version', 'rule_revision', 'repetitions'))
+            or (root / 'detector-commit.txt').read_text().strip() != plan['detector_commit']
+            or (root / 'image-id.txt').read_text().strip() != plan['image_ids'].get(split)):
+        raise ValueError('Measurement differs from frozen regression plan')
+elif complete['behavior_version'] != 'http-behavior-v2' or complete['metadata_version'] != 'metadata-v2':
+    raise ValueError('Nonlegacy detector requires an explicit frozen plan')
 if split not in expected or {s['id'] for s in samples} != expected[split] or any(s['split'] != split or s['label'] not in ('honeypot', 'benign') for s in samples):
     raise ValueError('Wrong corpus or partition')
 if not (len(samples) == complete['samples'] == len(expected[split]) and complete['repetitions'] == 3
@@ -50,11 +63,14 @@ for r in rows:
 
 def verdict(r):
     m = r['metadata']
-    return (m['evaluated'], m.get('result', {}).get('matched'), m.get('result', {}).get('confidence'), r['behavior']['outcome'])
+    return (m['evaluated'], m.get('result', {}).get('matched'), m.get('result', {}).get('confidence'), r['behavior']['outcome'], tuple(r['behavior'].get('content_warnings', [])))
 
 summary = dict(completion=complete, samples=samples, measurements=rows,
                unstable_samples=[ident for ident, group in by_id.items() if len({verdict(r) for r in group}) != 1],
-               counts={}, provenance={}, evaluation_role='new_holdout' if split == 'holdout-20261107' else 'regression')
+               counts={}, provenance={}, evaluation_role='regression' if plan is not None else ('new_holdout' if split == 'holdout-20261107' else 'regression'))
+if plan is not None:
+    summary['evaluation_plan'] = plan
+    summary['evaluation_plan_sha256'] = hashlib.sha256(plan_path.read_bytes()).hexdigest()
 for label in ('honeypot', 'benign'):
     first = [by_id[s['id']][0] for s in samples if s['label'] == label]
     summary['counts'][label] = dict(
@@ -68,6 +84,7 @@ for label in ('honeypot', 'benign'):
         behavior_needs_review=sum(r['behavior']['outcome'] == 'needs_review' for r in first),
         behavior_no_signal=sum(r['behavior']['outcome'] == 'no_signal' for r in first),
         behavior_inconclusive=sum(r['behavior']['outcome'] == 'inconclusive' for r in first),
+        content_warning_deployments=sum(bool(r['behavior'].get('content_warnings')) for r in first),
     )
 names = ['artex-commit', 'harness-sha256', 'opencanary-commit', 'qeeqbox-commit', 'nginx-version', 'image-id']
 if split == 'holdout':
@@ -76,6 +93,8 @@ if split == 'holdout-20261107':
     names = ['artex-commit', 'harness-sha256', 'image-id', 'python-version']
 if (root / 'detector-commit.txt').exists():
     names.append('detector-commit')
+if plan is not None:
+    names += ['detector-sha256', 'driver-image-id', 'driver-binary-sha256']
 for name in names:
     summary['provenance'][name] = (root / (name + '.txt')).read_text().strip()
 summary['excluded_deployments'] = [dict(id='opencanary-basic', reason='Pinned upstream basicLogin skin lacks redirect.html; GET / returns 500. Excluded before final run, not counted as a detector miss.') ]
@@ -98,6 +117,9 @@ summary['limits'] = [
     'Name rules unchanged; behavior v2 tuned only on the earlier baseline, then frozen before holdout measurement. No login attempts, payloads, redirects or TLS bypass.',
     'Metadata extraction is the evaluation collector; behavior calls production Probe directly, not the asset UI.',
 ]
+if plan is not None:
+    summary['limits'][1] = 'All partitions, including historical holdout-20261107, are previously viewed regression sets. No new independent holdout.'
+    summary['limits'][5] = 'Detector and fixture images frozen by explicit plan; no rule tuning in this run. No login attempts, payloads, redirects or TLS bypass.'
 (root / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n')
 lines = ['| Deployment | Known label | Metadata | Behavior | HTTP observations |',
          '| --- | --- | --- | --- | --- |']
