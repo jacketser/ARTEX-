@@ -1,6 +1,6 @@
 # 本地增强验收记录
 
-最近验收日期：2026-11-07（Asia/Shanghai）；保留此前发布记录。
+最近验收日期：2026-11-08（Asia/Shanghai）；保留此前发布记录。
 
 当前状态及剩余工作统一见[项目总览](PROJECT-STATUS.md)。本文是按次留存的验证证据；后续文档整理不会新增或改变历史测试结论。
 
@@ -8,9 +8,17 @@
 
 - 源码目录：`/home/ARTEX`。
 - 本地分支：`feature/local-enhancements`，已推送到 [jacketser/ARTEX-](https://github.com/jacketser/ARTEX-/tree/feature/local-enhancements)。
-- 当前部署版本：`dev-806bc74`，应用源码对应 `806bc74`，正式服务已更新。
-- 最新发布增加 Markdown／CSV 分享副本有限脱敏及失败拒绝下载，保留蜜罐 v4 的独立内容提示及旧历史过期语义；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
+- 当前部署版本：`dev-0fb610d`，应用源码对应 `0fb610d`，正式服务已更新。
+- 最新发布蜜罐 v5，增加 Server 基线稳定性检查，保留独立内容提示及 Markdown／CSV 分享脱敏；保留有界流量合并提交、保存阶段统计、正文失败保护、格式 4 历史归档恢复、脱敏维护及此前增强。其他已完成功能及未移植范围见 [二次开发计划](SECONDARY-DEVELOPMENT-PLAN.md) 与 [部署说明](DEPLOYMENT.md)。
 - 应用与 PostgreSQL 容器健康；宿主机仍仅发布 `127.0.0.1:8787`，SSH 隧道方式不变。
+
+## 正式发布：蜜罐 v5 基线稳定性（2026-11-08）
+
+应用 `0fb610d`／`dev-0fb610d`、验收记录 `00cacd3`。蜜罐全包、隔离历史 API、固定 AgentCapture 九模板回归及三阶段 Chromium 验收通过；前端源码未变，复用 `806bc74` 已验收静态产物重新嵌入。五个开发反例变为无法判断，稳定疑似和无信号对照保持；不是新真实样本或独立留出。
+
+确认空闲后停机备份 `/home/ARTEX/backups/pre-honeypot-v5-20261108-142835/`，dump 目录／文件包列表可读，目录 700、文件 600。发布同一候选镜像，健康、镜像／程序、资产／发现页静态资源、持久配置哈希及回环端口匹配；doctor 无失败，仅未配置模型警告。其他容器 ID／启动时间保持，未在正式库测试或向目标发起探测。
+
+回退 `jacketser/artex:rollback-before-honeypot-v5` 对应 `dev-806bc74`；无数据结构／依赖／认证变化。工具失败尝试、证据及边界见[详细报告](HONEYPOT-BASELINE-STABILITY.md)、[开发／浏览器结果](scripts/acceptance/results/honeypot-v5-baseline-20261108.json)、[正式发布结果](scripts/acceptance/results/honeypot-v5-release-20261108.json)。
 
 ## 正式发布：分享导出脱敏（2026-11-07）
 

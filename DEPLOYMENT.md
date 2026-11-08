@@ -6,7 +6,7 @@
 
 ## 当前运行方式
 
-截至 2026-11-07 最近一次正式发布版本为 `dev-806bc74`，源码提交 `806bc74`。版本变化与升级影响见[二开更新日志](CHANGELOG-LOCAL.md)；发布验证与备份见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
+截至 2026-11-08 最近一次正式发布版本为 `dev-0fb610d`，源码提交 `0fb610d`。版本变化与升级影响见[二开更新日志](CHANGELOG-LOCAL.md)；发布验证与备份见[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
 
 - 标准部署使用 `Dockerfile.source` 从当前工作目录编译 Next.js 静态前端及 Go 后端。近期发布复用既有运行环境、更新程序及嵌入前端，未升级基础镜像依赖，具体见验收记录。
 - Compose 文件是 **`compose.source.yml`**，不是上游的 `docker-compose.yml`。
@@ -100,7 +100,20 @@ ARTEX_LLM_CALL_TIMEOUT=900
 
 冻结补偿不取消单次模型调用及 Worker 自身超时，不重放已结束的请求。变更开关只影响新运行轮次采用的预算策略；已有固定计时器不反向修改。疑似进程停顿不等于已证明宿主机冻结。时钟事件历史按每页 50 条读取，当前不自动清理；处理备注和通知去重记录随所属恢复历史删除。
 
-## 当前分享导出发布与回退
+## 当前蜜罐 v5 发布与回退
+
+2026-11-08 发布已验收 `jacketser/artex:honeypot-v5-candidate`，正式 `dev-0fb610d`／`http-behavior-v5`。两次主页 GET 的 Server 标记变化时返回无法判断，避免把网关轮换当作 HEAD 差异；独立内容提示仍保留，v4 及更早行为历史过期且原样保存、不自动重测。无数据库结构、前端源码、依赖或认证格式变化。
+
+停机备份 `/home/ARTEX/backups/pre-honeypot-v5-20261108-142835/`，目录 700、文件 600；dump 和文件包列表读取校验通过。回退 `jacketser/artex:rollback-before-honeypot-v5` 对应 `dev-806bc74`／v4。确认空闲并先备份后执行：
+
+```bash
+docker tag jacketser/artex:rollback-before-honeypot-v5 jacketser/artex:local
+docker compose -f compose.source.yml up -d --no-build --no-deps --wait artex
+```
+
+回退将失去本次服务标记稳定性检查，v5 历史在旧版本显示过期；分享脱敏和独立内容提示保留。本次不重写源数据，通常无需恢复数据库。详细证据见[基线稳定性报告](HONEYPOT-BASELINE-STABILITY.md)。
+
+## 前序分享导出发布与回退
 
 2026-11-07 将通过专项、完整构建及隔离浏览器下载验收的 `jacketser/artex:share-export-candidate` 发布为本机 `jacketser/artex:local`，正式版本 `dev-806bc74`。发现页 Markdown 汇总／CSV 默认生成有限脱敏分享副本，源记录及原复核语义保持；CSV 在原 12 列末尾增加第 13 列说明。JSON／ZIP 不属于本次覆盖，未知／已轮换凭据等不保证识别；详见[导出报告](TEXT-EXPORT-REDACTION.md)。
 

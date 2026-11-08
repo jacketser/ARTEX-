@@ -218,5 +218,10 @@
   "limits": [
     "Synthetic counterexamples verify conservative inference only; no real detection-rate claim.",
     "Known AgentCapture literals are not default deployments or independent holdouts."
-  ]
+  ],
+  "post_measurement_formatting": {
+    "file": "honeydetect/behavior_boundary_test.go",
+    "sha256": "2456a773d2ac4f278bd20d21b67c56788a9c981971e2dbdeceaf4e6976fbf582",
+    "change": "gofmt field alignment only; source_tool_sha256 retains the actually measured bytes in application_commit"
+  }
 }

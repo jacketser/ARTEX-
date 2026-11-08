@@ -92,7 +92,7 @@ func TestBehaviorServerBaselineStability(t *testing.T) {
 	rules := RuleSet{Rules: []Rule{{ID: "fixture", Pattern: "testmarker", Match: "token", Source: "synthetic test", Fields: []string{"powered_by"}}}}
 	for _, tc := range []struct {
 		name, first, second, head, want string
-		marker, wildcard               bool
+		marker, wildcard                bool
 	}{
 		{"rotating-gateway", "gateway-a", "gateway-b", "gateway-b", "inconclusive", false, false},
 		{"rotation-with-stable-name", "gateway-a", "gateway-b", "gateway-b", "inconclusive", true, false},

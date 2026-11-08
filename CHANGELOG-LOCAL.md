@@ -9,9 +9,13 @@
 - 测试结果、发布备份及回退镜像：[验收记录](LOCAL-ENHANCEMENTS-VERIFICATION.md)。
 - 当前完成状态、剩余优先级及不实施项：[项目总览](PROJECT-STATUS.md)；设计与阶段记录：[开发计划](SECONDARY-DEVELOPMENT-PLAN.md)。
 
-## 未发布
+## dev-0fb610d — 2026-11-08
+
+应用源码 `0fb610d`，验收工具与记录 `00cacd3`。无数据库结构、前端源码、依赖或认证格式变化。
 
 - 蜜罐行为 v5：两次主页 GET 的 Server 标记不稳定时返回无法判断，避免将网关轮换归因于 HEAD 方法并升级疑似。旧历史标记过期且原样保留，内容提示仍独立；详见[验证报告](HONEYPOT-BASELINE-STABILITY.md)。
+- 蜜罐全包、独立 PG 历史 API、AgentCapture 九模板开发回归及隔离 Chromium 验收通过。停机备份 `/home/ARTEX/backups/pre-honeypot-v5-20261108-142835/` 后发布，健康、程序／前端、配置、回环端口及 doctor 核验通过。
+- 回退 `jacketser/artex:rollback-before-honeypot-v5` 为 `dev-806bc74`。本次仅收紧比较有效性，无新增真实蜜罐命中或独立留出证据，不代表准确率提高。
 
 ## dev-806bc74 — 2026-11-07
 
