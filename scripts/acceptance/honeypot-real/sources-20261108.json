@@ -1,0 +1,34 @@
+[
+  {
+    "id": "honeyhttpd",
+    "repository": "bocajspear1/honeyhttpd",
+    "commit": "edec2700f3248b73fce00893a9ed6f2833ac05fd",
+    "archive_url": "https://api.github.com/repos/bocajspear1/honeyhttpd/tarball/edec2700f3248b73fce00893a9ed6f2833ac05fd",
+    "archive_sha256": "9ea0b1e4464a5a485df639383bd1289c818d777057c618cf6a48af3a7bbabefa",
+    "bytes": 51834
+  },
+  {
+    "id": "elasticpot",
+    "repository": "bontchev/elasticpot",
+    "commit": "d12649730d819bd78ea622361b6c65120173ad45",
+    "archive_url": "https://api.github.com/repos/bontchev/elasticpot/tarball/d12649730d819bd78ea622361b6c65120173ad45",
+    "archive_sha256": "e1c88dfe50baca0220bc3f2007ba27559758675be78a7ab82b71b44ac5936b46",
+    "bytes": 47835
+  },
+  {
+    "id": "rangehttpserver",
+    "repository": "danvk/RangeHTTPServer",
+    "commit": "e5052e30e983d63846eb8fb0518ea5044bcb2235",
+    "archive_url": "https://api.github.com/repos/danvk/RangeHTTPServer/tarball/e5052e30e983d63846eb8fb0518ea5044bcb2235",
+    "archive_sha256": "98db669faad29328d4fcf568a4a7472397afdebd82c57f3884d6c8a65b346d1d",
+    "bytes": 8518
+  },
+  {
+    "id": "copyparty",
+    "repository": "9001/copyparty",
+    "commit": "1af7efeca858dcfa29f797d7ae93f22eb2fdecf0",
+    "archive_url": "https://api.github.com/repos/9001/copyparty/tarball/1af7efeca858dcfa29f797d7ae93f22eb2fdecf0",
+    "archive_sha256": "0faba2da6ac7312e5e73feaf7cf22a4e9b599bb4e360841b2fa29b7ca642f15e",
+    "bytes": 1637516
+  }
+]

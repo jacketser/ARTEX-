@@ -1,0 +1,56 @@
+services:
+  honeyhttpd:
+    image: jacketser/artex:honeypot-holdout-20261108
+    command: [/opt/qeeqbox/bin/python, start.py, --config, /fixtures/honeyhttpd.json]
+    working_dir: /sources/honeyhttpd
+    user: '65534:65534'
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/honeyhttpd.json:/fixtures/honeyhttpd.json:ro
+    mem_limit: 96m
+    cpus: 0.5
+    init: true
+  elasticpot:
+    image: jacketser/artex:honeypot-holdout-20261108
+    command: [/opt/qeeqbox/bin/python, elasticpot.py]
+    working_dir: /sources/elasticpot
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/elasticpot.cfg:/sources/elasticpot/honeypot.cfg:ro
+      - ${ARTEX_HONEY_DIR:?output required}/public-ip.txt:/fixtures/public-ip.txt:ro
+    mem_limit: 128m
+    cpus: 0.5
+    init: true
+  rangehttpserver:
+    image: jacketser/artex:honeypot-holdout-20261108
+    command: [python3, -m, RangeHTTPServer, '8080', --bind, 0.0.0.0]
+    environment:
+      PYTHONPATH: /sources/rangehttpserver
+    working_dir: /fixtures
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/files:/fixtures:ro
+    mem_limit: 96m
+    cpus: 0.5
+    init: true
+  copyparty:
+    image: jacketser/artex:honeypot-holdout-20261108
+    command: [/opt/qeeqbox/bin/python, -m, copyparty, '-i', 0.0.0.0, '-p', '8080', '-v', '/fixtures::r', --http-only, --no-crt, --no-thumb, --no-mtag-ff, --hist, /tmp/copyparty-history]
+    environment:
+      PYTHONPATH: /sources/copyparty
+      XDG_CONFIG_HOME: /tmp/copyparty-config
+    working_dir: /sources/copyparty
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}/files:/fixtures:ro
+    mem_limit: 192m
+    cpus: 0.5
+    init: true
+  driver:
+    image: jacketser/artex:local
+    entrypoint: [/output/honeypot-eval]
+    volumes:
+      - ${ARTEX_HONEY_DIR:?output required}:/output
+    environment:
+      GOMAXPROCS: '2'
+    mem_limit: 256m
+    profiles: [driver]
+networks:
+  default:
+    internal: true

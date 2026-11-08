@@ -13,6 +13,7 @@ complete = json.loads((root / 'evaluation-complete.json').read_text())
 samples = json.loads((root / 'samples.json').read_text())
 rows = json.loads((root / 'measurements.json').read_text())
 expected = {
+    'holdout-20261108': {'honeyhttpd-apache', 'elasticpot', 'rangehttpserver', 'copyparty'},
     'holdout-20261107': {'log4pot-json', 'log4pot-tomcat', 'httpbin', 'datasette'},
     'tuning': {'opencanary-nas', 'qeeqbox-http', 'qeeqbox-https', 'nginx-default', 'nginx-fallback', 'nginx-product-doc', 'nginx-product-doc-fallback'},
     'holdout': {'heralding-http', 'apache-default', 'apache-document-fallback', 'apache-auth', 'python-static'},
@@ -21,13 +22,28 @@ split = complete['split']
 plan_path = root / 'evaluation-plan.json'
 plan = json.loads(plan_path.read_text()) if plan_path.exists() else None
 if plan is not None:
-    if (plan['schema'] != 1 or plan['evaluation_role'] != 'regression'
+    if (plan['schema'] not in (1, 2) or plan['evaluation_role'] not in ('regression', 'new_holdout')
             or plan['repetitions'] != 3 or not re.fullmatch('[0-9a-f]{40}', plan['detector_commit'])
             or any(complete[key] != plan[key] for key in ('behavior_version', 'metadata_version', 'rule_revision', 'repetitions'))
             or (root / 'detector-commit.txt').read_text().strip() != plan['detector_commit']
             or (root / 'image-id.txt').read_text().strip() != plan['image_ids'].get(split)):
         raise ValueError('Measurement differs from frozen regression plan')
-elif complete['behavior_version'] != 'http-behavior-v2' or complete['metadata_version'] != 'metadata-v2':
+    if plan['schema'] == 1 and (plan['evaluation_role'] != 'regression' or split == 'holdout-20261108'):
+        raise ValueError('Historical samples cannot be relabeled as new holdout')
+    if plan['schema'] == 2:
+        if (split != 'holdout-20261108'
+                or (root / 'collector-commit.txt').read_text().strip() != plan['collector_commit']
+                or not re.fullmatch('[0-9a-f]{40}', plan['collector_commit'])
+                or hashlib.sha256((root / 'sources-20261108.json').read_bytes()).hexdigest() != plan['sources_sha256']
+                or json.loads((root / 'configuration-hashes.json').read_text()) != plan['configuration_hashes']
+                or (root / 'driver-image-id.txt').read_text().strip() != plan['driver_image_id']):
+            raise ValueError('New holdout differs from preregistered sources/configuration/collector')
+        for name, digest in plan['configuration_hashes'].items():
+            path = (root / name).resolve()
+            if not path.is_relative_to(root.resolve()) or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise ValueError('Fixture configuration bytes changed')
+
+elif split == 'holdout-20261108' or complete['behavior_version'] != 'http-behavior-v2' or complete['metadata_version'] != 'metadata-v2':
     raise ValueError('Nonlegacy detector requires an explicit frozen plan')
 if split not in expected or {s['id'] for s in samples} != expected[split] or any(s['split'] != split or s['label'] not in ('honeypot', 'benign') for s in samples):
     raise ValueError('Wrong corpus or partition')
@@ -41,6 +57,7 @@ for group in by_id.values():
         raise ValueError('Missing or duplicate measurement')
 
 expected_labels = {
+    'honeyhttpd-apache': 'honeypot', 'elasticpot': 'honeypot',
     'opencanary-nas': 'honeypot', 'qeeqbox-http': 'honeypot', 'qeeqbox-https': 'honeypot',
     'heralding-http': 'honeypot', 'log4pot-json': 'honeypot', 'log4pot-tomcat': 'honeypot',
 }
@@ -67,7 +84,7 @@ def verdict(r):
 
 summary = dict(completion=complete, samples=samples, measurements=rows,
                unstable_samples=[ident for ident, group in by_id.items() if len({verdict(r) for r in group}) != 1],
-               counts={}, provenance={}, evaluation_role='regression' if plan is not None else ('new_holdout' if split == 'holdout-20261107' else 'regression'))
+               counts={}, provenance={}, evaluation_role=plan['evaluation_role'] if plan is not None else ('new_holdout' if split == 'holdout-20261107' else 'regression'))
 if plan is not None:
     summary['evaluation_plan'] = plan
     summary['evaluation_plan_sha256'] = hashlib.sha256(plan_path.read_bytes()).hexdigest()
@@ -89,8 +106,10 @@ for label in ('honeypot', 'benign'):
 names = ['artex-commit', 'harness-sha256', 'opencanary-commit', 'qeeqbox-commit', 'nginx-version', 'image-id']
 if split == 'holdout':
     names += ['heralding-commit', 'apache-version', 'python-version']
-if split == 'holdout-20261107':
+if split in ('holdout-20261107', 'holdout-20261108'):
     names = ['artex-commit', 'harness-sha256', 'image-id', 'python-version']
+if plan is not None and plan['schema'] == 2:
+    names.append('collector-commit')
 if (root / 'detector-commit.txt').exists():
     names.append('detector-commit')
 if plan is not None:
@@ -105,8 +124,11 @@ if split == 'holdout-20261107':
     summary['runtime_compatibility'] = 'Log4Pot uses its documented stdlib-only mode. httpbin and Datasette use separate venvs; no response-code changes.'
     summary['source_archives'] = json.loads((root / 'sources-20261107.json').read_text())
     summary['target_request_audit'] = json.loads((root / 'request-audit.json').read_text())
+if split == 'holdout-20261108':
+    summary['runtime_compatibility'] = 'Existing Python 3.11.2 / Twisted 24.10.0 environment; only termcolor 2.5.0 added with wheel hash. Upstream response code unchanged. Elasticpot public-IP lookup reads a local synthetic file, no external output plugins.'
+    summary['source_archives'] = json.loads((root / 'sources-20261108.json').read_text())
 summary['configuration_hashes'] = json.loads((root / 'configuration-hashes.json').read_text())
-summary['dependency_versions'] = {name: (root / (name + '-packages.txt')).read_text().splitlines() for name in (('httpbin', 'datasette') if split == 'holdout-20261107' else (('heralding',) if split == 'holdout' else ('opencanary', 'qeeqbox')))}
+summary['dependency_versions'] = {name: (root / (name + '-packages.txt')).read_text().splitlines() for name in (('runtime',) if split == 'holdout-20261108' else ('httpbin', 'datasette') if split == 'holdout-20261107' else (('heralding',) if split == 'holdout' else ('opencanary', 'qeeqbox')))}
 summary['rules'] = json.loads((root / 'rules.json').read_text())
 summary['limits'] = [
     'Controlled local deployments, not independently labeled Internet observations.',
@@ -120,6 +142,9 @@ summary['limits'] = [
 if plan is not None:
     summary['limits'][1] = 'All partitions, including historical holdout-20261107, are previously viewed regression sets. No new independent holdout.'
     summary['limits'][5] = 'Detector and fixture images frozen by explicit plan; no rule tuning in this run. No login attempts, payloads, redirects or TLS bypass.'
+if split == 'holdout-20261108' and plan['evaluation_role'] == 'new_holdout':
+    summary['limits'][1] = 'First measurement of two new honeypot families and two normal file services; frozen detector. RangeHTTPServer shares Python stdlib implementation ancestry with earlier controls. Once viewed, these samples must become regression material for future tuning.'
+    summary['limits'][2] = 'Labels come from controlled source/configuration, not independent Internet labels. No signal overlap was injected into target responses.'
 (root / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n')
 lines = ['| Deployment | Known label | Metadata | Behavior | HTTP observations |',
          '| --- | --- | --- | --- | --- |']

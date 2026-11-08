@@ -1,0 +1,10 @@
+FROM jacketser/artex:honeypot-eval
+COPY honeyhttpd /sources/honeyhttpd
+COPY elasticpot /sources/elasticpot
+COPY rangehttpserver /sources/rangehttpserver
+COPY copyparty /sources/copyparty
+COPY wheels /wheels
+COPY sources-20261108.json dependencies-20261108.json /sources/
+RUN /opt/qeeqbox/bin/pip install --no-index --no-deps /wheels/termcolor-2.5.0-py3-none-any.whl
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENTRYPOINT []

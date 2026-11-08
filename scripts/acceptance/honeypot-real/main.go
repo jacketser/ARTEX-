@@ -116,7 +116,7 @@ func main() {
 	must(e)
 	var samples []sample
 	must(json.Unmarshal(b, &samples))
-	expected := map[string]int{"tuning": 7, "holdout": 5, "holdout-20261107": 4}
+	expected := map[string]int{"tuning": 7, "holdout": 5, "holdout-20261107": 4, "holdout-20261108": 4}
 	if len(samples) == 0 || expected[samples[0].Split] != len(samples) {
 		panic("expected complete predeclared corpus")
 	}

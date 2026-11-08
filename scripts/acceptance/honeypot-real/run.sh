@@ -10,6 +10,7 @@ case "$corpus" in
   tuning) compose=compose.yml; image=jacketser/artex:honeypot-eval ;;
   holdout) compose=compose.holdout.yml; image=jacketser/artex:honeypot-holdout ;;
   holdout-20261107) compose=compose.holdout-20261107.yml; image=jacketser/artex:honeypot-holdout-20261107 ;;
+  holdout-20261108) compose=compose.holdout-20261108.yml; image=jacketser/artex:honeypot-holdout-20261108 ;;
   *) exit 2 ;;
 esac
 export ARTEX_HONEY_DIR
@@ -35,7 +36,12 @@ if [[ -n "$plan" ]]; then
   detector_ref=$(python3 - "$plan" "$corpus" "$image" <<'PYPLAN'
 import json, re, subprocess, sys
 p = json.load(open(sys.argv[1]))
-assert p['schema'] == 1 and p['evaluation_role'] == 'regression'
+assert p['schema'] in (1, 2)
+if p['schema'] == 1:
+    assert p['evaluation_role'] == 'regression'
+else:
+    assert sys.argv[2] == 'holdout-20261108' and p['evaluation_role'] in ('new_holdout', 'regression')
+    assert re.fullmatch('[0-9a-f]{40}', p['collector_commit'])
 assert p['repetitions'] == 3 and re.fullmatch('[0-9a-f]{40}', p['detector_commit'])
 actual = subprocess.check_output(['docker', 'image', 'inspect', '--format', '{{.Id}}', sys.argv[3]], text=True).strip()
 assert actual == p['image_ids'][sys.argv[2]], 'Fixture image differs from frozen plan'
@@ -48,14 +54,42 @@ else
 fi
 source_dir=$(mktemp -d /tmp/artex-honey-frozen-source-XXXXXXXX)
 git -C "$repo_root" archive "$detector_ref" | tar -x -C "$source_dir"
-# Explicit plans freeze the collector too; legacy v2 keeps its existing harness.
+# Explicit plans freeze the collector independently; schema 1 uses the detector commit.
 if [[ -n "$plan" ]]; then
-  cmp main.go "$source_dir/scripts/acceptance/honeypot-real/main.go"
+  collector_ref=$(python3 - "$plan" <<'PYCOLLECTOR'
+import json, sys
+p = json.load(open(sys.argv[1]))
+print(p.get('collector_commit', p['detector_commit']))
+PYCOLLECTOR
+)
+  git -C "$repo_root" show "$collector_ref:scripts/acceptance/honeypot-real/main.go" > "$source_dir/scripts/acceptance/honeypot-real/main.go"
+  printf '%s\n' "$collector_ref" > "$ARTEX_HONEY_DIR/collector-commit.txt"
 else
   cp main.go "$source_dir/scripts/acceptance/honeypot-real/main.go"
 fi
 git -C "$repo_root" rev-parse "$detector_ref" > "$ARTEX_HONEY_DIR/detector-commit.txt"
 git -C "$repo_root" rev-parse HEAD > "$ARTEX_HONEY_DIR/artex-commit.txt"
+if [[ "$corpus" == holdout-20261108 ]]; then
+  [[ -n "$plan" ]]
+  docker run --rm --network none --entrypoint sh -v "$ARTEX_HONEY_DIR:/output" "$image" -c '
+    cp /sources/sources-20261108.json /output/sources-20261108.json
+    /opt/qeeqbox/bin/pip freeze > /output/runtime-packages.txt
+    python3 --version > /output/python-version.txt
+  '
+  cmp sources-20261108.json "$ARTEX_HONEY_DIR/sources-20261108.json"
+  python3 prepare-20261108.py "$ARTEX_HONEY_DIR"
+  python3 - "$plan" "$ARTEX_HONEY_DIR" <<'PYPREFLIGHT'
+import hashlib, json, subprocess, sys
+from pathlib import Path
+p = json.load(open(sys.argv[1]))
+root = Path(sys.argv[2])
+assert p['schema'] == 2
+assert json.loads((root/'configuration-hashes.json').read_text()) == p['configuration_hashes']
+assert hashlib.sha256((root/'sources-20261108.json').read_bytes()).hexdigest() == p['sources_sha256']
+actual = subprocess.check_output(['docker','image','inspect','--format','{{.Id}}','jacketser/artex:local'],text=True).strip()
+assert actual == p['driver_image_id'], 'Driver image changed'
+PYPREFLIGHT
+else
 docker run --rm --network none --entrypoint sh -v "$ARTEX_HONEY_DIR:/output" "$image" -c '
   cp -a /sources/opencanary /output/opencanary-source
   /opt/opencanary/bin/pip freeze > /output/opencanary-packages.txt
@@ -86,6 +120,7 @@ elif [[ "$corpus" == holdout-20261107 ]]; then
   python3 prepare-20261107.py "$ARTEX_HONEY_DIR"
 else
   python3 prepare.py "$ARTEX_HONEY_DIR/opencanary-source" "$ARTEX_HONEY_DIR"
+fi
 fi
 python3 - "$repo_root" "$ARTEX_HONEY_DIR" "$source_dir" <<'PYHASH'
 import hashlib

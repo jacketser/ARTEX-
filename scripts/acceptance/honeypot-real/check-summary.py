@@ -19,17 +19,32 @@ with tempfile.TemporaryDirectory(prefix='artex-honey-summary-') as tmp:
     samples = json.loads((target / 'samples.json').read_text())
     plan_path = target / 'evaluation-plan.json'
     plan = json.loads(plan_path.read_text()) if plan_path.exists() else None
+    if plan is not None and plan['schema'] == 2:
+        for name in plan['configuration_hashes']:
+            dest = target / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(original / name, dest)
     detector_path = target / 'detector-commit.txt'
     detector = detector_path.read_text() if detector_path.exists() else None
     cases = ['valid', 'missing-measurement', 'duplicate-repeat', 'missing-target', 'missing-completion', 'wrong-partition', 'unknown-outcome', 'mixed-algorithm', 'wrong-label', 'missing-observations', 'wrong-request-count', 'uniform-wrong-algorithm']
     if plan is not None:
-        cases += ['missing-plan', 'changed-plan-version', 'changed-plan-image', 'changed-detector-commit', 'relabel-as-holdout']
+        cases += ['missing-plan', 'changed-plan-version', 'changed-plan-image', 'changed-detector-commit']
+        if plan['schema'] == 1:
+            cases += ['relabel-as-holdout']
+        else:
+            cases += ['changed-collector', 'changed-source', 'changed-config', 'changed-runtime', 'downgrade-schema', 'invalid-role']
     for case in cases:
         r, c, s = copy.deepcopy(rows), copy.deepcopy(complete), copy.deepcopy(samples)
         if plan is not None:
             p = copy.deepcopy(plan)
             if case == 'changed-plan-version': p['behavior_version'] = 'unknown'
             if case == 'changed-plan-image': p['image_ids'][c['split']] = 'sha256:wrong'
+            if case == 'changed-collector': p['collector_commit'] = '0' * 40
+            if case == 'changed-source': p['sources_sha256'] = '0' * 64
+            if case == 'changed-config': p['configuration_hashes']['honeyhttpd.json'] = '0' * 64
+            if case == 'changed-runtime': p['driver_image_id'] = 'sha256:wrong'
+            if case == 'downgrade-schema': p['schema'] = 1
+            if case == 'invalid-role': p['evaluation_role'] = 'tuning'
             if case == 'relabel-as-holdout': p['evaluation_role'] = 'new_holdout'
             plan_path.write_text(json.dumps(p))
             detector_path.write_text('bad-ref' if case == 'changed-detector-commit' else detector)
@@ -57,7 +72,7 @@ with tempfile.TemporaryDirectory(prefix='artex-honey-summary-') as tmp:
         assert passed == (case == 'valid'), (case, proc.stdout, proc.stderr)
         if case == 'valid' and plan is not None:
             summary = json.loads((target / 'summary.json').read_text())
-            assert summary['evaluation_role'] == 'regression'
+            assert summary['evaluation_role'] == plan['evaluation_role']
             assert summary['evaluation_plan'] == plan
         if case != 'valid':
             assert not (target / 'summary.json').exists(), case
