@@ -81,7 +81,7 @@ const assert = require("node:assert/strict");
       assert.equal(old.result.confidence, baseline ? "medium" : "low");
       assert.deepEqual(old.result.signals, [baseline ? "旧版服务标记差异（合成历史）" : "旧版隐藏注册内容提示（合成历史）"]);
       assert.equal("content_warnings" in old.result, baseline);
-      const legacy = detail.locator("details").filter({ has: page.locator("summary").filter({ hasText: (baseline ? "疑似蜜罐线索" : "蜜罐线索待人工核对") + "（资产或规则已变化）" }) });
+      const legacy = detail.locator("details").filter({ has: page.locator("summary").filter({ hasText: (baseline ? "疑似蜜罐线索 · 有内容风险提示" : "蜜罐线索待人工核对") + "（资产或规则已变化）" }) });
       await legacy.locator("summary").click();
       await legacy.getByText(baseline ? "旧版服务标记差异（合成历史）" : "旧版隐藏注册内容提示（合成历史）", { exact: true }).waitFor();
       assert.equal(await legacy.getByRole("note").count(), baseline ? 1 : 0);

@@ -12,6 +12,11 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+    def version_string(self):
+        if os.environ.get('ARTEX_ACCEPTANCE_BASELINE') == '1' and self.path != '/metrics':
+            return 'gateway-a' if len(Handler.requests) == 1 else 'gateway-b'
+        return super().version_string()
+
     def do_HEAD(self):
         self.reply()
 
@@ -37,7 +42,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         if os.environ.get('ARTEX_ACCEPTANCE_BASELINE') == '1' and self.path != '/metrics':
             # Same body, rotating root GET header, stable marker in another field.
-            self.send_header('Server', 'gateway-a' if len(Handler.requests) == 1 else 'gateway-b')
             self.send_header('X-Powered-By', 'Cowrie')
         self.send_header('Content-Type', 'text/html')
         self.send_header('Content-Length', str(len(body)))

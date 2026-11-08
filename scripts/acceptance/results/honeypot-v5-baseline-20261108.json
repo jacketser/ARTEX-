@@ -1,0 +1,222 @@
+{
+  "date": "2026-11-08",
+  "application_commit": "0fb610dd9a7e93f93cd5a7ec18185aca1119036e",
+  "version": "dev-0fb610d",
+  "algorithm": "http-behavior-v5",
+  "deployed_at_measurement": false,
+  "image": "jacketser/artex:honeypot-v5-candidate",
+  "image_id": "sha256:e4666f59b73f3e8f0645196a17fef3a9da601e8be347511264044126c3c1a5b9",
+  "binary_sha256": "49741bbe1645cd7018b2229d1cbd1464713d0801c449091f73363cce509840e9",
+  "source_tool_sha256": {
+    "honeydetect/behavior.go": "a3cfca0a0285a197165e7e010ded6ccc8e1299723f1a7544b8e678334cb81d74",
+    "honeydetect/behavior_boundary_test.go": "8db924c7717ee8a856bac1f5fe4336f2e79e67651c08d612588900a3be65ea26",
+    "server/behavior_security_test.go": "dec991d39c5fa149a0666e2488522328c76662d72204094c5d3d064e44ce15d3",
+    "scripts/acceptance/content-target.py": "76ed4e1465f7d8218c811ef7649a49dd1649d9a9697af6059bbaf17cec1a109a",
+    "scripts/acceptance/content-browser.cjs": "569153836b4487255b292aa1c8862ba29049a81d2af717204da2e30399c181b2",
+    "scripts/acceptance/compose.yml": "476c3c1a8e070e023aa6f4a43458838ad42c41b2de0d602995ca3b8889bc8407",
+    "scripts/acceptance/run.sh": "bea1a0bef824311b7f3fb3396ee04c11848e631bf66b9f0a69826cbb2c68197c"
+  },
+  "build": {
+    "path": "/tmp/artex-honey-v5-build-qzhXcH8W",
+    "log": "/tmp/artex-honey-v5-build.log",
+    "frontend_reused_from": "dev-806bc74",
+    "frontend_source_unchanged": true,
+    "dependencies_updated": false
+  },
+  "tests": {
+    "honeydetect_seconds": 34.334,
+    "history_api_seconds": 1.715,
+    "agentcapture_seconds": 6.779
+  },
+  "development_cases": {
+    "cases": 7,
+    "requests": 28,
+    "v4": {
+      "suspected": 4,
+      "needs_review": 2,
+      "no_signal": 1,
+      "inconclusive": 0
+    },
+    "v5": {
+      "suspected": 1,
+      "needs_review": 0,
+      "no_signal": 1,
+      "inconclusive": 5
+    },
+    "independent_holdout": false
+  },
+  "agentcapture_regression": {
+    "source_commit": "b1fd1ee7a0130ab8fb1255b3af32e083bd9741f6",
+    "source_sha256": "59fe8d63a0fc5b12ad343720315a64bd0d78ff5a30a25206791f4892ff2f4e8c",
+    "fixture_sha256": "04ff71e93517a17d1f56046ce04dffacdd6f8c4fd36f8252b38dc7ea34408f00",
+    "runner_sha256": "a3d46aea81a2cb94613c0825f9bc5ceb9ca50e04df1e2dcd5dc06e376d862073",
+    "known_development_material": true,
+    "counts": {
+      "suspected": 0,
+      "needs_review": 0,
+      "no_signal": 9,
+      "inconclusive": 0
+    },
+    "results": [
+      {
+        "content_warnings": 0,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "AGENT_BLOCKING_PROMPT"
+      },
+      {
+        "content_warnings": 0,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "API_AGENT_WARNING_PROMPT"
+      },
+      {
+        "content_warnings": 1,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "C2_RECRUIT_PROMPT"
+      },
+      {
+        "content_warnings": 0,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "FAKE_BASH_OUTPUT"
+      },
+      {
+        "content_warnings": 0,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "FAKE_VULNERABILITY_BAIT"
+      },
+      {
+        "content_warnings": 0,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "HIDDEN_EXFILTRATION_PROMPT"
+      },
+      {
+        "content_warnings": 0,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "MARKDOWN_CODE_BAIT"
+      },
+      {
+        "content_warnings": 0,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "NL_TASK_DIRECTIVE"
+      },
+      {
+        "content_warnings": 0,
+        "outcome": "no_signal",
+        "requests": 4,
+        "template": "SYSTEM_OVERRIDE_INJECTION"
+      }
+    ]
+  },
+  "browser": {
+    "result.json": {
+      "settings_saved": true,
+      "policy_reloaded": true,
+      "behavior": "suspected",
+      "requests": 4,
+      "credentials_sent": false,
+      "upstream_connects": 4,
+      "original_host_preserved": true,
+      "cooldown": 429,
+      "passthrough_policy_saved": true,
+      "capture_off_protected": true,
+      "capture_toggle_preserved_history": true,
+      "page_errors": []
+    },
+    "result-content.json": {
+      "health": {
+        "ok": true,
+        "service": "artex",
+        "version": "dev-0fb610d"
+      },
+      "algorithm": "http-behavior-v5",
+      "outcome": "inconclusive",
+      "content_warnings": 1,
+      "persisted_after_reload": true,
+      "legacy_version": "http-behavior-v4",
+      "legacy_preserved": false,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "HEAD",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/artex-behavior-check-f0f2d5599f9085362985471a"
+        }
+      ],
+      "credentials_sent": false,
+      "page_errors": []
+    },
+    "result-legacy.json": {
+      "health": {
+        "ok": true,
+        "service": "artex",
+        "version": "dev-0fb610d"
+      },
+      "algorithm": "http-behavior-v5",
+      "outcome": "inconclusive",
+      "content_warnings": 1,
+      "persisted_after_reload": false,
+      "legacy_version": "http-behavior-v4",
+      "legacy_preserved": true,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "HEAD",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/artex-behavior-check-f0f2d5599f9085362985471a"
+        }
+      ],
+      "credentials_sent": false,
+      "page_errors": []
+    }
+  },
+  "artifacts_directory": "/tmp/artex-acceptance-0KZQrY4H",
+  "artifact_sha256": {
+    "result.json": "120e9cb66f42fa64b4ed1ee2ec8a062bc98f7f9d761cb0bec0674194a69cf5ac",
+    "settings.png": "a55d58ac9c071b10b68d1957d8c9cba20b13ec95e8a1e2543419f0011615d727",
+    "assets.png": "398bb373bd15404544c461c2f4b84acd9c126d915c085745e0572f0ea1326f75",
+    "result-content.json": "d238bf05cb9f5253c574c99ec56bd7298ce75ecf00aaed52885b51bc9f0940e5",
+    "result-legacy.json": "dda3777b49f8cf23636c1d6639d8dac8ef9cf1a25088af5477b93f4ed3615bcd",
+    "legacy.png": "8e1a77126820a8a702b1443bc8de7434f333006a1880e5102c9969b675d131cd",
+    "content.png": "c06d9d95e54b02726a38024461c52753ae276b1d7b452f6ceeba2ee93db4073e"
+  },
+  "failed_browser_attempt": {
+    "log": "/tmp/artex-honey-v5-browser.log",
+    "artifacts": "/tmp/artex-acceptance-jqCbETz3",
+    "reason": "Legacy summary selector omitted independent content warning label; fixed test locator and reran fresh instance."
+  },
+  "cleanup_verified": true,
+  "production_database_tests": false,
+  "new_real_samples": 0,
+  "new_independent_holdout_samples": 0,
+  "limits": [
+    "Synthetic counterexamples verify conservative inference only; no real detection-rate claim.",
+    "Known AgentCapture literals are not default deployments or independent holdouts."
+  ]
+}
